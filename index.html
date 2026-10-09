@@ -74,7 +74,8 @@ let TLK=loadTLK();
 [[4,1,{sk:'#eab98f',hs:12,hc:'#7a5233'}],[3,2,{sk:'#5c3a21',hs:0,hc:'#0d0d0f'}],[2,0,{sk:'#e0ac69',hs:8,hc:'#0d0d0f'}],[5,4,{sk:'#7d4a22',hs:13,hc:'#b05cff'}],[0,3,{sk:'#4a2d18',hs:14,hc:'#0d0d0f'}]].forEach(([t,i,l])=>{TLK[t][i]=l});
 let AUTO=false; // testing aid: lets the AI play both teams
 // ===== CAREER CONTROL: with a created player in the match you control ONLY him (offence and defence); the other four on your team are AI. CLK() = that lock is on. =====
-const CLK=()=>!AUTO&&!!myP(),setCtl=i=>{ctl=CLK()?myP().k:i};
+const CLK=()=>!AUTO&&!!myP(),isYou=p=>!AUTO&&!!p&&p.team==0&&TM&&TM[0]&&TM[0][ctl]===p, // isYou: the player YOU control (in CAREER: your created player) - only his shot meter and Signatures show on screen
+ setCtl=i=>{ctl=CLK()?myP().k:i};
 // CALL FOR THE BALL (E when off the ball on offence): every call counts; the AI ball handler may ignore it, but repeated calls (they fade after ~7s) wear him down until he passes.
 const CALL={n:0,t:0,last:-9};
 // TRANSITION BOOST: after a DEFENSIVE rebound the team that just lost the ball gets +30% speed for ~3.8s (fading in the last 1.2s) so it can get back on defence. tbk(p) = that team's speed multiplier.
@@ -397,7 +398,7 @@ const SIG_FREQ=new Set(['wall','bully','slithery','relentless','clamps','qfs','h
 const sigBeep=t=>{beep([0,740,880,1046][t],.07,'sine',.007);if(t==3)setTimeout(()=>beep(1318,.08,'sine',.005),60)};
 // a Signature fired for player p (any team): a badge pops over his head; your own team also gets the list under your player card
 function sigFx(p,id){if(!p||!p.sig||!p.sig[id]||S!='play')return;const fq=SIG_FREQ.has(id),f=p._sfx||(p._sfx={});if(f[id]>T-(fq?4:1.5))return;f[id]=T;
- p.sgp={id,t:p.sig[id],a:1.2,fq};if(!fq)sigBeep(p.sig[id]);if(p.team!==0)return;
+ p.sgp={id,t:p.sig[id],a:1.2,fq};if(!fq)sigBeep(p.sig[id]);if(!isYou(p))return; // (the list on the right, under the player card: YOUR Signatures only)
  const nm=pName(p),ex=SFX.find(x=>x.id==id&&x.nm==nm);if(ex){ex.a=1.8;return} // (the same player's same Signature again: refresh its flash, don't stack copies)
  SFX.push({id,t:p.sig[id],nm,a:1.8});if(SFX.length>4)SFX.shift()}
 // --- situations
@@ -899,7 +900,7 @@ function release(p,qq){
  p.sjm=tf;p.sjp=.26;p.sj=tf+.26;
  {const l=Math.hypot(hx(p.team)-p.x,HY-p.y)||1;p.fx=(hx(p.team)-p.x)/l;p.fy=(HY-p.y)/l}const mk_=q==2||Math.random()<pr&&!(needOpen(p,d)&&c>=WOPEN),pts=three?3:2; /* a PERFECT release always goes in (a block above still stops it). Otherwise: under 60 for this shot type (3pt rating from deep, mid rating from mid-range): no make unless wide open */
  p.fire={t:tf,f:()=>{B.make=mk_;B.perf=q==2;B.pts=pts;B.xk=three?'3':d>=MIDS?'M':null;B.bk=0;B.bc=0;B.txt=null;B.mode='shot';B.t=0;B.sx=B.x;B.sy=B.y;B.dur=.7+d/500;B.z=Math.max(B.z,40);B.z0=B.z;{const a=Math.random()*6.28,ro=mk_?0:9+Math.random()*5;B.tx=hx(p.team)+Math.cos(a)*ro;B.ty=HY+Math.sin(a)*ro}B.vz0=(RZ-B.z0+.5*G*B.dur*B.dur)/B.dur;B.so=p.team;B.bd=dr(p.team);B.sh=p;B.as=asstFor(p);RP.rel=RT;RP.who=p;shotAtt(p,three)}};
- if(p.team==0||NET.host&&p.team==1){ms.pw=perfW(p,d,c);ms.show=1;ms.res=q;ms.last=ms.t;ms.who=p;say(txt+(p.fdk?' FADEAWAY':'')+(three?' (3PT)':''),q==2?'#4cff7a':q?'#ffd23f':'#ff6b6b')}
+ if(isYou(p)||NET.host&&p.team==1){ms.pw=perfW(p,d,c);ms.show=1;ms.res=q;ms.last=ms.t;ms.who=p;say(txt+(p.fdk?' FADEAWAY':'')+(three?' (3PT)':''),q==2?'#4cff7a':q?'#ffd23f':'#ff6b6b')}
  beep(300,.05);
 }
 // POST EXIT (human and CPU post-ups): a small speed boost and a short spin that curves the drive towards the rim
@@ -4134,7 +4135,7 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.22'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.23'; // bump with every published update (shown top right of the main menu)
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
