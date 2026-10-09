@@ -1089,7 +1089,8 @@ function gpBan(t,kind){const s=GP[t];if(!s)return;const A=s.adj>=0?s.pl.adj[s.ad
  if(kind=='plan')GPB.push({t,kind,life:4.6,a:s.pl.o.n,b:s.pl.d.n});
  else if(kind=='adj'){for(let j=GPB.length-1;j>=0;j--)if(GPB[j].t==t&&GPB[j].kind!='plan')GPB.splice(j,1);GPB.push({t,kind,life:5.2,a:A.n,b:A.txt})}
  else GPB.push({t,kind,life:2.8,a:s.last||''});if(GPB.length>4)GPB.splice(0,GPB.length-4)}
-function gpBrk(t){const s=GP[t];if(s)s.brk=T} // a stop: team t may run
+const BRKT=[-99,-99],brkOn=t=>MODE!=1&&T-BRKT[t]<5; // every team's fast-break window (5 s after a steal, block or defensive rebound), game plan or not
+function gpBrk(t){const s=GP[t];if(s)s.brk=T;BRKT[t]=T} // a stop: team t may run
 const gpLbl=(p,s)=>{p.gpl={s,t:1.1}}; // a short call-out over a player when he starts a game-plan action (SCREEN, POST UP, TRAP...)
 function gpShot(t,kind,made){if(!GP_ON)return;if(made){GPM[t].push(kind);if(GPM[t].length>8)GPM[t].shift()}if(kind=='3')GPC[t]=made?0:GPC[t]+1}
 // every frame: switch adjustments on / off
@@ -1245,6 +1246,8 @@ function offBall(p,i,dt){
  const fx=(bh&&!(ai.cut>0)?bh.x:H)-p.x,fy=(bh&&!(ai.cut>0)?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;
 }
 // ---- on the ball (CPU handler): bring it up, then read the floor - shoot if it is a good shot, pass to a better one, otherwise use moves / a drive to create
+// FAST BREAK tuning: pass = chance he throws the hit-ahead pass when a runner is open (a fast-paced game plan raises it towards 1), think = how often he re-reads (s)
+const FBRK={pass:.85,think:[.15,.1]};
 function cpuH(p,dt){
  p.think-=dt;
  const ai=p.ai||(p.ai={t:0,tx:p.x,ty:p.y,cut:0,ct:2,cx:0,cy:0,dv:0}),H=hx(p.team),D=dr(p.team),d=Math.hypot(H-p.x,HY-p.y),role=roleOf(p),st=styleOf(p),bc=d>430,lt=toLoc(p,p.x,p.y)[1];
@@ -1266,11 +1269,15 @@ function cpuH(p,dt){
  if(p.think>0)return;
  p.think=(role=='PM'?.35:.45)+Math.random()*.4;
  {const r=oopTarget(p),df=r&&near(r,TM[1-p.team],200);if(r&&(!df||Math.hypot(df.x-r.x,df.y-r.y)>35)&&Math.hypot(hx(p.team)-r.x,HY-r.y)<120&&Math.random()<.25){throwOop(p,r);return}} // throw the lob to an open dunker
+ // FAST BREAK (any team, the 5 s after a steal, block or defensive rebound): look UP THE FLOOR first and hit the open man ahead EARLY - a teammate at least
+ // 9 ft nearer the rim with a clear passing lane and no defender on him - instead of dribbling into the retreating defence. He re-reads every 0.15-0.25 s,
+ // so the pass goes the moment a runner breaks free; the most advanced, most open runner is preferred. No one open: he pushes it himself (and keeps looking).
+ if(brkOn(p.team)&&d>150){const pace=gp?Math.max(0,gk(p.team,'pace')):0;let tg=null,bs=-1e9;if(gp&&ai.fbk!==gp.brk){ai.fbk=gp.brk;gpLbl(p,'FAST BREAK')}
+  for(const q of TM[p.team]){if(q===p||q.stun>0||q.dunk||q.lay)continue;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y),ql=Math.hypot(q.x-p.x,q.y-p.y);if(qd>d-90||ql<70||ql>(gp&&gw(q,'leak')?760:680))continue;
+   const lc_=laneClr(p.team,p.x,p.y,q.x,q.y),op=openness(p.team,q.x,q.y);if(lc_<26||op<46)continue;const s_=(d-qd)*.6+op*2+Math.min(lc_,80)-Math.max(0,qd-160)*.15;if(s_>bs){bs=s_;tg=q}}
+  if(tg&&Math.random()<FBRK.pass+(1-FBRK.pass)*pace){pass(p,tg);return}p.think=FBRK.think[0]+Math.random()*FBRK.think[1];if(bc)return}
  const c=cont(p),r=Math.random(),late=shot<4+10*fgOf(p),th=1-Math.max(0,14-shot)*.02+(gp?gk(p.team,'slow')*.25*Math.max(0,(shot-10)/14):0),dn0=near(p,TM[1-p.team],48);if(dn0)p.think=Math.min(p.think,.3+Math.random()*.15); // pressed: decide faster; the longer the clock runs the more he settles
 if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoever is open further up the floor) - non-playmakers don't dribble it up
-  if(brk){let tg=null,bd=1e9;if(ai.fbk!==GP[p.team].brk){ai.fbk=GP[p.team].brk;gpLbl(p,'FAST BREAK')} // FAST BREAK: hit-ahead pass to a runner who is well ahead and open, otherwise push it himself
-   for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);if(qd<d-150&&Math.hypot(q.x-p.x,q.y-p.y)<(gw(q,'leak')?720:520)&&laneClr(p.team,p.x,p.y,q.x,q.y)>30&&openness(p.team,q.x,q.y)>55&&qd<bd){bd=qd;tg=q}}
-   if(tg&&r<.55+.45*gk(p.team,'pace'))pass(p,tg);return}
   if(role!='PM'){const pm=primaryPM(p.team);let tg=null;
    if(pm!==p&&Math.hypot(pm.x-p.x,pm.y-p.y)<460&&laneClr(p.team,p.x,p.y,pm.x,pm.y)>22)tg=pm;
    else{let bd=1e9;for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);if(qd<d-60&&Math.hypot(q.x-p.x,q.y-p.y)<460&&laneClr(p.team,p.x,p.y,q.x,q.y)>26&&qd<bd){bd=qd;tg=q}}}
@@ -4135,7 +4142,7 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.23'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.24'; // bump with every published update (shown top right of the main menu)
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
