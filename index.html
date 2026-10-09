@@ -639,10 +639,12 @@ function vert(p,dt){
   if(p.jph==1){const u=Math.min(1,p.jt/Math.max(.001,p.jld));p.cr=p.c0+(p.jdm-p.c0)*sm3(u);if(u>=1){p.jph=2;p.jt=0}}
   else{const u=Math.min(1,p.jt/p.jtp);p.pu=u;p.cr=p.jdm*(1-u*u);if(u>=1){p.jph=0;p.pu=0;p.cr=0;p.air=1;p.vz=p.jvz;p.z=.01;p.avx=p.vx;p.avy=p.vy;p.tko=(p.tko||0)+1;p.tkT=T;p.swt=null;if(p.fdk&&shootNow(p)){const H=hx(p.team),ux=H-p.x,uy=HY-p.y,l=Math.hypot(ux,uy)||1,f=FADE.drift[0]+FADE.drift[1]*p.fdk;p.avx=-ux/l*f;p.avy=-uy/l*f}if(p.lng)lunge(p)}}
   return}
- {const tg=.3*(p.pst||0)+.26*(p.grd||0);p.cr=tg+(p.cr-tg)*Math.exp(-dt*9)}if(p.cr<.004)p.cr=0}
+ {const tg=Math.max(.3*(p.pst||0)+.26*(p.grd||0),p.lsq>0?p.lsqd||0:0);p.cr=tg+(p.cr-tg)*Math.exp(-dt*9)}if(p.cr<.004)p.cr=0}
 // Dunk plan: the player's real approach speed, leap strength and load depth decide takeoff point, apex and flight; nothing is scripted to reach the rim.
+// (v1.17, measured on reference clips) jump height = what it takes to get the hand to the rim + 1-6 inches + the style's extra: 0.75-1.0 s in the air.
+// Take-off distance comes from cmax (the flight speed allowed, as a share of the run-up): a two-foot jump stop goes up ~5 ft out, a one-foot ~8 ft.
 function dunkPlan(k,vr,Dr){
- const sf=Math.max(0,Math.min(1,vr/165)),q=Math.min(1,.5*sf+.3*(k.dm/.85)+.2*k.js),hz=k.zE+2+10*q+6*sf,vz=Math.sqrt(2*G*hz),tA=vz/G,tl=k.ft==1?.13:.24,tp=Math.max(.07,Math.min(.16,20*legX(crA(k.dm)).d/vz)),vh=Math.max(0,(Dr-tl*Math.max(vr,0)/2)/(tl/2+tp+tA));
+ const sf=Math.max(0,Math.min(1,vr/165)),q=Math.min(1,.5*sf+.3*(k.dm/.85)+.2*k.js),hz=k.zE+1+3*q+2*sf+(k.hzb||0),vz=Math.sqrt(2*G*hz),tA=vz/G,tl=k.ft==1?.06:.1,tp=Math.max(.07,Math.min(.16,20*legX(crA(k.dm)).d/vz)),vh=Math.max(0,(Dr-tl*Math.max(vr,0)/2)/(tl/2+tp+tA));
  return{hz,vz,tA,tl,tp,vh,conv:vr>8?vh/vr:9}}
 // DUNK OUTCOME, decided when the dunk starts (like the block). dn = DUNKING rating.
 //  WIDE OPEN (no defender near the rim, contest under the OPEN tier): a sure make from 35 up; below 35, 60% at 25 rising towards 95%.
@@ -672,8 +674,8 @@ function startDunk(p){
   sty=pos&&animOn(p,'dnk:4')&&Math.random()<Math.min(1,.15+.8*Math.max(0,Math.min(1,(dn-25)/75))+pz)?4:dunkPick(p,dn), // (style: dunkPick - the DUNKS he has the rating for and has switched on, see STORE) // (40% of tomahawks are the LEANING variation) POSTER attempts: from the DUNKING rating (15% at 25 -> 95% at 100) + Posterizer
   mk=!blk&&dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),sty==4,sn);
  if(sty==4&&pz)sigFx(p,'poster');
- const spd=Math.hypot(p.vx,p.vy),al=(p.vx*(H-p.x)+p.vy*(HY-p.y))/((spd||1)*(d||1)),p1=Math.min(.95,Math.max(.05,.1+.55*(spd/170)*(.5+.5*Math.max(0,al))+.35*Math.min(1,d/130))),ft=DKS[sty].ft||(sty==2||sty==5?2:Math.random()<p1?1:2);
- p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?1:.9,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,hang:false};
+ const spd=Math.hypot(p.vx,p.vy),al=(p.vx*(H-p.x)+p.vy*(HY-p.y))/((spd||1)*(d||1)),p1=Math.min(.95,Math.max(.05,.1+.55*(spd/170)*(.5+.5*Math.max(0,al))+.35*Math.min(1,d/130))),ft=DKS[sty].ft||(sty==2||sty==5?2:Math.random()<p1?1:2),st_=DKS[sty];
+ p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm; // (per-style take-off distance and jump height, see the v1.17 dunks)
  RP.rel=RT;RP.who=p;beep(180,.15,'sawtooth');
 }
 // phases: 0 run-up, 1 plant/load, 2 push (legs extend), 3 airborne rise to the dunk, 4 airborne fall + landing
@@ -688,7 +690,7 @@ function oopTarget(p){let best=null,bs=-1e9;const H=hx(p.team);
 function oopStyle(r){const L=[6,7,8].filter(s=>animOn(r,'dnk:'+s));return L.length?L[Math.random()*L.length|0]:6}
 function startOop(r,sty){const H=hx(r.team),pt_={x:H-dr(r.team)*30,y:HY},d0=nearD(pt_,TM[1-r.team],75,0),dn=(r.rt&&r.rt.dnk)||80,sn=Math.max(0,Math.min(1,(((r.rt&&r.rt.str)||50)-25)/75)),cc=cont(r),
   mk=dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),false,sn),ft=sty==6?2:1;
- r.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:r.x,sy:r.y,zE:Math.max(8,103-75*r.ht),js:[1,.92,.8,.7,.6][r.i]||.8,ft,dm:ft==1?.62:.85,cmax:ft==1?1:.9,cmin:ft==1?.15:.1,vt:ft==1?172:128,
+ r.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:r.x,sy:r.y,zE:Math.max(8,103-75*r.ht),js:[1,.92,.8,.7,.6][r.i]||.8,ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,
   blk:false,mk,by:null,hit:0,sty,hang:false,oop:1,cf:DKS[sty].cf,caught:0};RP.rel=RT;RP.who=r}
 function throwOop(p,r){if(!r)return false;const H=hx(p.team),sty=oopStyle(r);startOop(r,sty);
  const fa=Math.atan2(r.x-p.x,r.y-p.y);p.ps={ty:'over',k:1,t:0,wu:0,d:.38,go:1,fa,tg:r};p.bm=null; // the lob: an overhead follow-through
@@ -720,6 +722,9 @@ function oopStep(dt){const r=B.to,k=r&&r.dunk;
  for(const d of TM[1-r.team]){if(d.ochk||d.stun>0)continue;const l=Math.hypot(d.x-B.x,d.y-B.y);if(l>16)continue;const reach=d.z+87*(d.ht||1)+(d.air?6:0);if(reach<B.z)continue;d.ochk=1;
   if(Math.random()<OOP.tip*(.6+.8*blkN(d))){B.oop=0;B.mode='loose';B.h=null;B.age=0;B.so=r.team;B.vx=(B.x-d.x)*3;B.vy=(B.y-d.y)*3;B.vz=60;k.mk=false;k.lost=1;say('LOB TIPPED!',d.team?'#ff6b6b':'#4cff7a');(pstat(d).stl++);beep(140,.12,'square');return}}
  if(k.ph>=3&&k.ta>=k.cf*k.tA){B.oop=0;B.mode='held';B.h=r;B.vz=0;k.caught=1;k.g=1;r.ct0=T;ALAST={from:B.from,to:r,q:qn,c:qc};if(r.team==0)setCtl(r.k);beep(520,.05)}} // CAUGHT: in his right hand
+// how a dunker comes down when his style doesn't say (DKS land): bleed-off rate of the carried speed in the fall, share kept on touchdown, and the
+// restart (p.rec seconds at p.rm of his speed: after a normal dunk you are a beat slow to get going again)
+const DK_LAND={fd:1.4,keep:.85,rec:.2,rm:.7};
 function dunkStep(p,dt){
  const k=p.dunk,H=hx(p.team),D=dr(p.team),dd=k.by,Tx=H-D*20,Ty=HY;k.age+=dt;
  if(k.ph>0||k.pre>0)k.g=Math.min(1,(k.g||0)+dt/(k.ph?.12:.2)); // both hands gather the ball (render() moves it into them)
@@ -743,16 +748,16 @@ function dunkStep(p,dt){
   if(dd&&k.sty==4&&k.mk&&!k.lost&&!k.hit&&u>=.62){k.hit=1;dd.lock=0;dd.stun=1.3;dd.stb=0;dd.jump=0;dd.avx=D*70;dd.avy=0;dd.vx=D*70;dd.vy=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+dd.x)/20;FX.z=(p.y+dd.y)/20;FX.y=7.6}
   if(k.ta>=k.tA){
    k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(dd)dd.lock=0;
-   {const bx=D>0?932:8;let vx=(k.cvx||0)*.8,vy=(k.cvy||0)*.8;const rm=Math.max(0,Math.abs(bx-p.x)-14)*1.7;if(vx*D>0&&Math.abs(vx)>rm)vx=Math.sign(vx)*rm;p.vx=vx;p.vy=vy} // sprint momentum carries through the slam (capped so you don't slide out past the baseline)
+   {const bx=D>0?932:8,LD=DKS[k.sty].land,cy=LD&&LD.keep>=.9?LD.keep:.8;let vx=(k.cvx||0)*cy,vy=(k.cvy||0)*cy;const rm=Math.max(0,Math.abs(bx-p.x)-14)*1.7;if(vx*D>0&&Math.abs(vx)>rm)vx=Math.sign(vx)*rm;p.vx=vx;p.vy=vy} // sprint momentum carries through the slam (capped so you don't slide out past the baseline)
    if(k.mk&&!k.lost){const jc=jumpCont(p,k.sty==4?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
    if(k.lost){} // blocked on the way up (bkHit already sent the ball loose)
    else if(!k.mk)dunkMiss(p);
    else{p.hot=(p.hot||0)+1;shotAtt(p,false);shotMade(p,false);sc[off]+=2;crowdRoar();gpShot(off,'I',1);pstat(p).pts+=2;awardP(p,XP_DUNK,'DUNK');{const a=asstFor(p);if(a){pstat(a).ast++;awardP(a,XP_AST,'ASSIST')}}rimKick(p.team,1);shake=.7;netHit(p.team,1.5,D*40,0);say((off?TEAMS[TI[1]].n+': ':'')+(k.oop?OOP.names[k.sty]:DKS[k.sty].nm||['TOMAHAWK','WIDE TOMAHAWK','TWO-HAND SLAM','360 SPIN','POSTERIZED','LEANING TOMAHAWK'][k.sty])+' ('+k.ft+'-FOOT)! +2','#ffd23f');beep(120,.3,'sawtooth');B.x=H;B.y=HY;B.z=RZ;B.vx=B.vy=0;B.vz=-90;post('make',null,1-off)}
    if((k.sty==2||DKS[k.sty].hang)&&!k.lost&&k.mk){ // two-hand slam: grab the rim, hang and swing, momentum killed, then drop (handled by the p.hg step below)
-    p.hgk=!!DKS[k.sty].hang;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-D*(3.9+12.2*p.ht);p.hgy=HY;p.hfx=D;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;rimKick(p.team,1.4)}}
+    p.hgk=DKS[k.sty].hang==1;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-D*(3.9+12.2*p.ht);p.hgy=HY;p.hfx=D;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;rimKick(p.team,1.4)}}
   return}
- k.pf+=dt;p.vz-=G*dt;p.z+=p.vz*dt;const e=Math.exp(-dt*1.4);mv(p.vx*e,p.vy*e);k.t=1;
- if(p.z<=0||k.age>6){const iv=Math.max(0,-p.vz);p.z=0;p.vz=0;p.air=0;p.pu=0;p.cr=Math.min(.8,.2+iv/300);p.vx*=.85;p.vy*=.85;p.dunk=null}
+ const LD=Object.assign({},DK_LAND,DKS[k.sty].land);k.pf+=dt;p.vz-=G*dt;p.z+=p.vz*dt;const e=Math.exp(-dt*LD.fd);mv(p.vx*e,p.vy*e);k.t=1;
+ if(p.z<=0||k.age>6){const iv=Math.max(0,-p.vz);p.z=0;p.vz=0;p.air=0;p.pu=0;p.cr=LD.cr!=null?LD.cr:Math.min(.8,.2+iv/300);p.vx*=LD.keep;p.vy*=LD.keep;p.rec=LD.rec;p.rm=LD.rm;if(LD.sq){p.lsq=LD.sq;p.lsqd=LD.cr}p.dunk=null}
 }
 // Holding Space takes off immediately: almost no load, a quick push, then a floaty rise. The flight is stretched with a lower gravity
 // (p.gs) so the apex still lands on ms.t=1 (the perfect-release point); release() then finds the shooter airborne and fires at the apex.
@@ -1326,7 +1331,7 @@ function step(dt){
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
   if(p.dunk){dunkStep(p,dt);return}
   if(p.lay){layStep(p,dt);return}
-  for(const k of['mcd','inv','sep','spin','jump','cd','sj','lnd','rec','quick','swp','callT','shrug','jrc','qfsT','trT'])p[k]=Math.max(0,(p[k]||0)-dt);
+  for(const k of['mcd','inv','sep','spin','jump','cd','sj','lnd','lsq','rec','quick','swp','callT','shrug','jrc','qfsT','trT'])p[k]=Math.max(0,(p[k]||0)-dt);
   if(p.spin<=0)p.sd=0;
   if(p.grd>0&&!isHum(p))p.grd=Math.max(0,p.grd-dt*8);
   if(p.pst>0&&(p.stun>0||!((isHum(p)&&B.mode=='held'&&B.h===p)||(p.ai&&p.ai.pu&&B.h===p))))p.pst=Math.max(0,p.pst-dt*6);
@@ -2037,22 +2042,24 @@ const DKS=[ // per style: flight arm / torso tracks (tau >= 2) + where the ball 
   Fh:[[2,-1.5],[2.12,-1.45],[2.25,-1.25],[2.4,-.95],[2.55,-.7],[2.7,-.55],[2.85,-.5],[3,-.55],[3.12,-.85],[3.24,-1.25],[3.36,-1.52],[3.5,-1.65],[3.64,-1.6],[3.78,-1.38],[3.9,-1.02],[4,-.65]],
   Fk:[[2,1.55],[2.12,1.45],[2.25,1.25],[2.4,1.05],[2.55,.95],[2.7,.9],[2.85,.95],[3,.85],[3.12,.6],[3.24,.32],[3.36,.16],[3.5,.12],[3.64,.15],[3.78,.22],[3.9,.32],[4,.38]],
   hd:[[0,-.1],[1,-.2],[2,-.3],[2.5,-.35],[2.75,-.25],[2.95,.12],[3.1,.05],[3.3,-.2],[3.55,-.32],[3.8,-.22],[4,0]]},
- {nm:'SUPERMAN',P:-2.4,Pe:-.5,sp:[2.02,2.1],ft:1,cr:1,legs:1, // both arms fly up into a wide V off the floor, then he lays out: torso pitched forward, the right arm stretched out ahead with the ball,
-  // the left swept back, both lower legs folded up behind him; he comes upright as the arm rises to the rim, then flushes it
-  Dx:[[2,-2.4],[2.07,-2.72],[2.14,-2.85],[2.21,-2.8],[2.29,-2.6],[2.36,-2.3],[2.43,-2.05],[2.5,-1.95],[2.57,-1.95],[2.64,-2.05],[2.71,-2.35],[2.79,-2.75],[2.86,-3],[2.93,-2.65],[3,-2.1],[3.1,-1.6],[3.25,-1.2],[3.5,-.92],[3.75,-.78],[4,-.62]],
-  De:[[2,-.5],[2.14,-.15],[2.36,-.08],[2.64,-.04],[2.86,-.05],[2.93,-.1],[3.1,-.25],[3.5,-.35],[4,-.42]],
-  Dw:[[2,0],[2.36,-.2],[2.64,-.3],[2.82,-.5],[2.92,.75],[3.08,.5],[3.5,.18],[4,.1]],
-  Dz:[[2,-.1],[2.07,.3],[2.14,.55],[2.21,.6],[2.29,.45],[2.36,.22],[2.43,.06],[2.64,0],[2.86,.05],[3,.1],[3.2,.3],[3.6,.5],[4,.45]],
-  Ox:[[2,-2.4],[2.07,-2.72],[2.14,-2.85],[2.21,-2.75],[2.29,-2.4],[2.36,-1.8],[2.43,-1.05],[2.5,-.35],[2.57,.15],[2.64,.32],[2.71,.1],[2.79,-.45],[2.86,-1],[2.93,-1.4],[3,-1.7],[3.15,-1.95],[3.35,-1.8],[3.6,-1.25],[3.85,-.82],[4,-.62]],
-  Oe:[[2,-.5],[2.14,-.15],[2.5,-.1],[2.86,-.3],[3.2,-.4],[4,-.42]],
-  Oz:[[2,-.1],[2.07,.3],[2.14,.55],[2.21,.65],[2.29,.7],[2.43,.65],[2.57,.55],[2.71,.5],[2.86,.6],[3,.7],[3.35,.8],[3.7,.68],[4,.55]],
-  lean:[[2,.1],[2.14,0],[2.29,.15],[2.43,.45],[2.53,.6],[2.62,.58],[2.71,.42],[2.79,.2],[2.86,.05],[2.95,.16],[3.05,.3],[3.3,.24],[3.6,.2],[3.85,.26],[4,.3]],
-  tw:[[2,0],[2.29,.08],[2.43,.2],[2.55,.26],[2.71,.12],[2.86,-.1],[2.95,.2],[3.2,.1],[4,0]],
-  Th:[[2,.3],[2.14,.35],[2.29,.3],[2.43,.25],[2.57,.2],[2.71,.1],[2.86,-.05],[3,-.25],[3.2,-.15],[3.5,-.2],[3.8,-.28],[4,-.3]],
-  Tk:[[2,.2],[2.14,1],[2.29,1.5],[2.43,1.75],[2.57,1.8],[2.71,1.4],[2.86,.7],[3,.5],[3.2,.32],[3.5,.3],[3.8,.42],[4,.4]],
-  Fh:[[2,-1.2],[2.14,-.9],[2.29,-.3],[2.43,.05],[2.57,.15],[2.71,.05],[2.86,-.15],[3,-.45],[3.2,-.35],[3.5,-.3],[3.8,-.34],[4,-.3]],
-  Fk:[[2,1.4],[2.14,1.5],[2.29,1.6],[2.43,1.7],[2.57,1.7],[2.71,1.3],[2.86,.7],[3,.6],[3.2,.35],[3.5,.3],[3.8,.44],[4,.4]],
-  hd:[[0,-.1],[1,-.2],[2,-.3],[2.3,-.45],[2.55,-.55],[2.75,-.4],[2.95,.1],[3.4,.25],[4,.12]]},
+ {nm:'SUPERMAN',P:-3,Pe:-.1,sp:[2,2.06],ft:1,cr:1,legs:1,cm:1.25,hz:6,land:{cr:.15,keep:1,fd:.2,rec:.15,rm:1}, // (re-keyed v1.17 from a second reference, every frame at 30 fps)
+  // takes off from much further out than the other dunks (~10 ft) and floats: both arms fly straight up off the floor, spread into a T, then he lays out flat
+  // (torso ~30 deg off horizontal, the right arm stretched out ahead with the ball, the left straight out to the side, both lower legs folded up behind);
+  // he comes upright as the arm rises and cocks, flushes it, and lands running on the free (right) foot without breaking stride
+  Dx:[[2,-3],[2.05,-3.05],[2.1,-3],[2.15,-2.9],[2.2,-2.75],[2.25,-2.6],[2.3,-2.4],[2.35,-2.3],[2.45,-2.28],[2.55,-2.3],[2.6,-2.35],[2.65,-2.5],[2.7,-2.7],[2.75,-2.95],[2.8,-3.15],[2.85,-3.3],[2.9,-3],[2.95,-2.5],[3,-2.1],[3.1,-1.6],[3.25,-1.1],[3.5,-.8],[3.75,-.65],[4,-.6]],
+  De:[[2,-.1],[2.3,-.05],[2.7,-.05],[2.8,-.4],[2.85,-.6],[2.9,-.3],[2.95,-.1],[3.1,-.25],[3.5,-.35],[4,-.42]],
+  Dw:[[2,0],[2.4,-.2],[2.75,-.3],[2.85,-.5],[2.93,.75],[3.08,.5],[3.5,.18],[4,.1]],
+  Dz:[[2,.05],[2.05,.25],[2.1,.3],[2.2,.25],[2.3,.2],[2.6,.15],[2.8,.05],[3,.1],[3.2,.3],[3.6,.5],[4,.45]],
+  Ox:[[2,-2.6],[2.05,-2.7],[2.1,-2.5],[2.15,-2.2],[2.2,-1.9],[2.25,-1.6],[2.3,-1.35],[2.4,-1.3],[2.55,-1.3],[2.7,-1.3],[2.85,-1.35],[3,-1.4],[3.15,-1.45],[3.35,-1.3],[3.6,-1],[3.85,-.75],[4,-.62]],
+  Oe:[[2,-.2],[2.15,-.1],[2.7,-.1],[3,-.25],[3.4,-.35],[4,-.42]],
+  Oz:[[2,.1],[2.05,.35],[2.1,.6],[2.15,.9],[2.2,1.2],[2.25,1.35],[2.3,1.42],[2.6,1.42],[2.7,1.2],[2.85,1.05],[3,.95],[3.2,.9],[3.5,.8],[3.8,.65],[4,.55]],
+  lean:[[2,.02],[2.1,.05],[2.15,.15],[2.2,.25],[2.25,.35],[2.3,.48],[2.38,.56],[2.5,.56],[2.6,.5],[2.65,.4],[2.7,.3],[2.75,.2],[2.8,.1],[2.85,.05],[2.9,.1],[2.95,.25],[3,.35],[3.15,.4],[3.5,.45],[3.75,.4],[4,.35]],
+  tw:[[2,0],[2.3,.15],[2.5,.22],[2.7,.1],[2.85,-.15],[2.95,.2],[3.2,.1],[4,0]],
+  Th:[[2,.35],[2.05,.38],[2.1,.4],[2.15,.4],[2.2,.36],[2.25,.35],[2.3,.35],[2.55,.35],[2.6,.3],[2.7,.2],[2.75,.1],[2.8,.05],[2.9,-.05],[3,-.2],[3.1,.1],[3.25,.25],[3.5,.35],[3.75,.3],[4,.2]],
+  Tk:[[2,.3],[2.05,.6],[2.1,.9],[2.15,1.3],[2.2,1.6],[2.25,1.8],[2.3,1.9],[2.55,1.9],[2.6,1.8],[2.7,1.4],[2.75,1],[2.8,.6],[2.9,.4],[3,.5],[3.1,.7],[3.25,.9],[3.5,1],[3.75,.8],[4,.6]],
+  Fh:[[2,-1.5],[2.05,-1.4],[2.1,-1.2],[2.15,-.8],[2.2,-.4],[2.25,-.1],[2.3,.1],[2.4,.15],[2.55,.15],[2.6,.1],[2.65,0],[2.7,-.1],[2.75,-.2],[2.8,-.25],[2.85,-.3],[2.95,-.4],[3,-.5],[3.1,-.6],[3.25,-.6],[3.5,-.55],[3.75,-.4],[4,-.3]],
+  Fk:[[2,1.5],[2.05,1.5],[2.1,1.5],[2.15,1.6],[2.2,1.7],[2.25,1.8],[2.3,1.9],[2.55,1.9],[2.6,1.8],[2.7,1.4],[2.75,1],[2.8,.6],[2.85,.4],[3,.4],[3.1,.3],[3.25,.3],[3.5,.3],[3.75,.35],[4,.3]],
+  hd:[[0,-.1],[1,-.2],[2,-.4],[2.3,-.6],[2.6,-.5],[2.85,-.3],[2.97,.1],[3.4,.2],[4,.1]]},
  {nm:'WINDMILL',P:-2.6,Pe:-.4,sp:[2.22,2.34],ft:1,cr:1,legs:1, // both hands take the ball up overhead, then the right arm carries it straight down in front, past the hip, back
   // behind him and up and over in one full circle (the arm pitch keeps increasing: -3 up -> 0 down -> +1.6 back -> +3.1 up behind -> over the top to the rim),
   // knees tucked up in front through the swing, the left arm out front for balance
@@ -2094,7 +2101,62 @@ const DKS=[ // per style: flight arm / torso tracks (tau >= 2) + where the ball 
   Tk:[[2,.1],[2.1,.8],[2.2,.9],[2.35,.6],[2.5,.35],[2.7,.3],[2.85,.35],[3,.45],[3.2,.5],[3.5,.45],[3.8,.4],[4,.35]],
   Fh:[[2,-1.4],[2.1,-1.5],[2.2,-1.3],[2.35,-.8],[2.5,-.35],[2.7,-.2],[2.85,-.2],[3,-.35],[3.15,-.7],[3.3,-1.1],[3.45,-1.3],[3.6,-1.3],[3.8,-1],[4,-.6]],
   Fk:[[2,1.5],[2.1,1.4],[2.2,1.2],[2.35,.7],[2.5,.35],[2.7,.3],[2.85,.35],[3,.5],[3.15,.4],[3.3,.25],[3.5,.2],[3.7,.3],[3.9,.4],[4,.4]],
-  hd:[[0,-.1],[1,-.2],[2,-.35],[2.5,-.45],[2.8,-.3],[2.95,.1],[3.2,-.1],[3.45,-.35],[3.75,-.3],[4,0]]}];
+  hd:[[0,-.1],[1,-.2],[2,-.35],[2.5,-.45],[2.8,-.3],[2.95,.1],[3.2,-.1],[3.45,-.35],[3.75,-.3],[4,0]]},
+ // ===== v1.17 dunks, keyed from a second set of reference videos (every frame at 30 fps through the flight; the approach, plant, contact time, air time,
+ //  carry and landing measured from the same clips). cm: how far out he takes off (x the usual), hz: extra jump height (1/10 ft), land: how he comes down
+ //  (cr crouch depth, sq how long he holds a squat, keep: share of his speed carried out, fd: how fast it bleeds off in the fall, rec / rm: how long and how
+ //  slow he is to get going again), hang 2: grabs the rim and hangs (legs loose; hang 1 = knees tucked).
+ {nm:'DOUBLE PUMP',P:-2.7,Pe:-.9,two:1,ft:2,cr:1,legs:1,hang:2,hz:2, // two-foot jump stop, up with the ball in front of the forehead; at the top of the rise he
+  // pumps it down to the belly while both knees tuck up high, then throws it back up over his head with straight arms as the legs extend, two-hand slam, hangs
+  Ax:[[2,-2.7],[2.08,-2.75],[2.15,-2.4],[2.23,-1.8],[2.31,-1.1],[2.38,-.75],[2.46,-.6],[2.54,-.7],[2.62,-1.4],[2.69,-2.3],[2.77,-2.9],[2.85,-3.1],[2.92,-2.85],[3,-2.6],[3.3,-1.6],[3.7,-.7],[4,-.45]],
+  Ae:[[2,-.9],[2.08,-.9],[2.15,-1],[2.23,-1.2],[2.31,-1.3],[2.38,-1.4],[2.46,-1.35],[2.54,-1.3],[2.62,-1.1],[2.69,-.6],[2.77,-.2],[2.85,-.1],[3,-.1],[3.3,-.3],[4,-.45]],
+  Aw:[[2,0],[2.4,.2],[2.6,0],[2.85,-.3],[2.95,.6],[3.2,.3],[4,0]],Az:[[2,-.2],[2.4,-.25],[2.8,-.2],[3,-.15],[3.3,.35],[3.7,.6],[4,.5]],
+  lean:[[2,.05],[2.15,.08],[2.3,.15],[2.38,.2],[2.46,.25],[2.54,.2],[2.62,.1],[2.69,0],[2.77,-.05],[2.85,-.05],[2.92,.05],[3,.15],[3.3,.2],[4,.12]],
+  Th:[[2,.05],[2.08,.05],[2.15,-.2],[2.23,-.6],[2.31,-1],[2.38,-1.25],[2.46,-1.35],[2.54,-1.3],[2.62,-.9],[2.69,-.4],[2.77,-.1],[2.85,0],[3,-.1],[3.3,-.3],[4,-.25]],
+  Tk:[[2,.1],[2.08,.15],[2.15,.5],[2.23,1],[2.31,1.4],[2.38,1.6],[2.46,1.7],[2.54,1.65],[2.62,1.2],[2.69,.6],[2.77,.25],[2.85,.2],[3,.35],[3.3,.5],[4,.35]],
+  Fh:[[2,.05],[2.08,.02],[2.15,-.25],[2.23,-.65],[2.31,-1.05],[2.38,-1.3],[2.46,-1.4],[2.54,-1.32],[2.62,-.95],[2.69,-.45],[2.77,-.12],[2.85,-.02],[3,-.12],[3.3,-.3],[4,-.25]],
+  Fk:[[2,.1],[2.08,.18],[2.15,.55],[2.23,1.05],[2.31,1.45],[2.38,1.65],[2.46,1.72],[2.54,1.68],[2.62,1.25],[2.69,.65],[2.77,.3],[2.85,.22],[3,.35],[3.3,.5],[4,.35]],
+  hd:[[0,-.1],[1,-.2],[2,-.3],[2.25,-.1],[2.45,.05],[2.65,-.2],[2.8,-.35],[2.95,.1],[3.4,.25],[4,.12]]},
+ {nm:'TWO-HAND HAMMER',P:-3,Pe:-.15,two:1,ft:2,cr:1,legs:1,hang:2,hz:3, // two-foot, ball taken straight up overhead off the floor, then lowered behind the head
+  // (elbows pointing up, a slight arch) while he rises pencil-straight, legs together and toes pointed; hammered down with both hands and he hangs on the rim
+  Ax:[[2,-3],[2.07,-3.15],[2.14,-3.3],[2.21,-3.45],[2.29,-3.5],[2.5,-3.45],[2.57,-3.4],[2.64,-3.3],[2.71,-3.15],[2.79,-3],[2.86,-2.8],[2.93,-2.6],[3,-2.5],[3.3,-1.6],[3.7,-.7],[4,-.45]],
+  Ae:[[2,-.15],[2.07,-.5],[2.14,-1],[2.21,-1.5],[2.29,-1.75],[2.36,-1.85],[2.43,-1.85],[2.5,-1.8],[2.57,-1.6],[2.64,-1.2],[2.71,-.7],[2.79,-.3],[2.86,-.15],[2.93,-.1],[3.3,-.3],[4,-.45]],
+  Aw:[[2,0],[2.3,-.4],[2.7,-.5],[2.85,-.2],[2.93,.6],[3.2,.3],[4,0]],Az:[[2,-.2],[2.15,-.05],[2.3,.05],[2.6,.05],[2.8,-.15],[3,-.15],[3.3,.35],[3.7,.6],[4,.5]],
+  lean:[[2,0],[2.15,-.06],[2.3,-.12],[2.6,-.12],[2.75,-.02],[2.85,.1],[3,.2],[3.3,.2],[4,.12]],
+  Th:[[2,.05],[2.3,.08],[2.6,.1],[2.75,.02],[2.88,-.2],[3,-.45],[3.3,-.35],[4,-.25]],Tk:[[2,.1],[2.3,.15],[2.6,.25],[2.75,.3],[2.88,.5],[3,.9],[3.3,.6],[4,.35]],
+  Fh:[[2,.05],[2.3,.06],[2.6,.08],[2.75,0],[2.88,-.22],[3,-.48],[3.3,-.35],[4,-.25]],Fk:[[2,.1],[2.3,.12],[2.6,.22],[2.75,.28],[2.88,.48],[3,.88],[3.3,.6],[4,.35]],
+  hd:[[0,-.1],[1,-.2],[2,-.35],[2.4,-.4],[2.75,-.3],[2.95,.1],[3.4,.25],[4,.12]]},
+ {nm:'HEEL-KICK TOMAHAWK',P:-2.8,Pe:-.6,sp:[2.08,2.2],ft:2,cr:1,legs:1,hz:3,land:{cr:.95,sq:.45,keep:.2,fd:1.4,rec:.55,rm:.25}, // two-foot jump stop off a
+  // long penultimate stride; the right hand takes the ball up and cocks it far back behind the head while BOTH heels kick up behind him and the back arches,
+  // the left arm reaching out in front; whipped over the rim one-handed, legs straightening; lands on both feet into a deep squat and gets up slowly
+  Dx:[[2,-2.8],[2.07,-3],[2.13,-3.2],[2.2,-3.4],[2.27,-3.6],[2.33,-3.75],[2.4,-3.85],[2.47,-3.9],[2.53,-3.9],[2.6,-3.85],[2.67,-3.6],[2.73,-3.2],[2.8,-2.75],[2.87,-2.35],[2.93,-2.1],[3,-1.9],[3.1,-1.4],[3.25,-1],[3.5,-1.1],[3.75,-1],[4,-.7]],
+  De:[[2,-.6],[2.13,-.6],[2.27,-1.1],[2.4,-1.5],[2.53,-1.6],[2.67,-1.3],[2.8,-.5],[2.93,-.1],[3.1,-.2],[3.5,-.35],[4,-.5]],
+  Dw:[[2,0],[2.4,-.5],[2.7,-.4],[2.92,.9],[3.1,.5],[4,.1]],Dz:[[2,-.1],[2.3,.15],[2.5,.25],[2.8,.15],[3,.1],[3.25,.6],[3.5,1],[3.8,.9],[4,.6]],
+  Ox:[[2,-2.8],[2.13,-2.5],[2.27,-2],[2.4,-1.8],[2.53,-1.75],[2.67,-1.7],[2.8,-1.5],[2.93,-1.2],[3.1,-1],[3.3,-1.2],[3.6,-1.3],[4,-1]],
+  Oe:[[2,-.6],[2.3,-.2],[3,-.3],[4,-.4]],Oz:[[2,-.1],[2.2,.1],[2.5,.15],[2.8,.3],[3.1,.6],[3.4,1],[3.8,.9],[4,.7]],
+  lean:[[2,.05],[2.2,-.1],[2.4,-.3],[2.55,-.35],[2.7,-.2],[2.85,.15],[2.97,.35],[3.1,.3],[3.4,.25],[3.7,.35],[4,.45]],
+  tw:[[2,-.1],[2.4,-.35],[2.55,-.4],[2.75,-.15],[2.92,.3],[3.2,.1],[4,0]],
+  Th:[[2,.05],[2.1,.05],[2.2,.15],[2.3,.3],[2.4,.4],[2.53,.45],[2.67,.35],[2.8,.1],[2.93,-.15],[3.05,-.25],[3.3,-.15],[3.6,-.25],[3.85,-.45],[4,-.6]],
+  Tk:[[2,.1],[2.1,.3],[2.2,.9],[2.3,1.5],[2.4,1.85],[2.53,1.95],[2.67,1.7],[2.8,1.1],[2.93,.55],[3.05,.35],[3.3,.3],[3.6,.35],[3.85,.6],[4,.9]],
+  Fh:[[2,.05],[2.1,.08],[2.2,.2],[2.3,.35],[2.4,.45],[2.53,.5],[2.67,.4],[2.8,.15],[2.93,-.1],[3.05,-.2],[3.3,-.12],[3.6,-.22],[3.85,-.42],[4,-.58]],
+  Fk:[[2,.1],[2.1,.25],[2.2,.8],[2.3,1.4],[2.4,1.75],[2.53,1.85],[2.67,1.65],[2.8,1.05],[2.93,.5],[3.05,.32],[3.3,.28],[3.6,.32],[3.85,.58],[4,.88]],
+  hd:[[0,-.1],[1,-.2],[2,-.35],[2.4,-.4],[2.7,-.3],[2.95,.15],[3.4,.2],[4,.25]]},
+ {nm:'SCISSOR TOMAHAWK',P:-2.5,Pe:-.7,sp:[2.1,2.25],ft:1,cr:1,legs:1,cm:1.12,hz:4,land:{cr:.15,keep:.95,fd:.3,rec:.15,rm:.95}, // one-foot from a little further
+  // out: free knee driven up to hip height, the ball lifted overhead and held up high in the right hand while the left arm opens out straight to the side;
+  // through the float his legs split like a stride in the air (free leg reaching out in front, take-off leg folded behind), then they snap together as he
+  // tomahawks it down, and he lands on the free foot and keeps running
+  Dx:[[2,-2.5],[2.06,-2.75],[2.12,-2.95],[2.18,-3.1],[2.24,-3.2],[2.29,-3.25],[2.35,-3.3],[2.41,-3.35],[2.47,-3.4],[2.53,-3.45],[2.59,-3.5],[2.65,-3.55],[2.71,-3.6],[2.76,-3.5],[2.82,-3.1],[2.88,-2.6],[2.94,-2.2],[3,-1.9],[3.1,-1.4],[3.25,-.9],[3.5,-.6],[3.75,-.5],[4,-.5]],
+  De:[[2,-.7],[2.12,-.4],[2.24,-.15],[2.41,-.1],[2.59,-.3],[2.71,-.7],[2.8,-.4],[2.9,-.1],[3.1,-.2],[3.5,-.35],[4,-.45]],
+  Dw:[[2,0],[2.6,-.4],[2.8,-.4],[2.93,.9],[3.1,.5],[4,.1]],Dz:[[2,-.1],[2.2,0],[2.6,.1],[2.9,.05],[3.1,.3],[3.4,.5],[4,.4]],
+  Ox:[[2,-2.5],[2.12,-2.1],[2.24,-1.6],[2.35,-1.4],[2.6,-1.4],[2.85,-1.3],[3,-1.1],[3.2,-.9],[3.5,-.7],[4,-.5]],
+  Oe:[[2,-.7],[2.2,-.3],[3,-.3],[4,-.4]],Oz:[[2,-.1],[2.12,.4],[2.24,.9],[2.35,1.2],[2.6,1.3],[2.85,1.2],[3,1],[3.3,.8],[4,.5]],
+  lean:[[2,.05],[2.2,0],[2.5,-.05],[2.7,-.15],[2.85,.1],[2.97,.3],[3.1,.3],[3.4,.25],[3.7,.3],[4,.3]],
+  tw:[[2,-.1],[2.5,-.2],[2.72,-.35],[2.9,.25],[3.2,.1],[4,0]],
+  Th:[[2,.3],[2.06,.3],[2.12,.25],[2.24,.2],[2.35,.25],[2.47,.35],[2.59,.45],[2.71,.55],[2.82,.5],[2.94,.2],[3.06,.1],[3.25,.3],[3.5,.4],[3.75,.2],[4,.1]],
+  Tk:[[2,.2],[2.06,.6],[2.12,1],[2.24,1.3],[2.35,1.35],[2.47,1.3],[2.59,1.2],[2.71,1.1],[2.82,1],[2.94,.7],[3.06,.6],[3.25,.9],[3.5,1.1],[3.75,.7],[4,.4]],
+  Fh:[[2,-1.5],[2.06,-1.5],[2.12,-1.45],[2.24,-1.1],[2.35,-1],[2.47,-1.1],[2.59,-1.2],[2.71,-1.25],[2.82,-1.1],[2.94,-.6],[3.06,-.45],[3.25,-.55],[3.5,-.6],[3.75,-.45],[4,-.3]],
+  Fk:[[2,1.6],[2.06,1.5],[2.12,1.4],[2.24,1.3],[2.35,1.1],[2.47,.8],[2.59,.5],[2.71,.35],[2.82,.35],[2.94,.5],[3.06,.45],[3.25,.35],[3.5,.3],[3.75,.3],[4,.3]],
+  hd:[[0,-.1],[1,-.2],[2,-.35],[2.5,-.4],[2.8,-.3],[2.95,.12],[3.4,.15],[4,.1]]}];
 
 const DKH=[[0,-.1],[1,-.2],[2,-.3],[2.7,-.3],[2.95,.1],[3.4,.25],[4,.12]], // head: eyes up on the rim on the way up, down on the ball at the slam, then on the landing
  DKF=[[2,.75],[2.7,.7],[3.2,.5],[3.8,.35],[4,.3]]; // trailing / airborne feet: toes pointed off the floor, flattening out to land toes first
@@ -2111,9 +2173,13 @@ function dunkPose(p,k,q,LG,aa){
  if(k.ph==0){ // RUN-UP, last ~0.3s before the plant: ball gathered into both hands at the waist, hips start to sink on the long penultimate step
   const w=sm3(ck(k.pre||0));if(w<=0||k.oop)return;q.r=24; // (an alley-oop has no ball to gather)
   for(const s of ['L','R']){q[s+'x']=mx(q[s+'x'],-.55-q.lean,w);q[s+'e']=mx(q[s+'e'],-1.2,w);q[s+'z']=mx(q[s+'z'],.24*-sg(s),w)}
-  q.drop+=(one?.16:.1)*w;p.m.hdT=-.1*w;if(st.yaw)p.m.hyT=-.8*dkYaw(p,k);return}
+  // PENULTIMATE STEP (measured on the reference clips): the last stride before the plant is long and low - the stride opens up, the lead leg reaches
+  // out with a nearly straight knee (heel first), the trail leg stays back - and the torso comes upright, braking a touch, instead of the run's lean
+  {const g_=one?.55:.75;q.Lh*=1+g_*w;q.Rh*=1+g_*w;if(q.Lh<q.Rh)q.Lk=mx(q.Lk,.18,.8*w);else q.Rk=mx(q.Rk,.18,.8*w);q.lean=mx(q.lean,one?.04:-.04,w)}
+  q.drop+=(one?.2:.26)*w;p.m.hdT=-.1*w;if(st.yaw)p.m.hyT=-.8*dkYaw(p,k);return}
  const tau=dkTau(p,k);
  q.r=tau<2?40:tau>2.55&&tau<3.1?32:22; // crisp take-off and slam, softer in the float
+ if(!one&&tau<.45)q.r=16; // two-foot JUMP STOP: the trail foot swings through and lands beside the lead foot, it doesn't snap there
  // ---- LEGS
  const S=Math.max(.5,(k.dm||.62)/.62),poster=!!st.knee;
  if(one){
@@ -4053,7 +4119,7 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.16'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.17'; // bump with every published update (shown top right of the main menu)
 function drawMainMenu(){if(MN.gate){gateDraw();return}const t=MN.t,tm=TEAMS[MN.ti],te=t-T_HIT,clamp=mnC;
  const ui=clamp(0,1,(t-T_UI)/.9),ez=1-Math.pow(1-ui,3);
  if(ui>0){
@@ -4293,7 +4359,7 @@ const HL_MOVES=[
  {t:'FADEAWAY',tag:'BACK + SPACE',d:'Shoot while moving backwards, away from the basket (a step-back counts too), and you fade away: you jump higher and drift back through the air, leaning back with a high release over the defender. The separation makes the contest count much less, but it\'s a harder shot for poor shooters (a smaller green window at low MID-RANGE / 3PT).\nShoot out of a post-up (holding G) and you do a turnaround fadeaway on one leg, knee up.\nThe result shows FADEAWAY when it happens. The Fadeaway Artist Signature makes them even better.'},
  {t:'LAYUP',tag:'DRIVE + SPACE',d:'Run at the rim, facing it, and press and hold Space from close range. Let go at the top of the layup meter: PERFECT always goes in (unless it\'s blocked), GOOD uses your normal chance, EARLY / LATE are much harder.\nThe finish is picked for you to fit the play and your LAYUP rating: overhand and power layups for everyone, finger roll 55+, floater 65+, scoop 70+, euro step 75+, reverse 82+ and over-the-shoulder reverse 92+.'},
  {t:'ALLEY-OOP',tag:'Q',d:'With the ball, press Q to throw a lob to a teammate with DUNKING 80+ who is within dunk range of the rim (about 15 ft). He goes up and the ball lands in his right hand at the top of his jump for one of three alley-oop finishes: the two-foot FLUSH, the one-foot TOMAHAWK or the TUCK SLAM (both knees tucked). Switch them on or off in the STORE.\nA defender who gets a hand up to the lob can tip it away, and once he has caught it, it\'s a normal dunk (it can still be blocked or altered). AI teams throw them too when their dunker is open near the rim.\nCALL FOR THE LOB (career): without the ball, run at the rim and press Q - if your player has 80+ DUNKING and is close enough (about 24 ft, running at the rim), he shouts for it and the teammate with the ball throws you the alley-oop.'},
- {t:'DUNK',tag:'F',d:'Press F within about 15 ft of the rim. The style is picked at random from the dunks you have unlocked (and switched on in the STORE): tomahawk and two-hand for everyone, extension slam at DUNKING 60, wide tomahawk at 65, cock-back slam at 70, leaning tomahawk at 75, backscratch hang at 80, 360 and windmill at 85, superman at 88. With a defender at the rim you might posterize him (more often with a high DUNKING rating).'},
+ {t:'DUNK',tag:'F',d:'Press F within about 15 ft of the rim. The style is picked at random from the dunks you have unlocked (and switched on in the STORE): tomahawk and two-hand for everyone, extension slam at DUNKING 60, wide tomahawk at 65, cock-back slam at 70, scissor tomahawk at 72, leaning tomahawk and two-hand hammer at 75, heel-kick tomahawk at 78, backscratch hang at 80, double pump at 82, 360 and windmill at 85, superman at 88. Each one has its own take-off distance, hang time and landing: the superman and scissor tomahawk go up from further out and land running, the heel-kick tomahawk lands in a deep squat, the double pump and hammer hang on the rim. With a defender at the rim you might posterize him (more often with a high DUNKING rating).'},
  {t:'POST UP',tag:'HOLD G',d:'With the ball, hold G to turn your back and back your defender down. The ball can\'t be stolen, but you move slowly. Let go of G to spin out of the post towards the rim: a better POST MOVES rating makes the spin quicker and knocks the defender off balance for longer.'},
  {t:'PASSING',tag:'E',d:'Press E to pass to the teammate you\'re facing. E also inbounds the ball. The pass type is picked to fit the play:\n• CHEST PASS: the standard two-hand pass.\n• BOUNCE PASS: when a defender is in the passing lane - it skips off the floor under his hands.\n• OVERHEAD PASS: long skip passes, out of the post, inbounds, or over a smaller defender.\n• ONE-HAND PUSH: a quick pass on the move.\n• BEHIND THE BACK: good passers (PASSING 75+) on the move, to a teammate on their off side.\n• BASEBALL PASS: long outlets up the floor, thrown like a baseball.\nEvery pass has a short wind-up while the ball is still in your hands, so it can be stripped before it leaves. Without the ball, E calls for a pass. In career, Space without the ball makes your teammate with the ball shoot.'},
  {t:'STEAL',tag:'E (DEFENCE)',d:'Swipe at the ball. It works best on a plain dribble; during dribble moves it rarely works, and you can\'t steal it during a spin, a behind-the-back or a post-up. There\'s a short wait between swipes.\nWhen an AI defender reaches in on you, you\'ll see his arm shoot out at the ball (and hear a whoosh). AI defenders stay in front of you and only reach when the ball is exposed on their side of your body, especially while you\'re standing still or slow: keep moving and keep the ball away from them. A missed reach costs them a step.'},
@@ -4335,13 +4401,15 @@ const DUNKV=[{sty:0,n:'TOMAHAWK',req:0,d:'One hand, the ball cocked behind the h
  {sty:8,n:'ALLEY-OOP TUCK SLAM',req:80,d:'Catches it high, rips it back with both knees tucked, then throws it down.'},
  {sty:13,n:'EXTENSION SLAM',req:60,d:'Ball pushed straight up at full stretch, flushed, then falls away kicking.'},{sty:9,n:'COCK-BACK SLAM',req:70,d:'Cocked way back behind the head, left arm wide, thrown down, then a leg kick.'},
  {sty:12,n:'BACKSCRATCH HANG',req:80,d:'Two hands scratch the back, thrown down, then hangs on the rim, knees tucked.'},{sty:11,n:'WINDMILL',req:85,d:'The ball swung down past the hip and round in a full circle over the top.'},
- {sty:10,n:'SUPERMAN',req:88,d:'Lays out flat in the air, ball stretched out in front, then flushes it.'}];
+ {sty:10,n:'SUPERMAN',req:88,d:'From way out: arms into a T, lays out flat, flushes it and lands running.'},
+ {sty:15,n:'TWO-HAND HAMMER',req:75,d:'Two-foot, pencil-straight, ball lowered behind the head, hammered down, hangs.'},{sty:17,n:'SCISSOR TOMAHAWK',req:72,d:'One-foot from further out, legs split in the air, tomahawk, runs out.'},
+ {sty:16,n:'HEEL-KICK TOMAHAWK',req:78,d:'Two-foot, heels kicked up behind, cocked far back, lands in a deep squat.'},{sty:14,n:'DOUBLE PUMP',req:82,d:'Pumps the ball down to the belly with the knees tucked, then up and slams, hangs.'}];
 const PASS_D={chest:'Two hands from the chest, step in, thumbs-down snap.',bounce:'Two hands pushed down: it skips off the floor under the defender.',over:'Two hands from above the head: skip passes, post entries, over a defender.',
  one:'A quick one-handed push on the move.',btb:'The ball hand wraps behind the back to a teammate on the other side.',base:'Long outlet thrown like a baseball, arm cocked by the ear.'};
 function animClean(a){const ok=new Set(STORE_T.flatMap(t=>t.items().map(i=>i.k)));const off=a&&Array.isArray(a.off)?[...new Set(a.off.filter(k=>typeof k=='string'&&ok.has(k)))]:[];return{off}}
 const animOn=(p,k)=>!(p&&p.build&&p.build.anim&&p.build.anim.off&&p.build.anim.off.includes(k));
 // in games: which dunk style (DUNKS: rating + switched on; 40% of the old pure tomahawks were the leaning one, kept as the weights)
-const DUNK_W={0:.15,1:.25,2:.25,3:.25,5:.1,9:.22,10:.2,11:.22,12:.2,13:.22};
+const DUNK_W={0:.15,1:.25,2:.25,3:.25,5:.1,9:.22,10:.2,11:.22,12:.2,13:.22,14:.2,15:.22,16:.2,17:.22};
 function dunkPick(p,dn){const L=[];let tot=0;for(const v of DUNKV){if(v.sty==4||DKS[v.sty].oop||dn<v.req||!animOn(p,'dnk:'+v.sty))continue;L.push(v.sty);tot+=DUNK_W[v.sty]}
  if(!L.length)return 0;let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
 // ---- the screen
