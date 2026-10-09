@@ -2672,7 +2672,7 @@ function draw(){
  if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
  if(ONL_S.has(S))onlDraw();if(NET.on&&S=='play')netOverlay();
  if(S=='cdebut'){renderDebut();drawDebut()}
- if(S=='menu'){renderMainMenu();drawMainMenu();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
+ if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
   ['RESUME','CUSTOMISATION','REPLAY CAM:  '+['FAR','CLOSE','BASKET','DRONE'][RC],'MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText((on&&i==2?'◀  ':'')+t+(on&&i==2?'  ▶':''),480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · A/D or ←/→ change replay cam · K to close',480,462);g.fillText('Replay cam follows the scorer · graphics, ball trail and court live under CUSTOMISATION',480,486)}
@@ -3413,7 +3413,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  if(type==2){MM.drag=-1;MM.pd=-1;MM.hdr=null;return}
  const[x,y]=cpos(e);
  if(ONL_S.has(S)){onlPtr(x,y,type);return}
- if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
+ if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
  else if(S=='career'){for(let i=0;i<4;i++)if(mIn(x,y,mainRect(i))){MM.r=i;if(type==0)mainEnter();return}}
  else if(S=='playnow'){
   if(type==0&&mIn(x,y,PN_BACK)){pnBack();return}
@@ -4119,7 +4119,20 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.18'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.19'; // bump with every published update (shown top right of the main menu)
+// UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
+// asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
+// on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
+// page can't reach the website, so it never shows it: that one is updated in place.)
+const SITE='https://dashryerson-design.github.io/The-Hardwood-/',UPD_R=[300,8,360,30],verNum=v=>{const m=/^v(\d+)\.(\d+)/.exec(v||'');return m?+m[1]*1000+ +m[2]:0};let UPD=null;
+function updCheck(){try{fetch(SITE+'version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j.v=='string'&&verNum(j.v)>verNum(GAME_VER))UPD=j.v.slice(0,12)}).catch(()=>{})}catch(e){}}
+const onSite=()=>location.href.toLowerCase().startsWith(SITE.toLowerCase());
+function updGo(){if(onSite())location.replace(SITE+'?v='+encodeURIComponent(UPD));else window.open(SITE,'_blank')}
+function updDraw(){if(!UPD||MN.gate||MN.t<T_READY-.6)return;const[x,y,w,h]=UPD_R,pl=.5+.5*Math.sin(performance.now()/300);
+ mRR(x,y,w,h,15,'rgba(76,255,122,'+(.14+.1*pl)+')','#4cff7a');g.save();g.textAlign='center';g.font='bold 13px system-ui';g.fillStyle='#bfffd0';
+ g.fillText(onSite()?'⬆  NEW VERSION '+UPD+' IS OUT  ·  TAP TO UPDATE':'⬆  '+UPD+' IS OUT  ·  CLICK TO PLAY IT ON THE WEBSITE',x+w/2,y+20);g.restore()}
+setTimeout(updCheck,1500);setInterval(()=>{if(S=='menu'||S=='olob')updCheck()},120000);
+
 function drawMainMenu(){if(MN.gate){gateDraw();return}const t=MN.t,tm=TEAMS[MN.ti],te=t-T_HIT,clamp=mnC;
  const ui=clamp(0,1,(t-T_UI)/.9),ez=1-Math.pow(1-ui,3);
  if(ui>0){
