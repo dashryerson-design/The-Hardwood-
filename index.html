@@ -749,12 +749,12 @@ function dunkStep(p,dt){
   if(k.ta>=k.tA){
    k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(dd)dd.lock=0;
    {const bx=D>0?932:8,LD=DKS[k.sty].land,cy=LD&&LD.keep>=.9?LD.keep:.8;let vx=(k.cvx||0)*cy,vy=(k.cvy||0)*cy;const rm=Math.max(0,Math.abs(bx-p.x)-14)*1.7;if(vx*D>0&&Math.abs(vx)>rm)vx=Math.sign(vx)*rm;p.vx=vx;p.vy=vy} // sprint momentum carries through the slam (capped so you don't slide out past the baseline)
-   if(k.mk&&!k.lost){const jc=jumpCont(p,k.sty==4?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
-   if(k.lost){} // blocked on the way up (bkHit already sent the ball loose)
+   if(k.pv)SPV.slam=1;else if(k.mk&&!k.lost){const jc=jumpCont(p,k.sty==4?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
+   if(k.lost||k.pv){} // blocked on the way up (bkHit already sent the ball loose)
    else if(!k.mk)dunkMiss(p);
    else{p.hot=(p.hot||0)+1;shotAtt(p,false);shotMade(p,false);sc[off]+=2;crowdRoar();gpShot(off,'I',1);pstat(p).pts+=2;awardP(p,XP_DUNK,'DUNK');{const a=asstFor(p);if(a){pstat(a).ast++;awardP(a,XP_AST,'ASSIST')}}rimKick(p.team,1);shake=.7;netHit(p.team,1.5,D*40,0);say((off?TEAMS[TI[1]].n+': ':'')+(k.oop?OOP.names[k.sty]:DKS[k.sty].nm||['TOMAHAWK','WIDE TOMAHAWK','TWO-HAND SLAM','360 SPIN','POSTERIZED','LEANING TOMAHAWK'][k.sty])+' ('+k.ft+'-FOOT)! +2','#ffd23f');beep(120,.3,'sawtooth');B.x=H;B.y=HY;B.z=RZ;B.vx=B.vy=0;B.vz=-90;post('make',null,1-off)}
    if((k.sty==2||DKS[k.sty].hang)&&!k.lost&&k.mk){ // two-hand slam: grab the rim, hang and swing, momentum killed, then drop (handled by the p.hg step below)
-    p.hgk=DKS[k.sty].hang==1;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-D*(3.9+12.2*p.ht);p.hgy=HY;p.hfx=D;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;rimKick(p.team,1.4)}}
+    p.hgk=DKS[k.sty].hang==1;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-D*(3.9+12.2*p.ht);p.hgy=HY;p.hfx=D;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;if(!k.pv)rimKick(p.team,1.4)}}
   return}
  const LD=Object.assign({},DK_LAND,DKS[k.sty].land);k.pf+=dt;p.vz-=G*dt;p.z+=p.vz*dt;const e=Math.exp(-dt*LD.fd);mv(p.vx*e,p.vy*e);k.t=1;
  if(p.z<=0||k.age>6){const iv=Math.max(0,-p.vz);p.z=0;p.vz=0;p.air=0;p.pu=0;p.cr=LD.cr!=null?LD.cr:Math.min(.8,.2+iv/300);p.vx*=LD.keep;p.vy*=LD.keep;p.rec=LD.rec;p.rm=LD.rm;if(LD.sq){p.lsq=LD.sq;p.lsqd=LD.cr}p.dunk=null}
@@ -2465,7 +2465,7 @@ function starPose(p,gdt){const P=IN.pz,m=p.m,rdt=IN.rdt||.016,k=1-Math.exp(-6*rd
 function poseReset(P){const m=P.p.m;if(P.ap){m.aL.position.copy(P.ap[0]);m.aR.position.copy(P.ap[1])}m.aL.rotation.y=m.aR.rotation.y=0;m.head.rotation.set(0,0,0)}
 // Menu screens never show the court: the court scene is not rendered at all there - the 3D canvas is just cleared to black and each screen draws only its own 3D bits (lineup, player models, debut stage...).
 // (Customisation keeps the court behind its see-through panel as a live preview of the court / graphics settings.)
-const NO_COURT=new Set(['menu','career','archq','sigs','playnow','pnmode','slotact','create','look','rosters','rteam','cpos','cbio','ctrans','cteam','cconf','cdebut']);
+const NO_COURT=new Set(['store','menu','career','archq','sigs','playnow','pnmode','slotact','create','look','rosters','rteam','cpos','cbio','ctrans','cteam','cconf','cdebut']);
 function blankGL(){R.setRenderTarget(null);R.setScissorTest(false);R.setViewport(0,0,960,540);R.setClearColor(0x000000,1);R.clear()}
 function render(dt){
  const hb=(B.mode=='held'||B.mode=='inbound')?B.h:null;if(hb)hb.ct=ex(hb.ct||0,cont(hb),dt,10);
@@ -4119,7 +4119,7 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.17'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.18'; // bump with every published update (shown top right of the main menu)
 function drawMainMenu(){if(MN.gate){gateDraw();return}const t=MN.t,tm=TEAMS[MN.ti],te=t-T_HIT,clamp=mnC;
  const ui=clamp(0,1,(t-T_UI)/.9),ez=1-Math.pow(1-ui,3);
  if(ui>0){
@@ -4330,7 +4330,7 @@ const HL_CREATE=[
  {t:'HOW YOUR BODY SETS YOUR CAPS',tag:'TRADE-OFFS',d:'• Taller: higher dunking, interior defense, blocking, rebounding and strength caps, but lower speed, ball handle, perimeter defense and stealing.\n• Heavier: more strength, post moves, rebounding and interior defense, but less speed, perimeter defense, dunking, stealing and shooting.\n• Longer arms: better blocking, stealing, rebounding and defense, slightly worse shooting.\n• A body built for a skill can take it to 99: e.g. a guard under 6\'4" with short arms can reach 99 3PT and MID-RANGE, a 7-footer with long arms 99 DUNKING and BLOCKING.\nHeight, weight and arm length also matter on the court (reach, contact, blocks), not just for the caps.'},
  {t:'STEP 3: ATTRIBUTES',tag:'190 POINTS',d:'Every rating starts at 25 and you get 190 points to spread across the 14 attributes, never above each cap. Use ←/→ (Shift for bigger steps) or click / drag the bars.\nYour OVR goes up as you invest more of your possible points. Your ARCHETYPE (the kind of player you are, e.g. a slashing playmaker) is worked out automatically from where you put your points.\nSee the ATTRIBUTES page for what each rating does.'},
  {t:'APPEARANCE',tag:'LOOK',d:'From the attributes page, open APPEARANCE to choose a hair style (13 styles), hair colour (32), skin tone (24) and face (8). Drag the preview to spin your player around. You can change your look any time.'},
- {t:'STORE',tag:'ANIMATIONS',d:'From the attributes page, move to APPEARANCE and press \u2192 twice (or click STORE). It lists every animation your player can use, in four tabs: LAYUPS, DUNKS, PASSES and SHOTS (fadeaways).\n• The ones your ratings have unlocked can be switched ON or OFF; a switched-off animation is never used in your games, offline or online.\n• Locked ones show the rating they need (e.g. the 360 dunk needs DUNKING 85) and unlock as you upgrade.\n• Each tab keeps at least one ON (except fadeaways, which you can switch off completely).\n• Your choices are saved when you SAVE PLAYER.'},
+ {t:'STORE',tag:'ANIMATIONS',d:'From the attributes page, move to APPEARANCE and press \u2192 twice (or click STORE). It lists every animation your player can use, in four tabs: LAYUPS, DUNKS, PASSES and SHOTS (fadeaways). The tabs run along the top and that tab\'s animations down the left: hover over or click one and your own player performs it on loop in the PREVIEW to the right, so you can see exactly what it looks like (locked ones too).\n• The ones your ratings have unlocked can be switched ON or OFF; a switched-off animation is never used in your games, offline or online.\n• Locked ones show the rating they need (e.g. the 360 dunk needs DUNKING 85) and unlock as you upgrade.\n• Each tab keeps at least one ON (except fadeaways, which you can switch off completely).\n• Your choices are saved when you SAVE PLAYER.'},
  {t:'SIGNATURES',tag:'BADGES',d:'From the attributes page, move to APPEARANCE and press → to switch to SIGNATURES. Your ratings unlock Bronze, Silver and Gold tiers, and you spend each category\'s Signature Points to equip them. See the SIGNATURES page for every one.'},
  {t:'STEP 4: PICK YOUR TEAM',tag:'SIGNING',d:'Press SAVE PLAYER, then choose which of the 6 teams to sign with. Each team card shows its lineup with you in it. Confirm with YES and you replace that team\'s starter at your position. Your team can\'t be changed afterwards.\nYou then get your debut: a welcome card for your new team.'},
  {t:'LEVELS AND EXP',tag:'PROGRESSION',d:'You earn EXP for what your created player does in a career game: steals, layups, mid-range shots, threes, dunks, rebounds and assists. Finishing the whole game adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1); leaving early keeps your EXP but loses the bonus.\n• No EXP is earned in Play Now or online.\n• There are 25 levels. Each level-up gives attribute points (15 at the first and more every level after).\n• Each level also gives more Signature Points in every category.'},
@@ -4413,7 +4413,7 @@ const DUNK_W={0:.15,1:.25,2:.25,3:.25,5:.1,9:.22,10:.2,11:.22,12:.2,13:.22,14:.2
 function dunkPick(p,dn){const L=[];let tot=0;for(const v of DUNKV){if(v.sty==4||DKS[v.sty].oop||dn<v.req||!animOn(p,'dnk:'+v.sty))continue;L.push(v.sty);tot+=DUNK_W[v.sty]}
  if(!L.length)return 0;let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
 // ---- the screen
-function openStore(){MM.st={tab:0,sel:0,sc:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';beep(520,.06,'triangle')}
+function openStore(){MM.st={tab:0,sel:0,sc:0,msg:'',mt:0,hov:null};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 function storeBack(){S='create';MM.row=5;MM.apS=2;for(const k in P)P[k]=0}
 const stHave=(it,at)=>((MM.cr.st&&MM.cr.st[at])||25)>=it.req;
 function storeToggle(i){const T=STORE_T[MM.st.tab],L=T.items(),it=L[i];if(!it)return;const off=MM.cr.anim.off,isOff=off.includes(it.k);
@@ -4422,34 +4422,136 @@ function storeToggle(i){const T=STORE_T[MM.st.tab],L=T.items(),it=L[i];if(!it)re
  else{off.splice(off.indexOf(it.k),1);beep(620,.06,'triangle')}}
 const statLbl=a=>((STATS.find(z=>z[0]==a)||[a,a])[1]).replace('LAYUP / CLOSE SHOT','LAYUP');
 function storeMsg(s){MM.st.msg=s;MM.st.mt=2;beep(160,.08,'square')}
-const STB=i=>[40+i*222,92,206,40],STROW=i=>[40,148+i*41,880,37],ST_N=8;
+// ===== STORE PREVIEW: the selected (or hovered) animation, played on loop by YOUR player on a little half court to the right of the list. It runs the
+// game's own animation code - dunkStep (with k.pv: no score, no sound, no defenders), layStep, passPose, the jump shot - on a stand-alone copy of the
+// player that is never part of a game (not in TM, never the ball handler). Side-on camera; the rim is where the game's is (x 88.8 ft, 10 ft up).
+const SPV={sc:null,cam:null,p:null,q:null,ball:null,key:'',t:0,lt:0,bf:null,done:0,slam:0},SPV_R=[352,148,568,300],SPV_H=888;
+function spvInit(){if(SPV.sc)return;const s=new THREE.Scene();s.background=new THREE.Color(0x141821);s.add(new THREE.AmbientLight(0xffffff,.82));
+ {const l=new THREE.DirectionalLight(0xffffff,.7);l.position.set(60,40,80);s.add(l)}
+ const box=(w,h,d,c,x,y,z,o)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial(Object.assign({color:c},o||{})));m.position.set(x,y,z);s.add(m);return m};
+ {const f=new THREE.Mesh(new THREE.PlaneGeometry(240,200),new THREE.MeshLambertMaterial({color:0x7a5532}));f.rotation.x=-Math.PI/2;f.position.set(70,0,-30);s.add(f)} // floor
+ {const k=new THREE.Mesh(new THREE.PlaneGeometry(19,16),new THREE.MeshLambertMaterial({color:0x8c2f2f}));k.rotation.x=-Math.PI/2;k.position.set(84.5,.01,32);s.add(k)} // the key
+ box(.25,.02,50,0xffffff,94,.02,32);box(.25,.02,16,0xffffff,75,.02,32); // baseline, free-throw line
+ box(.12,3.5,6,0xffffff,90.1,11.25,32,{transparent:true,opacity:.55});box(.14,1.5,2,0xffffff,90.04,10.75,32,{transparent:true,opacity:.35}); // backboard + square
+ box(.5,13,.5,0x30343f,97,6.5,32);box(7,.35,.35,0x30343f,93.6,12.4,32); // pole + arm
+ {const r=new THREE.Mesh(new THREE.TorusGeometry(.75,.06,8,28),new THREE.MeshLambertMaterial({color:0xff6a1a}));r.rotation.x=Math.PI/2;r.position.set(88.8,10,32);s.add(r)}
+ {const n=new THREE.Mesh(new THREE.CylinderGeometry(.75,.45,1.5,14,2,true),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:.55}));n.position.set(88.8,9.25,32);s.add(n)}
+ SPV.ball=new THREE.Mesh(ballM.geometry,ballM.material);s.add(SPV.ball);
+ SPV.sc=s;SPV.cam=new THREE.PerspectiveCamera(30,SPV_R[2]/SPV_R[3],.5,300)}
+// your player as the editor has him (look, height, weight, wingspan, ratings - the ratings set his jump and run like in a game), plus a teammate for the passes
+function spvBuild(){spvInit();const d=MM.cr;for(const o of [SPV.p,SPV.q])if(o){SPV.sc.remove(o.m);o.m.traverse(x=>{if(x.geometry&&x!==SPV.ball)x.geometry.dispose()})}
+ const p=mk(0,d.pos|0);Object.assign(p,{sk:d.sk,hs:d.hs,hc:d.hc,bt:btOfBuild(d),fc:fcOfBuild(d),tm:d.tm!=null?d.tm:0,rt:Object.assign({},d.st),build:d,sig:null});p.ht=htOf(d.h||74);
+ build(p);SPV.sc.add(p.m);{const w=1+((d.wt||215)-215)/(W_MAX-W_MIN)*.08,a=mClamp((d.ws||(d.h||74)+4)/((d.h||74)+4),.88,1.14);p.m.scale.set(p.ht*w,p.ht,p.ht*w);p.m.aL.scale.y=p.m.aR.scale.y=a}
+ const q=mk(0,((d.pos|0)+2)%5);q.tm=p.tm;build(q);q.m.scale.set(q.ht,q.ht,q.ht);SPV.sc.add(q.m);SPV.p=p;SPV.q=q;SPV.key=''}
+function spvReset(o,x,y,ang){Object.assign(o,{x,y,vx:0,vy:0,z:0,vz:0,air:0,jph:0,cr:0,pu:0,dunk:null,lay:null,ps:null,sj:0,fdk:0,fdp:0,hg:0,hgk:0,stun:0,pst:0,grd:0,bm:null,fire:null,lyw:0,rec:0,lsq:0,avx:0,avy:0,gs:1,spr:0,rch:0,jump:0,spin:0});
+ o.fx=Math.sin(ang);o.fy=Math.cos(ang);o.ang=ang}
+// (re)start the clip for store item key k ('dnk:7', 'lay:2', 'pas:bounce', 'sht:fade')
+function spvStart(k){const p=SPV.p,q=SPV.q,[c,v]=k.split(':');SPV.key=k;SPV.lob=null;SPV.t=0;SPV.done=0;SPV.bf=null;SPV.slam=0;SPV.c=c;SPV.v=v;q.m.visible=c=='pas';
+ if(c=='dnk'){const sty=+v,st=DKS[sty]||DKS[0];spvReset(p,SPV_H-230,HY+12,Math.PI/2);p.vx=150;SPV.sty=sty;SPV.ph='run'}
+ else if(c=='lay'){const L=LAYV[+v]||LAYV[0];spvReset(p,SPV_H-230,HY+(L.rv?70:22),Math.PI/2);p.vx=150;p.vy=L.rv?-14:-4;SPV.ph='run'}
+ else if(c=='pas'){const mv=v=='one'||v=='btb';spvReset(p,mv?SPV_H-200:SPV_H-170,HY,Math.PI/2);if(mv)p.vx=95;spvReset(q,v=='btb'?SPV_H-60:SPV_H-20,v=='btb'?HY-110:HY,v=='btb'?0:-Math.PI/2);q.m.visible=true;SPV.ph='set'}
+ else{const post=v=='pfade';spvReset(p,post?SPV_H-115:SPV_H-140,HY,post?-Math.PI/2:Math.PI/2);if(!post)p.vx=-55;p.pst=post?.9:0;SPV.ph='set'}}
+function spvDunkK(p,sty){const st=DKS[sty]||DKS[0],ft=st.ft||(sty==2||sty==5||sty==6?2:1),k={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i]||.8,
+ ft,dm:ft==1?.62:.85,cmax:(ft==1?.55:.32)*(st.cm||1),cmin:ft==1?.15:.1,vt:ft==1?172:128,blk:false,mk:true,by:null,hit:0,sty,hang:false,hzb:st.hz||0,pv:1};
+ if(st.oop)Object.assign(k,{oop:1,cf:st.cf,caught:0});return k}
+const _SVA=new THREE.Vector3(),_SVB=new THREE.Vector3();
+function spvHand(p,right,out){p.m.updateMatrixWorld(true);(right?p.m.aL:p.m.aR).h.getWorldPosition(out);return out}
+function spvFly(from,to,dur,arc,bounce){SPV.bf={a:from.clone(),b:to.clone(),t:0,dur,arc,bounce}}
+function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
+ for(const k of['rec','lsq'])p[k]=Math.max(0,(p[k]||0)-dt);
+ // ---- the clip
+ if(c=='dnk'){
+  if(SPV.ph=='run'){p.x+=p.vx*dt;if(H-p.x<=140){p.dunk=spvDunkK(p,SPV.sty);SPV.ph='dunk'}}
+  else if(SPV.ph=='dunk'){if(p.dunk){const k=p.dunk;dunkStep(p,dt);if(k.oop&&!k.caught&&k.ph>=3&&k.ta>=k.cf*k.tA)k.caught=1;if(SPV.slam==1){SPV.slam=2;SPV.bf={drop:1,v:new THREE.Vector3(.6,-9,0)};SPV.ball.position.set(88.8,9.7,32)}}
+   else if(p.hg>0){p.hg-=dt;p.x+=(p.hgx-p.x)*Math.min(1,dt*10);p.z+=(p.lz-p.z)*Math.min(1,dt*14);if(p.hg<=0){p.hg=0;p.air=1;p.vz=0;p.avx=p.avy=0;p.gs=1}}
+   else{if(p.air)vert(p,dt);else{vert(p,dt);p.x+=p.vx*dt;p.vx*=Math.exp(-dt*3);SPV.done+=dt}}}}
+ else if(c=='lay'){
+  if(SPV.ph=='run'){p.x+=p.vx*dt;p.y+=p.vy*dt;if(Math.hypot(H-p.x,HY-p.y)<=105){const vi=+SPV.v,v=LAYV[vi]||LAYV[0],dx=H-p.x,d=Math.hypot(dx,HY-p.y),a=Math.max(-1.1,Math.min(1.1,Math.atan2(p.y-HY,Math.max(dx,1)))),
+    vz=Math.sqrt(2*G*v.hop),tg=v.tg,tl=v.tl||LAY.tl,tp=v.tp||LAY.tp,M=a<-.12?1:0;
+   p.lay={t:0,v:vi,M,tg,tl,tp,tr:tg+tl+tp+v.rf*vz/G,vz,a,rd:v.far?Math.min(70,Math.max(40,d*.8)):Math.min(LAY.rel,Math.max(10,d*.85)),bank:!!v.bank,up:0,rv:v.rv||0,rs:-Math.sign(p.y-HY||1),es:M?-1:1,hm:0};p.lay.tr0=p.lay.tr;
+   if(p.lay.rv){const L=p.lay,dR=Math.atan2(-2,L.rs*34)+layOfs(L)-(L.ha0=Math.atan2(H-p.x,HY-p.y)),sh=Math.atan2(Math.sin(dR),Math.cos(dR));L.dR=L.rv==2?sh-Math.sign(sh||1)*2*Math.PI:sh}SPV.ph='lay'}}
+  else if(SPV.ph=='lay'){const L=p.lay;if(L){const was=L.t<L.tr;layStep(p,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.lay&&was&&L.t>=L.tr){const a=SPV.ball.position.clone(),v=LAYV[L.v]||LAYV[0];spvFly(a,new THREE.Vector3(88.8,10.3,32),v.dur||.55,v.bank?2:3.5)}
+    else if(!p.lay&&!SPV.bf){const a=SPV.ball.position.clone();spvFly(a,new THREE.Vector3(88.8,10.3,32),.45,3)}}
+   else{vert(p,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.exp(-dt*3);p.vy*=Math.exp(-dt*3);SPV.done+=dt}}}
+ else if(c=='pas'){const ty=SPV.v,P=PASS_T[ty]||PASS_T.chest;p.x+=p.vx*dt;
+  if(SPV.ph=='set'&&SPV.t>=.45){p.ps={ty,k:ty=='btb'?-1:1,t:0,wu:P.wu,d:P.wu+.38,go:0,fa:null};SPV.ph='wind'}
+  else if(SPV.ph=='wind'){const ps=p.ps;ps.t+=dt;if(!ps.go&&ps.t>=ps.wu){ps.go=1;const a=SPV.ball.position.clone(),b=spvHand(q,1,_SVB).clone();b.y+=.2;
+    const L=Math.hypot(q.x-p.x,q.y-p.y);spvFly(a,b,Math.max(.16,L/(480+L*.5)/(P.sp||1)),ty=='over'||ty=='base'?Math.max(1.5,(P.zc||60)/10-5):.4,ty=='bounce')}
+   if(ps.t>=ps.d){p.ps=null;SPV.ph='after'}}
+  else if(SPV.ph=='after'){p.vx*=Math.exp(-dt*3);SPV.done+=dt}}
+ else if(c=='sht'){const post=SPV.v=='pfade';
+  if(SPV.ph=='set'){p.x+=p.vx*dt;if(SPV.t>=(post?.55:.4)){p.vx=0;p.pst=0;p.fdk=1;p.fdp=post?1:0;if(post){p.ang=Math.PI/2;p.fx=1;p.fy=0}
+    const hs=9.5*FADE.jump,vz=Math.sqrt(2*G*hs);p.jvz=vz;p.jdm=.5;p.jtp=pushT(p);p.c0=p.cr;p.jld=.08;p.jt=0;p.jph=1;const tf=p.jld+p.jtp+vz/G;p.sjm=tf;p.sjp=.26;p.sj=tf+.26;SPV.rel=tf;SPV.ph='shot';SPV.st=0}}
+  else if(SPV.ph=='shot'){SPV.st+=dt;p.sj=Math.max(0,p.sj-dt);vert(p,dt);if(p.air){p.x+=p.avx*dt;p.y+=p.avy*dt}
+   if(SPV.rel!=null&&SPV.st>=SPV.rel){SPV.rel=null;const a=SPV.ball.position.clone(),d=Math.abs(H-p.x);spvFly(a,new THREE.Vector3(88.8,10.3,32),.7+d/500,4.5)}
+   if(!p.air&&!p.jph&&SPV.st>.3)SPV.done+=dt}}
+ // ---- the ball: in his hands / dribbled until it is let go, then its own flight, then dropping through the net and bouncing
+ const bm=SPV.ball,bf=SPV.bf;
+ if(bf&&bf.drop){bf.v.y-=33*dt;bm.position.addScaledVector(bf.v,dt);if(bm.position.y<.4){bm.position.y=.4;bf.v.y=Math.abs(bf.v.y)*.55;bf.v.x*=.8}}
+ else if(bf){bf.t+=dt;const u=Math.min(1,bf.t/bf.dur);
+  if(bf.bounce){const s=.6,p1=bf.a.clone().lerp(bf.b,s);p1.y=.4;if(u<s){bm.position.copy(bf.a).lerp(p1,u/s)}else bm.position.copy(p1).lerp(bf.b,(u-s)/(1-s))}
+  else{bm.position.copy(bf.a).lerp(bf.b,u);bm.position.y+=bf.arc*4*u*(1-u)}
+  if(u>=1){if(c=='pas'){bf.stick=1}else SPV.bf={drop:1,v:new THREE.Vector3(.4,-7,0)}}
+  if(bf.stick)bm.position.copy(spvHand(q,1,_SVA)).add(_SVB.set(0,.15,0))}
+ else{let pl=null;
+  if(c=='dnk'&&p.dunk&&(p.dunk.ph>=1||p.dunk.g>0)&&!(p.dunk.oop&&!p.dunk.caught)){const k=p.dunk,a=spvHand(p,!k.mir,_SVA);const sw=dkSep(k);if(sw<1){const b=spvHand(p,!!k.mir,_SVB);b.add(a).multiplyScalar(.5);b.y+=.3;a.lerp(b,1-sw)}
+   const w=sm3(Math.max(0,Math.min(1,(Math.min(1,k.t)-.86)/.14)));a.x+=(88.8-a.x)*w;a.y+=(10.1-a.y)*w;a.z+=(32-a.z)*w;const gb=k.g!=null?sm3(k.g):1;pl=a.clone();if(gb<1){const dr_=spvHand(p,1,_SVB).clone();dr_.y=Math.max(.4,dr_.y-1.6*Math.abs(Math.sin(SPV.t*9)));pl=dr_.lerp(a,gb)}}
+  else if(c=='dnk'&&p.dunk&&p.dunk.oop&&!p.dunk.caught){const k=p.dunk,h=spvHand(p,1,_SVA),rem=k.ph>=3?Math.max(.02,k.cf*k.tA-k.ta):9;if(!SPV.lob)SPV.lob=new THREE.Vector3(76,15,26);if(k.ph>=3)SPV.lob.lerp(h,Math.min(1,dt/rem));pl=SPV.lob.clone()}
+  else if(c=='lay'&&p.lay){const L=p.lay,v=LAYV[L.v]||LAYV[0],tau=layTau(p,L),one=tau>=(v.sp?v.sp[0]:3.3),a=spvHand(p,!L.M,_SVA);if(!one){const b=spvHand(p,!!L.M,_SVB);a.add(b).multiplyScalar(.5);a.y+=.25}pl=a.clone()}
+  else if(c=='pas'&&p.ps&&passHand(p,_SVA))pl=_SVA.clone();
+  else if(c=='sht'&&(SPV.ph=='shot'||SPV.ph=='set')&&(SPV.ph=='shot'||!SPV.v||SPV.v=='fade')){const a=spvHand(p,1,_SVA),b=spvHand(p,0,_SVB);a.add(b).multiplyScalar(.5);a.y+=.35;pl=a.clone()}
+  else if(SPV.ph!='after'&&!SPV.done){const h=spvHand(p,1,_SVA).clone();h.y=Math.max(.4,h.y-1.7*Math.abs(Math.sin(SPV.t*8.5)));pl=h} // dribbling
+  if(pl)bm.position.copy(pl)}
+ if(SPV.done>1.1||SPV.t>9)spvStart(SPV.key)} // loop
+// one frame of the preview into the panel: step, pose (the game's pose()), place, render (scissored into SPV_R, the 2D UI is cleared there)
+function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=performance.now(),dt=Math.min(.033,(now-(SPV.lt||now))/1000)||.016;SPV.lt=now;
+ spvStep(dt);for(const o of [SPV.p,SPV.q]){if(o===SPV.q&&!o.m.visible)continue;
+  if(o===SPV.p){let tg=Math.atan2(o.fx,o.fy);if(SPV.c=='sht'&&SPV.ph=='set'&&SPV.v=='pfade')tg=-Math.PI/2;let da=tg-o.ang;da=Math.atan2(Math.sin(da),Math.cos(da));o.ang+=da*(1-Math.exp(-14*dt))}
+  const d0=o.dunk,sp3=d0&&d0.sty==3?sm3(Math.max(0,Math.min(1,(d0.t-d0.f0)/((1-d0.f0)*.8))))*2*Math.PI:0;
+  o.lyw=ex(o.lyw||0,d0?dkYaw(o,d0):o.lay?layYaw(o,o.lay):0,dt,o.lay&&o.lay.rv?(o.lay.rv==2?60:22):14);
+  o.m.position.set(o.x/10,o.z/10,o.y/10);o.m.rotation.y=o.ang+sp3+o.lyw;pose(o,dt)}
+ const cam=SPV.cam,cx=SPV.c=='pas'?81:SPV.c=='sht'?78:79;cam.position.set(cx-1.5,7.2,32+27);cam.lookAt(cx+.5,6.3,32);
+ const[x,y,w,h]=SPV_R;R.setScissorTest(true);R.setViewport(x,540-y-h,w,h);R.setScissor(x,540-y-h,w,h);R.render(SPV.sc,cam);R.setScissorTest(false);R.setViewport(0,0,960,540)}
+// ---- the screen: categories along the top, that category's animations down the left (each with its ON / OFF switch), and the PREVIEW on the right:
+// whatever row the mouse is over (or else the selected one) is played on loop by your player, with its name and description under it
+const STB=i=>[40+i*222,92,206,40],STROW=i=>[40,148+i*41,296,37],ST_N=8,STOG=r=>[r[0]+r[2]-66,r[1]+8,58,21];
 function storeStep(dt){const st=MM.st,L=STORE_T[st.tab].items();st.mt=Math.max(0,st.mt-dt);
- const lr=(P.ArrowRight||P.KeyD||P.KeyE||P.Tab?1:0)-(P.ArrowLeft||P.KeyA||P.KeyQ?1:0);if(lr){st.tab=(st.tab+lr+STORE_T.length)%STORE_T.length;st.sel=0;st.sc=0}
- if(P.ArrowDown||P.KeyS)st.sel=Math.min(L.length-1,st.sel+1);if(P.ArrowUp||P.KeyW)st.sel=Math.max(0,st.sel-1);
+ const lr=(P.ArrowRight||P.KeyD||P.KeyE||P.Tab?1:0)-(P.ArrowLeft||P.KeyA||P.KeyQ?1:0);if(lr){st.tab=(st.tab+lr+STORE_T.length)%STORE_T.length;st.sel=0;st.sc=0;st.hov=null}
+ if(P.ArrowDown||P.KeyS){st.sel=Math.min(L.length-1,st.sel+1);st.hov=null}if(P.ArrowUp||P.KeyW){st.sel=Math.max(0,st.sel-1);st.hov=null}
  st.sc=Math.max(0,Math.min(st.sc||0,STORE_T[st.tab].items().length-ST_N));if(st.sel<st.sc)st.sc=st.sel;if(st.sel>=st.sc+ST_N)st.sc=st.sel-ST_N+1; // keep the selection in view
  if(P.Enter||P.Space)storeToggle(st.sel);if(P.Escape||P.Backspace)storeBack()}
-function storePtr(x,y,type){if(type!=0)return;const st=MM.st;if(mIn(x,y,RO_BACK)){storeBack();return}
- for(let i=0;i<STORE_T.length;i++)if(mIn(x,y,STB(i))){st.tab=i;st.sel=0;st.sc=0;return}
- const L=STORE_T[st.tab].items(),o=st.sc||0;for(let i=0;i<Math.min(L.length-o,ST_N);i++)if(mIn(x,y,STROW(i))){st.sel=o+i;storeToggle(o+i);return}}
+function storePtr(x,y,type){const st=MM.st,L=STORE_T[st.tab].items(),o=st.sc||0;let hv=null;for(let i=0;i<Math.min(L.length-o,ST_N);i++)if(mIn(x,y,STROW(i)))hv=o+i;
+ if(type==1){st.hov=hv;return}if(type!=0)return; // hovering a row previews it
+ if(mIn(x,y,RO_BACK)){storeBack();return}
+ for(let i=0;i<STORE_T.length;i++)if(mIn(x,y,STB(i))){st.tab=i;st.sel=0;st.sc=0;st.hov=null;return}
+ if(hv!=null){st.sel=hv;if(mIn(x,y,STOG(STROW(hv-o))))storeToggle(hv)}} // clicking a row selects it (and keeps it in the preview); clicking its switch turns it ON / OFF
 function drawStore(){const st=MM.st,d=MM.cr,T=STORE_T[st.tab],L=T.items(),off=d.anim.off;
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 30px Georgia';g.fillText('STORE',40,48);
- g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(d.name+'  ·  '+POS[d.pos]+'  ·  switch the animations your player uses ON or OFF  ·  locked ones unlock as your ratings go up',40,72);
+ g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(d.name+'  ·  '+POS[d.pos]+'  ·  hover over or click an animation to watch it  ·  switch the ones you have ON or OFF  ·  locked ones unlock as your ratings go up',40,72);
  STORE_T.forEach((t,i)=>{const[x,y,w,h]=STB(i),on=st.tab==i,its=t.items(),n=its.filter(it=>stHave(it,t.at)&&!off.includes(it.k)).length;
   mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?GOLD:'rgba(255,255,255,.12)');g.textAlign='left';g.font='bold 15px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(t.n,x+14,y+25);
   g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=on?GOLD:'#8a90a0';g.fillText(n+' / '+its.length+' ON',x+w-12,y+25)});
- const o=st.sc||0;if(L.length>ST_N){const[x0,y0]=STROW(0),hh=ST_N*41-4,bh=hh*ST_N/L.length;mRR(926,y0,5,hh,2.5,'rgba(255,255,255,.08)');mRR(926,y0+(hh-bh)*o/(L.length-ST_N),5,bh,2.5,GOLD); // scroll bar
-  g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText((o>0?'▲ ':'')+(o+1)+'-'+Math.min(L.length,o+ST_N)+' of '+L.length+(o+ST_N<L.length?' ▼':'')+'  ·  scroll / arrows',920,140)}
- L.slice(o,o+ST_N).forEach((it,i)=>{const[x,y,w,h]=STROW(i),sel=st.sel==o+i,have=stHave(it,T.at),isOn=have&&!off.includes(it.k);
-  mRR(x,y,w,h,8,sel?'rgba(40,32,8,.9)':'rgba(255,255,255,.04)',sel?GOLD:'rgba(255,255,255,.08)');
-  g.textAlign='left';{let fz=15;g.font='bold '+fz+'px Georgia';while(g.measureText(it.n).width>232&&fz>10){fz-=.5;g.font='bold '+fz+'px Georgia'}}g.fillStyle=have?'#fff':'#6a7080';g.fillText(it.n,x+16,y+24);
-  g.font='12px system-ui';g.fillStyle=have?'#9aa3b4':'#5a6070';{let s=it.d;while(g.measureText(s).width>520&&s.length>4)s=s.slice(0,-2);g.fillText(s+(s!==it.d?'…':''),x+260,y+23)}
-  const bx=x+w-118,by=y+7;
-  if(!have){mRR(bx,by,104,23,11,'rgba(255,90,90,.12)','rgba(255,120,120,.5)');g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle='#ff9a9a';g.fillText('🔒 '+statLbl(T.at)+' '+it.req,bx+52,by+16)}
-  else{mRR(bx,by,104,23,11,isOn?'rgba(76,255,122,.2)':'rgba(255,255,255,.06)',isOn?'#4cff7a':'rgba(255,255,255,.25)');const kx=isOn?bx+104-20:bx+4;mRR(kx,by+3,17,17,8.5,isOn?'#4cff7a':'#6a7080');
-   g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle=isOn?'#7fffa0':'#9aa';g.fillText(isOn?'ON':'OFF',isOn?bx+40:bx+62,by+16)}});
- if(st.mt>0){g.textAlign='center';g.font='bold 15px system-ui';g.fillStyle='#ff7b7b';g.fillText(st.msg,480,486)}
+ const o=st.sc||0;if(L.length>ST_N){const[x0,y0]=STROW(0),hh=ST_N*41-4,bh=hh*ST_N/L.length;mRR(341,y0,4,hh,2,'rgba(255,255,255,.08)');mRR(341,y0+(hh-bh)*o/(L.length-ST_N),4,bh,2,GOLD); // scroll bar
+  g.textAlign='right';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText((o>0?'▲ ':'')+(o+1)+'-'+Math.min(L.length,o+ST_N)+' of '+L.length+(o+ST_N<L.length?' ▼':'')+'  ·  scroll',336,141)}
+ const pv=st.hov!=null&&L[st.hov]?st.hov:st.sel;
+ L.slice(o,o+ST_N).forEach((it,i)=>{const r=STROW(i),[x,y,w,h]=r,j=o+i,sel=st.sel==j,hov=pv==j,have=stHave(it,T.at),isOn=have&&!off.includes(it.k);
+  mRR(x,y,w,h,8,sel?'rgba(40,32,8,.9)':hov?'rgba(255,255,255,.09)':'rgba(255,255,255,.04)',sel?GOLD:hov?'rgba(255,210,63,.45)':'rgba(255,255,255,.08)');
+  g.textAlign='left';{let fz=14;g.font='bold '+fz+'px Georgia';while(g.measureText(it.n).width>212&&fz>9){fz-=.5;g.font='bold '+fz+'px Georgia'}}g.fillStyle=have?'#fff':'#6a7080';g.fillText(it.n,x+12,y+23);
+  if(hov){g.fillStyle=GOLD;g.font='10px system-ui';g.fillText('▶',x+w-80,y+23)}
+  const[bx,by,bw,bh]=STOG(r);
+  if(!have){mRR(bx,by,bw,bh,10,'rgba(255,90,90,.12)','rgba(255,120,120,.5)');g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle='#ff9a9a';g.fillText('🔒 '+it.req,bx+bw/2,by+15)}
+  else{mRR(bx,by,bw,bh,10,isOn?'rgba(76,255,122,.2)':'rgba(255,255,255,.06)',isOn?'#4cff7a':'rgba(255,255,255,.25)');const kx=isOn?bx+bw-18:bx+3;mRR(kx,by+3,15,15,7.5,isOn?'#4cff7a':'#6a7080');
+   g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle=isOn?'#7fffa0':'#9aa';g.fillText(isOn?'ON':'OFF',isOn?bx+22:bx+37,by+15)}});
+ // the preview panel (the 3D stage is drawn into it, see STORE PREVIEW) and the caption under it
+ const it=L[pv],[px,py,pw,ph]=SPV_R;mRR(px-3,py-3,pw+6,ph+6,10,'rgba(255,255,255,.03)','rgba(255,255,255,.14)');
+ if(it){g.clearRect(px,py,pw,ph);spvFrame(it.k);const have=stHave(it,T.at),isOn=have&&!off.includes(it.k);
+  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='rgba(255,255,255,.7)';g.fillText('▶  PREVIEW',px+10,py+18);
+  g.font='bold 20px Georgia';g.fillStyle='#fff';g.fillText(it.n,px,py+ph+26);
+  g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=!have?'#ff9a9a':isOn?'#7fffa0':'#9aa';g.fillText(!have?'🔒 LOCKED  ·  NEEDS '+statLbl(T.at)+' '+it.req:isOn?'● ON  ·  your player uses it':'○ OFF  ·  your player won\'t use it',px+pw,py+ph+24);
+  g.textAlign='left';g.font='12px system-ui';g.fillStyle='#9aa3b4';{let s=it.d||'';while(g.measureText(s).width>pw&&s.length>4)s=s.slice(0,-2);g.fillText(s+(s!==(it.d||'')?'…':''),px,py+ph+44)}}
+ if(st.mt>0){g.textAlign='center';g.font='bold 14px system-ui';const tw_=g.measureText(st.msg).width+28;mRR(px+pw/2-tw_/2,py+10,tw_,26,13,'rgba(20,10,10,.85)','rgba(255,120,120,.6)');g.fillStyle='#ff9a9a';g.fillText(st.msg,px+pw/2,py+28)}
  mRR(RO_BACK[0],RO_BACK[1],RO_BACK[2],RO_BACK[3],8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('DONE',RO_BACK[0]+RO_BACK[2]/2,RO_BACK[1]+22);
- g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('←/→ tab  ·  ↑/↓ choose  ·  Enter switch on / off  ·  Esc done  ·  or click  ·  saved when you SAVE PLAYER',540,518)}
+ g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('←/→ tab  ·  ↑/↓ choose  ·  Enter switch on / off  ·  Esc done  ·  saved when you SAVE PLAYER',600,524)}
 function drawMenus(){
  if(S=='cust'){drawCust();return}
  g.fillStyle='#000';g.fillRect(0,0,960,540);
