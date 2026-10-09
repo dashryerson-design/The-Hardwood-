@@ -741,8 +741,10 @@ function dunkStep(p,dt){
   mv(p.vx+(ux*vt-p.vx)*a,p.vy+(uy*vt-p.vy)*a);
   const nx=Tx-p.x,ny=Ty-p.y,nd=Math.hypot(nx,ny)||1,v2=(p.vx*nx+p.vy*ny)/nd,q=dunkPlan(k,v2,nd);
   {const vv=Math.max(v2,40),dT=k.cmax*vv*(q.tl/2+q.tp+q.tA)+q.tl*vv/2;k.pre=Math.max(k.pre||0,Math.min(1,1-(nd-dT)/vv/.3))} // the last ~0.3s before the plant (penultimate step): pose gathers the ball and sinks the hips
-  // plant: the foot that is coming down in his stride takes off (left foot = right-hand dunk, the canonical pose; right foot = mirrored, left hand)
-  if((v2>20&&q.conv<=k.cmax)||nd<5||(v2<=20&&nd<14)||k.age>2.4){k.mir=k.sty==5||DKS[k.sty].oop?0:Math.sin(p.ph||0)>0?0:1;Object.assign(k,{cvx:p.vx,cvy:p.vy,ph:1,pt:0,vr0:Math.max(v2,0),vh:q.vh,vz:q.vz,tA:q.tA,tl:q.tl,tp:q.tp});k.ex=Math.max(0,Math.min(1,(nd-40)/80));k.dm*=1-.3*k.ex;if(v2<=20)k.vh=Math.min(k.vh,30)}
+  // EVERY dunk is right-handed off the LEFT foot (the canonical pose). Over the last ~0.3 s (the penultimate step) his stride is nudged - a touch quicker or
+  // slower, like a real gather step - so it is the left foot that comes down on the plant (sin(ph) > 0 = the left foot landing)
+  if(k.pre>0&&k.lph!=null&&dt>0){const rate=(p.ph-k.lph)/dt;if(rate>1){const tpl=Math.max(dt,(1-k.pre)*.3),pr=p.ph+rate*tpl,e=Math.atan2(Math.sin(Math.PI/2-pr),Math.cos(Math.PI/2-pr));p.ph+=e*Math.min(1,dt/tpl)*.9}}k.lph=p.ph;
+  if((v2>20&&q.conv<=k.cmax)||nd<5||(v2<=20&&nd<14)||k.age>2.4){k.mir=0;Object.assign(k,{cvx:p.vx,cvy:p.vy,ph:1,pt:0,vr0:Math.max(v2,0),vh:q.vh,vz:q.vz,tA:q.tA,tl:q.tl,tp:q.tp});k.ex=Math.max(0,Math.min(1,(nd-40)/80));k.dm*=1-.3*k.ex;if(v2<=20)k.vh=Math.min(k.vh,30)}
   return}
  const ex0=Tx-p.x,ey0=Ty-p.y,nd=Math.hypot(ex0,ey0)||1,ux=ex0/nd,uy=ey0/nd;
  if(k.ph==1){k.pt=Math.min(1,k.pt+dt/k.tl);const u=k.pt;mv(ux*(k.vr0+(k.vh-k.vr0)*u),uy*(k.vr0+(k.vh-k.vr0)*u));p.cr=k.dm*sm3(u);p.fx=ux;p.fy=uy;k.t=.12*u;if(u>=1){k.ph=2;k.pt=0}return}
@@ -811,7 +813,7 @@ function layRel(p,L,tm){const e=tm-1,ae=Math.abs(e),w=layW(p,L,cont(p));let q,tx
 function startLayup(p){
  const H=hx(p.team),D=dr(p.team),dx=(H-p.x)*D,d=Math.hypot(H-p.x,HY-p.y),a=Math.max(-1.1,Math.min(1.1,Math.atan2(p.y-HY,Math.max(dx,1)))),vi=layPick(p,d,a),v=LAYV[vi],vz=Math.sqrt(2*G*v.hop);
  p.burst=0;p.pause=0;p.spin=0;p.sd=0;p.bm=null;p.pst=0;p.cr=0;
- const tg=v.tg,tl=v.tl||LAY.tl,tp=v.tp||LAY.tp,M=a*D<-.12?1:0; // M: attacking the left side of the rim -> left hand, off the right foot
+ const tg=v.tg,tl=v.tl||LAY.tl,tp=v.tp||LAY.tp,M=0; // EVERY layup is right-handed (off the left foot), from either side of the rim (M = 1 would mirror it to the left hand)
  p.lay={t:0,v:vi,M,tg,tl,tp,tr:tg+tl+tp+v.rf*vz/G,vz,a,rd:v.far?Math.min(70,Math.max(40,d*.8)):Math.min(LAY.rel,Math.max(10,d*.85)),bank:!!v.bank,up:0,
   rv:v.rv||0,rs:-Math.sign(p.y-HY||1),es:M?-1:1,hm:!NET.on&&msOf(p)===ms?1:0}; // hm: you, offline -> the layup meter decides the release (layRel)
  p.lay.tr0=p.lay.tr;if(p.lay.hm){ms.lyP=p;ms.lyT=0} // reverse: finishes on the other side of the rim (rs) · euro: first step to the shooting-hand side (es)
@@ -4129,7 +4131,7 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.20'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.21'; // bump with every published update (shown top right of the main menu)
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
@@ -4490,7 +4492,7 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
    else{if(p.air)vert(p,dt);else{vert(p,dt);p.x+=p.vx*dt;p.vx*=Math.exp(-dt*3);SPV.done+=dt}}}}
  else if(c=='lay'){
   if(SPV.ph=='run'){p.x+=p.vx*dt;p.y+=p.vy*dt;if(Math.hypot(H-p.x,HY-p.y)<=105){const vi=+SPV.v,v=LAYV[vi]||LAYV[0],dx=H-p.x,d=Math.hypot(dx,HY-p.y),a=Math.max(-1.1,Math.min(1.1,Math.atan2(p.y-HY,Math.max(dx,1)))),
-    vz=Math.sqrt(2*G*v.hop),tg=v.tg,tl=v.tl||LAY.tl,tp=v.tp||LAY.tp,M=a<-.12?1:0;
+    vz=Math.sqrt(2*G*v.hop),tg=v.tg,tl=v.tl||LAY.tl,tp=v.tp||LAY.tp,M=0;
    p.lay={t:0,v:vi,M,tg,tl,tp,tr:tg+tl+tp+v.rf*vz/G,vz,a,rd:v.far?Math.min(70,Math.max(40,d*.8)):Math.min(LAY.rel,Math.max(10,d*.85)),bank:!!v.bank,up:0,rv:v.rv||0,rs:-Math.sign(p.y-HY||1),es:M?-1:1,hm:0};p.lay.tr0=p.lay.tr;
    if(p.lay.rv){const L=p.lay,dR=Math.atan2(-2,L.rs*34)+layOfs(L)-(L.ha0=Math.atan2(H-p.x,HY-p.y)),sh=Math.atan2(Math.sin(dR),Math.cos(dR));L.dR=L.rv==2?sh-Math.sign(sh||1)*2*Math.PI:sh}SPV.ph='lay'}}
   else if(SPV.ph=='lay'){const L=p.lay;if(L){const was=L.t<L.tr;layStep(p,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.lay&&was&&L.t>=L.tr){const a=SPV.ball.position.clone(),v=LAYV[L.v]||LAYV[0];spvFly(a,new THREE.Vector3(88.8,10.3,32),v.dur||.55,v.bank?2:3.5)}
