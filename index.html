@@ -3785,7 +3785,7 @@ const rlRelays=()=>{let n=0;for(const k in RL.ws)if(RL.ws[k].readyState===1)n++;
 function p2pRoom(name){if(P2P.rooms[name])return P2P.rooms[name];
  const chId=p2pChId(name),r=H27P2P.joinRoom(p2pConf(),name,{onJoinError:d=>{P2P.jerr=(d&&d.error)||'join error';P2P.jerrT=performance.now()}}),act=r.makeAction('pres'),peers=new Map(),
   me=H27P2P.selfId,nonce=Math.random().toString(36).slice(2,10),topic='h27rl-'+P2P.app+'-'+name,NORTC=!!window.H27_NORTC;
- let pres={},alive=1,last=0,tm=0,q=0,dF={},dS={},rP={},rLast=0,rTm=0,hbT=0;
+ let pres={},alive=1,last=0,tm=0,q=0,dF={},dS={},rP={},rLast=0,rTm=0,hbT=0,rqT=0;
  const pick=(keys,fast)=>{const o={};for(const k of keys)if(fast==null||P2P_FAST.has(k)==fast)o[k]=k in pres?pres[k]:null;return o},
   rel=(m,to)=>{if(alive&&!NORTC)act.send(Object.assign({n:nonce},m),to?{target:to}:undefined).catch(()=>{})},
   full=to=>rel({f:1,q,k:pres},to),
@@ -3811,9 +3811,10 @@ function p2pRoom(name){if(P2P.rooms[name])return P2P.rooms[name];
    if(!rTm){const w=RL.DT-(performance.now()-rLast);if(w<=0)rlFlush();else rTm=setTimeout(rlFlush,w)}}}
  r.onPeerJoin=id=>{peer(id);fastCh(id);full(id)};
  r.onPeerLeave=id=>{const v=peers.get(id);if(!v)return;if(v.ch)try{v.ch.close()}catch(e){}v.ch=null;v.fok=0;v.dT=0;if(Date.now()-v.rT>4000)peers.delete(id)};
- act.onMessage=(d,c)=>{const id=c&&c.peerId;if(!id||NORTC)return;heard(id,d,0)};
+ act.onMessage=(d,c)=>{const id=c&&c.peerId;if(!id||NORTC)return;heard(id,d,0);if(d&&d.rq)full(id)}; // (rq: someone pressed REFRESH: send them everything now)
  rlSub(topic,m=>{if(!alive)return;
   if(m.po&&m.po.to===me&&typeof m.po.t=='number'){const v=peers.get(m.i);if(v){const x=Date.now()-m.po.t;if(x>=0&&x<10000)v.rrt=v.rrt==null?x:v.rrt*.6+x*.4}}
+  if(m.rq&&Date.now()-rqT>1000){rqT=Date.now();hbT=rqT;rlPub(topic,{i:me,n:nonce,q,f:1,k:pres},1)}
   if(typeof m.pi=='number'&&m.i!==me)rlPub(topic,{i:me,n:nonce,q:-1,k:{},po:{to:m.i,t:m.pi}},1); // relay ping: answer at once
   heard(m.i,m,1)});
  const iv=setInterval(()=>{full();const t=Date.now();
@@ -3827,6 +3828,8 @@ function p2pRoom(name){if(P2P.rooms[name])return P2P.rooms[name];
   connected:()=>p2pRelays()>0||rlRelays()>0||peers.size>0,
   rtt(){let b=null;for(const v of peers.values()){const x=direct(v)?v.rtt:v.rrt;if(x!=null&&(b==null||x<b))b=x}return b},
   fast(){let n=0;for(const v of peers.values())if(direct(v)&&v.fok&&v.ch&&v.ch.readyState=='open')n++;return n},
+  refresh(){if(!alive)return;const t=Date.now();for(const[id,v]of peers)if(!direct(v)&&t-v.rT>4000)peers.delete(id); // forget anyone not heard from lately (they come straight back with their reply)
+   rel({rq:1,f:1,q,k:pres});hbT=t;rlPub(topic,{i:me,n:nonce,q,f:1,k:pres,pi:t,rq:1},1);rlTick()},
   relayed(){let n=0;for(const v of peers.values())if(!direct(v)&&Date.now()-v.rT<7000)n++;return n},
   leave(){if(alive){alive=0;clearInterval(iv);clearTimeout(tm);clearTimeout(rTm);rlUnsub(topic);for(const v of peers.values())if(v.ch)try{v.ch.close()}catch(e){}delete P2P.rooms[name];try{r.leave()}catch(e){}}return Promise.resolve()}}}
 async function netJoin(code){if(NET.tp=='p2p'){NET.via='p2p';return p2pRoom('h27-'+code)}const ns=NET.tp=='room'?await roomNS():null;if(ns){NET.via='room';return ns.join('h27-'+code)}NET.via='local';return bcRoom('h27-'+code)}
@@ -3843,7 +3846,7 @@ async function netHost(){if(NET.busy)return;NET.busy=1;NET.err='';NET.msg='CREAT
    netPres({r:'h',v:GAME_VER,b:netB(),set:NET.set,st:'lobby',g:0,s:null});S='oroom';return}
   NET.err='NO FREE LOBBY CODE - TRY AGAIN'}catch(e){NET.err=netErr(e)}finally{NET.busy=0;NET.msg=''}}
 async function netJoinCode(code){if(NET.busy)return;if(!/^\d{4}$/.test(code)){NET.err='TYPE THE 4-DIGIT LOBBY CODE FIRST';return}NET.busy=1;NET.err='';NET.msg='LOOKING FOR LOBBY '+code;
- try{const r=await netJoin(code);let h=null;for(let i=0,n=NET.tp=='p2p'?60:20;i<n&&!h;i++){await netWait(200);h=r.peers().find(p=>!p.sameTab&&p.presence&&p.presence.r=='h')}
+ try{await netLobby();const r=await netJoin(code);let h=null;for(let i=0,n=NET.tp=='p2p'?60:20;i<n&&!h;i++){await netWait(200);h=r.peers().find(p=>!p.sameTab&&p.presence&&p.presence.r=='h')}
   if(S!='olob'){await r.leave();return}
   if(!h){await r.leave();NET.err='NO LOBBY FOUND WITH CODE '+code;return}
   if(h.presence.v!==GAME_VER){await r.leave();NET.err='THAT LOBBY IS ON '+String(h.presence.v).slice(0,8)+' - RELOAD BOTH GAMES';return}
@@ -3921,7 +3924,7 @@ function onlStep(dt){
   if(S=='play'&&now-NET.lastRx>5000){netAbort('LOST THE CONNECTION TO THE HOST');return}}
  if(S=='play'){if(P.KeyK)NET.ask=!NET.ask;if(NET.ask){if(P.Enter){netLeave();toMenu()}else if(P.Escape)NET.ask=0}}}
 // ----- the screens: ONLINE / CAREER · ONLINE 1V1 · server finder · lobby
-const ONC=i=>[150+i*360,140,300,300],ONM=[348,140,264,300],OLH=[300,110,360,48],OLR=k=>[150,206+k*52,660,46],OL_N=4,ORM=i=>i<2?[280,300+i*46,400,38]:[i==2?280:490,400,190,48],ON_BACK=PN_BACK;
+const ONC=i=>[150+i*360,140,300,300],ONM=[348,140,264,300],OLR=k=>[150,206+k*52,660,46],OL_N=4,ORM=i=>i<2?[280,300+i*46,400,38]:[i==2?280:490,400,190,48],ON_BACK=PN_BACK;
 // ----- SERVER LIST: every host advertises his lobby in the room everyone viewing the game shares (presence field 'lb'; the platform clears it when he leaves),
 // and the finder lists those adverts live. The lobby's name is its 4-digit code. Local test mode uses a same-browser stand-in for that shared room.
 async function netLobby(){if(NET.lob)return NET.lob;if(NET.lobP)return NET.lobP;return NET.lobP=(async()=>{
@@ -3933,22 +3936,50 @@ function netAdvert(){const L=NET.lob;if(!L)return;let lb=null;
  if(NET.on&&NET.host){const b=SLOTS[MM.slot]||{},op=netOpp();lb={c:NET.code,h:String(b.name||'PLAYER').slice(0,12),p:b.pos|0,o:ovrOf(b.st||{}),n:op?2:1,s:S=='play'||S=='over'?'game':op?'full':'open',cs:NET.set.c,w:NET.set.w,v:GAME_VER}}
  const k=JSON.stringify(lb);if(k!==NET.lbK){NET.lbK=k;L.presence({lb}).catch(()=>{})}}
 function onlOpen(){ONL.sel=0;S='onsel'}
-function onlRows(){return S=='onsel'?2:S=='onmode'?1:S=='olob'?1+netList().length:NET.host?4:1}
+// ----- SERVER LIST extras: REFRESH (asks everyone in the online lobby to re-send their lobby right now, drops anyone not heard from lately, and
+// reconnects the lobby if its connection died) and JOIN BY CODE (type the host's 4-digit code and join that lobby directly, even if it never
+// showed up in the list: the join goes straight to the lobby's own room, the list isn't involved). OLB: the three buttons at the top; lobby rows follow (sel 3+).
+const OLB=i=>[[140,110,250,48],[402,110,234,48],[648,110,172,48]][i],OL_T=3,CK_R=i=>[345+(i%3)*94,262+(i/3|0)*46,84,40],CK_L=['1','2','3','4','5','6','7','8','9','DEL','0','JOIN'],CK_P=[290,118,380,372];
+function netRefresh(){if(NET.busy)return;ONL.rf=performance.now();NET.err='';const L=NET.lob;
+ if(L&&L.connected&&!L.connected()){try{L.leave()}catch(e){}NET.lob=NET.lobP=null;NET.lbK=null} // a dead lobby connection: start a fresh one
+ if(!NET.lob){netLobby();return}if(L.refresh)L.refresh();beep(660,.05,'triangle')}
+function codeOpen(){ONL.ce={d:''};NET.err=''}
+function codeKey(k){const c=ONL.ce;if(!c)return;if(k!='JOIN')NET.err='';
+ if(k=='DEL'){c.d=c.d.slice(0,-1);return}
+ if(k=='JOIN'){if(c.d.length<4){NET.err='TYPE ALL 4 DIGITS OF THE LOBBY CODE';beep(160,.08,'square');return}const d=c.d;ONL.ce=null;netJoinCode(d);return}
+ if(/^\d$/.test(k)&&c.d.length<4){c.d+=k;beep(880,.03,'triangle')}}
+function codeKeys(){} // (keys reach the code pad straight from keydown below, one by one, however fast they come; nothing else sees them)
+addEventListener('keydown',e=>{if(S!='olob'||!ONL.ce)return;const m=/^(?:Digit|Numpad)(\d)$/.exec(e.code),c=e.code=='Backquote'?'Escape':e.code;
+ if(m)codeKey(m[1]);else if(c=='Backspace')codeKey('DEL');else if(c=='Enter'||c=='NumpadEnter')codeKey('JOIN');else if(c=='Escape')ONL.ce=null;else return;
+ P[e.code]=0;P[c]=0;e.preventDefault()});
+function codePtr(x,y,type){if(type!=0)return;for(let i=0;i<12;i++)if(mIn(x,y,CK_R(i))){codeKey(CK_L[i]);return}if(!mIn(x,y,CK_P))ONL.ce=null} // (a click outside the panel closes it)
+function codeDraw(){const c=ONL.ce;g.fillStyle='rgba(0,0,0,.72)';g.fillRect(0,0,960,540);const[px,py,pw,ph]=CK_P;mRR(px,py,pw,ph,16,'rgba(18,20,26,.98)',GOLD);
+ g.textAlign='center';g.fillStyle=GOLD;g.font='bold 24px Georgia';g.fillText('JOIN BY CODE',480,py+38);g.font='12px system-ui';g.fillStyle='#9aa';g.fillText('Ask the host for the 4-digit LOBBY code on their screen',480,py+60);
+ for(let i=0;i<4;i++){const x=372+i*56,on=i==c.d.length;mRR(x,py+76,46,56,8,'rgba(255,255,255,.06)',on?GOLD:'rgba(255,255,255,.2)');if(c.d[i]){g.fillStyle='#fff';g.font='bold 34px Georgia';g.fillText(c.d[i],x+23,py+117)}
+  else if(on&&(performance.now()/500|0)%2){g.fillStyle=GOLD;g.fillRect(x+15,py+120,16,3)}}
+ CK_L.forEach((l,i)=>{const r=CK_R(i),j=l=='JOIN',ok=!j||c.d.length==4;mRR(r[0],r[1],r[2],r[3],8,j&&ok?'rgba(76,255,122,.18)':'rgba(255,255,255,.07)',j&&ok?'#4cff7a':'rgba(255,255,255,.18)');
+  g.save();if(!ok)g.globalAlpha=.4;g.fillStyle=j?'#7fffa0':'#fff';g.font=(j||l=='DEL'?'bold 14px system-ui':'bold 20px Georgia');g.fillText(l=='DEL'?'⌫ DELETE':l,r[0]+r[2]/2,r[1]+27);g.restore()});
+ if(NET.err){g.fillStyle='#ff7b7b';g.font='bold 12px system-ui';g.fillText(NET.err,480,py+ph-14)}else{g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('type the digits  ·  Enter join  ·  Backspace delete  ·  Esc cancel',480,py+ph-14)}}
+function onlRows(){return S=='onsel'?2:S=='onmode'?1:S=='olob'?OL_T+netList().length:NET.host?4:1}
 function onlEnter(){const i=ONL.sel;
  if(S=='onsel'){if(i==0){S='onmode';ONL.sel=0}else openModes('car')}
  else if(S=='onmode'){S='olob';ONL.sel=0;ONL.top=0;NET.err='';netLobby()}
- else if(S=='olob'){if(i==0)netHost();else{const l=netList()[i-1];if(!l)return;if(l.s!='open'){NET.err=l.s=='game'?'LOBBY '+l.c+' IS IN THE MIDDLE OF A GAME':'LOBBY '+l.c+' IS FULL';return}netJoinCode(l.c)}}
+ else if(S=='olob'){if(i==0)netHost();else if(i==1)codeOpen();else if(i==2)netRefresh();else{const l=netList()[i-OL_T];if(!l)return;if(l.s!='open'){NET.err=l.s=='game'?'LOBBY '+l.c+' IS IN THE MIDDLE OF A GAME':'LOBBY '+l.c+' IS FULL';return}netJoinCode(l.c)}}
  else if(S=='oroom'){if(!NET.host||i==3){netLeave();S='olob';ONL.sel=0;NET.err=''}else if(i==2)netStartHost();else onlSet(i,1)}}
-function onlBack(){if(S=='onsel')S='slotact';else if(S=='onmode'){S='onsel';ONL.sel=0}else if(S=='olob'){if(!NET.busy){S='onmode';ONL.sel=0}}else if(S=='oroom'){netLeave();S='olob';ONL.sel=0;NET.err=''}}
+function onlBack(){if(S=='onsel')S='slotact';else if(S=='onmode'){S='onsel';ONL.sel=0}else if(S=='olob'){if(ONL.ce)ONL.ce=null;else if(!NET.busy){S='onmode';ONL.sel=0}}else if(S=='oroom'){netLeave();S='olob';ONL.sel=0;NET.err=''}}
 function onlSet(r,d){const s=Object.assign({},NET.set);if(r==0)s.c=NET_COURTS[(NET_COURTS.indexOf(s.c)+d+3)%3];else s.w=NET_WINS[(NET_WINS.indexOf(s.w)+d+4)%4];NET.set=s;netPres({set:s})}
-function onlKeys(){const up=P.ArrowUp||P.KeyW,dn=P.ArrowDown||P.KeyS,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space,n=onlRows();
+function onlKeys(){if(S=='olob'&&ONL.ce){codeKeys();return}const up=P.ArrowUp||P.KeyW,dn=P.ArrowDown||P.KeyS,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space,n=onlRows();
  if(P.Backspace){onlBack();return}
- if(ONL.sel>=n)ONL.sel=n-1;if(S=='onsel'||S=='onmode'){if(lr)ONL.sel=(ONL.sel+lr+n)%n}else{if(up)ONL.sel=(ONL.sel+n-1)%n;if(dn)ONL.sel=(ONL.sel+1)%n;if(S=='oroom'&&NET.host&&lr&&ONL.sel<2)onlSet(ONL.sel,lr)}
+ if(ONL.sel>=n)ONL.sel=n-1;if(S=='onsel'||S=='onmode'){if(lr)ONL.sel=(ONL.sel+lr+n)%n}
+ else if(S=='olob'){const s=ONL.sel; // the top row (HOST / JOIN BY CODE / REFRESH): left / right; down drops into the lobby list, up from its first row goes back up
+  if(s<OL_T){if(lr)ONL.sel=(s+lr+OL_T)%OL_T;if(dn&&n>OL_T)ONL.sel=OL_T;if(up&&n>OL_T)ONL.sel=n-1}else{if(up)ONL.sel=s==OL_T?0:s-1;if(dn)ONL.sel=s>=n-1?0:s+1}}
+ else{if(up)ONL.sel=(ONL.sel+n-1)%n;if(dn)ONL.sel=(ONL.sel+1)%n;if(S=='oroom'&&NET.host&&lr&&ONL.sel<2)onlSet(ONL.sel,lr)}
  if(S=='oroom'&&!NET.host)ONL.sel=0;
  if(ok)onlEnter();else if(P.Escape)onlBack()}
 function onlPtr(x,y,type){const hit=(i,r)=>{if(!mIn(x,y,r))return false;ONL.sel=i;if(type==0)onlEnter();return true};
+ if(S=='olob'&&ONL.ce){codePtr(x,y,type);return}
  if(type==0&&S!='oroom'&&mIn(x,y,ON_BACK)){onlBack();return}
- if(S=='onsel'){for(let i=0;i<2;i++)if(hit(i,ONC(i)))return}else if(S=='onmode')hit(0,ONM);else if(S=='olob'){if(hit(0,OLH))return;const L=netList();for(let k=0;k<Math.min(OL_N,L.length-(ONL.top|0));k++)if(hit((ONL.top|0)+k+1,OLR(k)))return}
+ if(S=='onsel'){for(let i=0;i<2;i++)if(hit(i,ONC(i)))return}else if(S=='onmode')hit(0,ONM);else if(S=='olob'){for(let i=0;i<OL_T;i++)if(hit(i,OLB(i)))return;const L=netList();for(let k=0;k<Math.min(OL_N,L.length-(ONL.top|0));k++)if(hit((ONL.top|0)+k+OL_T,OLR(k)))return}
  else if(S=='oroom'){if(!NET.host){hit(0,ORM(3));return}for(let i=0;i<4;i++){const r=ORM(i);if(mIn(x,y,r)){ONL.sel=i;if(type==0){if(i<2)onlSet(i,x<r[0]+r[2]/2?-1:1);else onlEnter()}return}}}}
 const tcolOf=tm=>'#'+((TEAMS[tm]||TEAMS[0]).jc>>>0).toString(16).padStart(6,'0');
 function onlCard(x,y,w,h,on,big,sub,lines,dim){if(on){g.save();g.shadowColor=GOLD;g.shadowBlur=20;mRR(x,y,w,h,16,'rgba(255,210,63,.1)',GOLD);g.restore()}else mRR(x,y,w,h,16,'rgba(255,255,255,.05)','rgba(255,255,255,.14)');
@@ -3967,11 +3998,12 @@ function onlDraw(){g.fillStyle='#000';g.fillRect(0,0,960,540);g.textAlign='cente
   onlCard(...ONM,true,'ONLINE 1V1','ONE ON ONE',['Your created player against','a friend\'s  ·  check ball up top','after every possession.'])}
  else if(S=='olob'){const L=netList();g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('ONLINE 1V1  ·  SERVER LIST',480,64);g.font='13px system-ui';g.fillStyle='#9aa';
   {const[t,c]=netStatus();g.fillStyle=c;g.fillText(t,480,92)}
-  onlBtn(OLH,'HOST A LOBBY',ONL.sel==0);mRR(140,166,680,262,12,'rgba(255,255,255,.03)','rgba(255,255,255,.1)');
+  {const rf=ONL.rf&&performance.now()-ONL.rf<1500;onlBtn(OLB(0),'HOST A LOBBY',ONL.sel==0);onlBtn(OLB(1),'JOIN BY CODE',ONL.sel==1);onlBtn(OLB(2),rf?'REFRESHING'+'.'.repeat(1+(performance.now()/300|0)%3):'⟳  REFRESH',ONL.sel==2);
+   if(ONL.rf&&!rf){const s=(performance.now()-ONL.rf)/1000|0;g.textAlign='right';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('refreshed '+(s<5?'just now':s<60?s+'s ago':(s/60|0)+' min ago'),810,420)}}mRR(140,166,680,262,12,'rgba(255,255,255,.03)','rgba(255,255,255,.1)');
   g.font='bold 10px system-ui';g.fillStyle='#8a90a0';[[168,'LOBBY'],[290,'HOST'],[470,'COURT'],[580,'FIRST TO'],[680,'PLAYERS'],[792,'STATUS']].forEach(([x,t],j)=>{g.textAlign=j==5?'right':'left';g.fillText(t,x,192)});
-  const se=ONL.sel-1;if(se>=0){if(se<(ONL.top|0))ONL.top=se;if(se>=(ONL.top|0)+OL_N)ONL.top=se-OL_N+1}ONL.top=Math.max(0,Math.min(ONL.top|0,L.length-OL_N));
+  const se=ONL.sel-OL_T;if(se>=0){if(se<(ONL.top|0))ONL.top=se;if(se>=(ONL.top|0)+OL_N)ONL.top=se-OL_N+1}ONL.top=Math.max(0,Math.min(ONL.top|0,L.length-OL_N));
   if(!L.length){g.textAlign='center';g.font='italic 16px Georgia';g.fillStyle='#8a90a0';g.fillText('No lobbies open right now'+'.'.repeat(1+(performance.now()/500|0)%3)+'  host one!',480,300);const ol=netOldLobbies();g.font='13px system-ui';g.fillStyle=GOLD;if(ol.length)g.fillText(ol.length+' lobby'+(ol.length>1?'s are':' is')+' on another version of the game ('+String(ol[0].v).slice(0,8)+', you have '+GAME_VER+')  \u00b7  both players reload the page',480,330);else if(NET.tp=='local'){g.fillStyle='#8a90a0';g.fillText('Only lobbies from other tabs of this browser show up here (test mode).',480,330)}}
-  L.slice(ONL.top,ONL.top+OL_N).forEach((l,k)=>{const r=OLR(k),on=ONL.sel==ONL.top+k+1,open=l.s=='open';
+  L.slice(ONL.top,ONL.top+OL_N).forEach((l,k)=>{const r=OLR(k),on=ONL.sel==ONL.top+k+OL_T,open=l.s=='open';
    mRR(r[0],r[1],r[2],r[3],8,on?'rgba(40,32,8,.9)':'rgba(255,255,255,.05)',on?GOLD:'rgba(255,255,255,.1)');g.save();if(!open)g.globalAlpha=.55;
    g.textAlign='left';g.font='bold 17px Georgia';g.fillStyle='#fff';g.fillText('LOBBY '+l.c,168,r[1]+29);
    g.font='bold 13px system-ui';g.fillStyle='#cfd3dc';g.fillText(String(l.h).slice(0,12),290,r[1]+21);g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText((POS[l.p|0]||'')+'  ·  OVR '+(l.o|0),290,r[1]+36);
@@ -3979,7 +4011,7 @@ function onlDraw(){g.fillStyle='#000';g.fillRect(0,0,960,540);g.textAlign='cente
    g.textAlign='right';g.fillStyle=open?'#7fffa0':l.s=='full'?GOLD:'#ff9f43';g.fillText(open?'OPEN':l.s=='full'?'FULL':'IN GAME',792,r[1]+29);g.restore()});
   g.textAlign='center';if(L.length>OL_N){g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText((ONL.top+1)+'-'+Math.min(L.length,ONL.top+OL_N)+' of '+L.length+' lobbies  ·  ↑/↓ to scroll',480,446)}
   if(NET.busy){g.font='bold 15px system-ui';g.fillStyle=GOLD;g.fillText(NET.msg+'.'.repeat(1+(performance.now()/350|0)%3),480,472)}else if(NET.err){g.font='bold 15px system-ui';g.fillStyle='#ff7b7b';g.fillText(NET.err,480,472)}
-  g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ choose  ·  Enter host / join  ·  Esc back  ·  or click',480,508)}
+  g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('←/→ ↑/↓ choose  ·  Enter select  ·  Esc back  ·  or click',480,508)}
  else if(S=='oroom'){const op=netOpp(),ob=op&&op.presence.b,hb=NET.host?b:ob,gb=NET.host?ob:b,set=NET.host?NET.set:(op&&op.presence.set)||NET.set;
   g.fillStyle=GOLD;g.font='bold 22px Georgia';g.fillText('ONLINE 1V1 LOBBY',480,48);g.font='bold 52px Georgia';g.fillStyle='#fff';g.fillText('LOBBY  '+NET.code,480,104);
   g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText(NET.via=='local'?'LOCAL TEST MODE  ·  this browser only':NET.via=='p2p'?(NET.room&&NET.room.relayed&&NET.room.relayed()?'Online  ·  VIA RELAY: a network here blocks a direct connection, so the game goes through the relay servers (a little more delay)':'Online  ·  peer-to-peer  ·  anyone with the game can join from the server list'):'Online via claude.ai  ·  your friend needs access to this game\'s link',480,128);
@@ -3992,7 +4024,8 @@ function onlDraw(){g.fillStyle='#000';g.fillRect(0,0,960,540);g.textAlign='cente
   if(NET.err){g.fillStyle='#ff7b7b';g.fillText(NET.err,480,478)}
   else{g.fillStyle=ready?'#7fffa0':'#9aa';g.fillText(NET.host?(ready?'Both players in  ·  press START':op?'Waiting for your opponent to come back to the lobby':'Waiting for a second player'):op&&op.presence.st=='over'?'The host is still on the result screen':'Waiting for the host to start',480,478)}
   g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText(NET.host?'↑/↓ choose  ·  ←/→ change a setting  ·  Enter confirm  ·  Esc leave':'Enter / Esc leave the lobby',480,516)}
- if(S!='oroom'){mRR(ON_BACK[0],ON_BACK[1],ON_BACK[2],ON_BACK[3],8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('BACK',ON_BACK[0]+ON_BACK[2]/2,ON_BACK[1]+24)}}
+ if(S!='oroom'){mRR(ON_BACK[0],ON_BACK[1],ON_BACK[2],ON_BACK[3],8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('BACK',ON_BACK[0]+ON_BACK[2]/2,ON_BACK[1]+24)}
+ if(S=='olob'&&ONL.ce)codeDraw()}
 let ROOM_OK=null,ROOM_CON=false;roomNS().then(ns=>{ROOM_OK=!!ns;if(ns)try{ns.onConnection(c=>{ROOM_CON=c},e=>{ROOM_OK=false;ROOM_CON=false})}catch(e){}});
 // the server list's status line: is this view really in the shared online lobby, and how many others are in it with the game open
 function netStatus(){if(!NET.lob)return['CONNECTING TO THE ONLINE LOBBY'+'.'.repeat(1+(performance.now()/400|0)%3),'#9aa'];
@@ -4020,7 +4053,7 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.15'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.16'; // bump with every published update (shown top right of the main menu)
 function drawMainMenu(){if(MN.gate){gateDraw();return}const t=MN.t,tm=TEAMS[MN.ti],te=t-T_HIT,clamp=mnC;
  const ui=clamp(0,1,(t-T_UI)/.9),ez=1-Math.pow(1-ui,3);
  if(ui>0){
@@ -4242,7 +4275,7 @@ const HL_ONLINE=[
  {t:'WHO CAN PLAY ONLINE',tag:'ANYONE',d:'Anyone playing the website version (dashryerson-design.github.io/The-Hardwood-, works on iPad too) or the downloaded HTML file can play anyone else on either of them. No account or sign-in is needed.\n• Players connect straight to each other (peer-to-peer) when their networks allow it. Free public relay servers are used for finding each other.\n• If a network blocks the direct connection (mobile data, some routers, school or work Wi-Fi), the game goes through the relay servers instead, automatically. The lobby and the match screen then say VIA RELAY. It works the same, with a little more delay.\n• The claude.ai page can only play other people on the claude.ai page (signed in, invited by email): claude.ai doesn\'t let pages connect to anything else.'},
  {t:'GETTING THERE',tag:'MENUS',d:'CAREER, pick your player, PLAY, ONLINE, then ONLINE 1V1. You need a created player first: see CREATE A PLAYER. It can take a few seconds for lobbies to show up after you open the server list.'},
  {t:'HOSTING A LOBBY',tag:'HOST',d:'On the server list choose HOST A LOBBY. You get a 4-digit lobby code and your lobby shows up in your friend\'s server list. As the host you choose:\n• COURT: Street, Heaven or Hell.\n• FIRST TO: 7, 11, 15 or 21 points.\nOnce your friend has joined, press START.'},
- {t:'JOINING A LOBBY',tag:'JOIN',d:'Your friend\'s lobby appears in the server list with its code, the host\'s player, the court, the score to win and whether it\'s OPEN, FULL or IN GAME. Pick an open one to join. Only the host can change the settings and start; the guest can leave at any time.\nBoth players need the same version of the game (shown at the top right of the main menu). If they differ, reload both games.'},
+ {t:'JOINING A LOBBY',tag:'JOIN',d:'Your friend\'s lobby appears in the server list with its code, the host\'s player, the court, the score to win and whether it\'s OPEN, FULL or IN GAME. Pick an open one to join. Only the host can change the settings and start; the guest can leave at any time.\nBoth players need the same version of the game (shown at the top right of the main menu). If they differ, reload both games.\n• REFRESH re-checks for lobbies right away: everyone online re-sends theirs, and the list drops any that have gone.\n• Lobby not in the list? Choose JOIN BY CODE, type the host\'s 4-digit LOBBY code (shown big on their lobby screen) with the number keys or by clicking the keypad, and press JOIN. It goes straight to that lobby, no list needed.'},
  {t:'THE RULES',tag:'FIRST TO 7-21',d:'• Shots are worth 2 or 3.\n• After every possession, make or miss, the ball is checked at the top of the key. There are no rebounds: a miss goes to the other player.\n• 15-second shot clock.\n• The first player to reach the target score wins (no win-by-2).'},
  {t:'DIFFERENCES FROM OFFLINE',tag:'GOOD TO KNOW',d:'• No pause: K asks whether you want to leave the match (Enter to leave, K or Esc to keep playing).\n• Layups release on their own (no layup meter); jump shots still use the shot meter.\n• No replays, and no EXP is earned.\n• The host\'s game runs the match, so keep the host\'s tab open and in front.'},
  {t:'IF SOMEONE LEAVES',tag:'DISCONNECTS',d:'If the guest leaves, the host sees "YOUR OPPONENT LEFT THE MATCH" and goes back to the lobby. If the host leaves or the connection drops, the guest is told and sent back. After a game both players can go BACK TO LOBBY for a rematch or LEAVE ONLINE.'},
