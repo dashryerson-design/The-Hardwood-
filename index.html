@@ -2695,7 +2695,7 @@ function draw(){
  if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
  if(ONL_S.has(S))onlDraw();if(NET.on&&S=='play')netOverlay();
  if(S=='cdebut'){renderDebut();drawDebut()}
- if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
+ if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();if(PN.on)pnDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
   ['RESUME','CUSTOMISATION','REPLAY CAM:  '+['FAR','CLOSE','BASKET','DRONE'][RC],'MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText((on&&i==2?'◀  ':'')+t+(on&&i==2?'  ▶':''),480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · A/D or ←/→ change replay cam · K to close',480,462);g.fillText('Replay cam follows the scorer · graphics, ball trail and court live under CUSTOMISATION',480,486)}
@@ -2870,23 +2870,43 @@ const wExp=h=>190+(h-74)*7,wRange=h=>[Math.max(W_MIN,Math.round((wExp(h)-55)/5)*
 //  cap = base + height effect x t + weight effect x u + wingspan effect x w   with   t = (height - 6'6") / 6"  (7'0" = +1, 6'0" = -1)
 //                                                                                    u = (weight - typical for his height) / 40 lb   (heavier than normal = +)
 //                                                                                    w = (wingspan - (height + 4")) / 3"            (longer arms = +)
-// Taller: +dunk +rebound +block +interior D +strength,  -speed -handle -perimeter D -steal, slightly -shooting. Heavier: +strength +post +rebound +interior D,  -speed -perimeter D -dunk -steal -shooting. Longer arms: +block +steal +rebound +interior / perimeter D +dunk.
-// Nothing is capped below 40 or above 99 (see the TOP-END BOOST in statCaps).
-// STRICT: the bases sit well below 90, so a 95+ cap needs a body that is extreme for that attribute (e.g. 99 SPEED needs a short, light, slim player; longer arms LOWER shooting caps; 99 DUNKING a 7-footer with a huge wingspan).
+// Taller: +dunk +rebound +block +interior D +strength,  -speed -handle -passing -steal -shooting. Heavier: +strength +post +rebound +interior D,  -speed -handle -perimeter D -dunk -steal -shooting. Longer arms: +block +steal +rebound +defence +dunk +layup,  -shooting.
+// Shooting stops gaining from height at 6'0" (CAP_TF): being shorter than that doesn't make you a better shooter.
+// REBALANCE (v1.25): no more top-end boost - a 99 now needs the ONE body that is extreme for that attribute, e.g.
+//  99 3PT: 6'0" at 130 lb with the minimum wingspan (5'9") · 99 MID-RANGE: 5'11"-6'1", short arms, lightest · 99 SPEED: 5'9"-5'10", lightest · 99 BALL HANDLE: 5'9"-5'11", lightest
+//  99 DUNKING: 7'0"+, light, longest arms · 99 BLOCKING: 7'2" with the longest arms · 99 STRENGTH: 7'0" at 320 lb, muscular · 99 REBOUNDING: 7'2", heaviest, longest arms.
+// A single body has at most ~7 caps of 90+ (it was up to 8 caps of 95-99), and the RIVALS + ELITE budget below stop him from reaching them all at once.
 // Each BUILD (body type) adds a small modifier on top. Nothing goes below 40 or above 99.
-const CAP_B={bh:85,stl:80,mid:84,tp:81,spd:78,lay:86,dnk:78,str:72,pas:86,pd:82,idf:74,blk:74,reb:76,post:72},
- CAP_H={bh:-7,stl:-3.5,mid:-4.5,tp:-5,spd:-10,lay:-2,dnk:10,str:4,pas:-4,pd:-5,idf:9,blk:11,reb:7,post:4},
- CAP_W={bh:-4,stl:-3,mid:-4.5,tp:-5,spd:-8,lay:-2,dnk:-3,str:11,pas:-2,pd:-4,idf:6,blk:1,reb:6,post:10},
- CAP_S={bh:0,stl:5,mid:-3,tp:-3.5,spd:0,lay:3,dnk:3,str:0,pas:2.5,pd:4,idf:4,blk:6,reb:3,post:1},
- CAP_T=[{spd:3,bh:1,stl:1,tp:1,lay:1,str:-5,post:-4,dnk:-1,reb:-2,idf:-3}, // SLIM
+const CAP_B={bh:81,stl:79,mid:83,tp:78,spd:77,lay:85,dnk:74,str:73,pas:82,pd:81,idf:71,blk:73,reb:73,post:72},
+ CAP_H={bh:-8,stl:-4,mid:-4.5,tp:-6,spd:-10,lay:-2.5,dnk:11,str:4,pas:-8,pd:-4,idf:9,blk:11,reb:8,post:5},
+ CAP_W={bh:-4,stl:-4,mid:-3,tp:-3,spd:-7,lay:-3,dnk:-4,str:12,pas:-2,pd:-4,idf:6,blk:0,reb:6,post:11},
+ CAP_S={bh:-1.5,stl:5,mid:-3.5,tp:-4.5,spd:0,lay:3.5,dnk:4,str:0,pas:2,pd:4,idf:4,blk:6,reb:4,post:1},
+ CAP_TF={mid:-1,tp:-1}, // lowest t that still counts (6'0")
+ CAP_T=[{spd:3,bh:1,stl:1,tp:1,lay:1,pd:1,str:-5,post:-4,dnk:-1,reb:-2,idf:-3}, // SLIM
   {dnk:2,spd:1,lay:2,str:1}, // TONED
   {}, // REGULAR
   {str:4,post:3,dnk:1,idf:2,spd:-3,bh:-1,stl:-1,pd:-1}, // MUSCULAR
   {str:3,post:4,idf:3,reb:1,spd:-6,dnk:-5,stl:-3,bh:-2,pd:-3,lay:-2,tp:-2}]; // FATTY
-// TOP-END BOOST (v1.10): every cap above 80 is lifted by 55% of the amount it is over 80 (85 -> 88 · 90 -> 95.5 · 92.7 -> 99), so 90+ ratings are easier to
-// reach for a body built for them - e.g. a guard under 6'4" with short arms can now take 3PT and MID-RANGE to 99. Caps of 80 or less are unchanged.
-const CAP_HI=[80,.55];
-function statCaps(h,wt,ws,bt){const t=(h-78)/6,u=mClamp((wt-wExp(h))/40,-1.5,1.5),w=(ws-(h+4))/3,tb=CAP_T[bt==null?2:bt],o={};for(const k in CAP_B){let v=CAP_B[k]+CAP_H[k]*t+CAP_W[k]*u+CAP_S[k]*w+(tb[k]||0);if(v>CAP_HI[0])v+=(v-CAP_HI[0])*CAP_HI[1];o[k]=Math.round(mClamp(v,40,99))}return o}
+function statCaps(h,wt,ws,bt){const t=(h-78)/6,u=mClamp((wt-wExp(h))/40,-1.5,1.5),w=(ws-(h+4))/3,tb=CAP_T[bt==null?2:bt],o={};for(const k in CAP_B){const v=CAP_B[k]+CAP_H[k]*Math.max(t,CAP_TF[k]??-9)+CAP_W[k]*u+CAP_S[k]*w+(tb[k]||0);o[k]=Math.round(mClamp(v,40,99))}return o}
+// ===== ATTRIBUTE TRADE-OFFS (v1.25). On top of the body caps, what you already have lowers what else you can reach:
+// RIVALS: pairs of attributes that fight each other. Past 70, the two share one allowance: (a - 70) + (b - 70) <= L.
+//  e.g. 3PT <-> SPEED (40): 99 3PT holds SPEED to 81, 90 / 90 is the most for both. A pure shooter can't be a burner, a burner can't be a sniper.
+// ELITE BUDGET: every point above 80, over ALL attributes together, comes out of one budget of 50 - two 99s and a 92, or five 90s, and the rest 80 or less.
+// The cap of an attribute right now = the lowest of: his body cap · 80 + what's left of the elite budget · 70 + what's left of each rival allowance.
+// Raising an attribute up to that cap never breaks a limit, so the builder only has to stop it there (adj / setBar); sanitize() trims old builds that break them.
+const ELITE=[80,50],RIV_T=70,
+ RIVALS=[['tp','spd',40],['mid','spd',45],['spd','str',40],['tp','dnk',40],['mid','dnk',45],['tp','pd',50],['pd','idf',40],['blk','post',45]];
+const stName=k=>(STATS.find(s=>s[0]==k)||[0,k])[1],rivOf=k=>RIVALS.filter(r=>r[0]==k||r[1]==k).map(r=>r[0]==k?r[1]:r[0]),eliteUsed=st=>STATS.reduce((a,[k])=>a+Math.max(0,(st[k]|0)-ELITE[0]),0);
+// {c: the cap of k right now, why: null (his body) · 'ELITE' · the rival attribute holding it down}
+function capInfo(st,k,body){let c=body[k],why=null;
+ const ce=ELITE[0]+Math.max(0,ELITE[1]-(eliteUsed(st)-Math.max(0,(st[k]|0)-ELITE[0])));if(ce<c){c=ce;why='ELITE'}
+ for(const[a,b,L] of RIVALS){const o=a==k?b:b==k?a:null;if(!o)continue;const cr=RIV_T+Math.max(0,L-Math.max(0,(st[o]|0)-RIV_T));if(cr<c){c=cr;why=o}}
+ return{c,why}}
+// lowers attributes until every rival allowance and the elite budget fit (the higher of two rivals gives way first; the freed points go back to spend)
+function fitLimits(st){for(let n=0;n<2000;n++){let k=null;
+  for(const[a,b,L] of RIVALS)if(Math.max(0,st[a]-RIV_T)+Math.max(0,st[b]-RIV_T)>L){k=st[a]>st[b]?a:b;break}
+  if(!k&&eliteUsed(st)>ELITE[1])k=STATS.reduce((m,[q])=>st[q]>st[m]?q:m,STATS[0][0]);
+  if(!k)return st;st[k]--}return st}
 // ===== BUILD (body type) options, limited by weight for the height (r = weight / typical weight for that height). Nobody is forced into the extremes:
 // SLIM at or below typical weight · TONED near typical · REGULAR always · MUSCULAR needs 8%+ over typical · FATTY needs 25%+ over typical.
 const btRatio=(h,wt)=>wt/wExp(h),btAllowed=(h,wt)=>{const r=btRatio(h,wt);return[r<=1.02,r>=.85&&r<=1.2,true,r>=1.08,r>=1.25]},
@@ -2899,10 +2919,15 @@ const mClamp=(v,a,b)=>Math.max(a,Math.min(b,v)),mIn=(x,y,r)=>x>=r[0]&&x<=r[0]+r[
 const fmtH=i=>Math.floor(i/12)+"'"+(i%12)+'"';
 const htOf=h=>mClamp(.93+(h-74)*.021,.84,1.22);
 const pointsLeft=d=>poolOf(d)-STATS.reduce((a,[k])=>a+d.st[k]-SMIN,0);
-// CREATED PLAYER OVR = how much of his body's attribute potential he has invested, not his best few ratings (25 everywhere + four 90s used to read as 90).
-// f = points invested / points it takes to raise EVERY attribute to its cap on his build (his own caps, so every build can reach 99).
-// OVR = 40 + 59 x f^0.75, rounded down: 40 with nothing invested · ~61 for a new player (190 pts) · ~75 at level 10 · ~92 at level 20 · 99 only when every attribute is at its cap (level 25 covers any build).
-const ovr=d=>{const c=statCaps(d.h,d.wt,d.ws,btEff(d)),mx=STATS.reduce((a,[k])=>a+c[k]-SMIN,0),used=STATS.reduce((a,[k])=>a+Math.min(d.st[k],c[k])-SMIN,0),f=mx>0?Math.max(0,Math.min(1,used/mx)):0;return Math.floor(40+59*Math.pow(f,.75)+1e-9)},
+// CREATED PLAYER OVR = how much of his attribute potential he has invested, not his best few ratings (25 everywhere + four 90s used to read as 90).
+// f = points invested / (points invested + points he could still add): what's left is found by filling every attribute up to its cap, lowest first,
+// with the rivals and the elite budget in force - so the trade-offs count (a capped-out specialist and a capped-out all-rounder both read 99).
+// OVR = 40 + 59 x f^0.75, rounded down: 40 with nothing invested · ~61 for a new player (190 pts) · 99 only when no attribute can go any higher.
+const roomLeft=d=>{const c=statCaps(d.h,d.wt,d.ws,btEff(d)),st={};STATS.forEach(([k])=>st[k]=Math.min(d.st[k],c[k]));let n=0,up=1;
+ while(up){up=0;for(const[k] of STATS.slice().sort((a,b)=>st[a[0]]-st[b[0]]))if(st[k]<capInfo(st,k,c).c){st[k]++;n++;up=1}}return n};
+const ovrMemo=new Map(); // OVR by build (it is drawn every frame on several screens)
+const ovr=d=>{const key=d.h+','+d.wt+','+d.ws+','+btEff(d)+','+STATS.map(([k])=>d.st[k]).join(',');if(ovrMemo.has(key))return ovrMemo.get(key);
+  const c=statCaps(d.h,d.wt,d.ws,btEff(d)),used=STATS.reduce((a,[k])=>a+Math.min(d.st[k],c[k])-SMIN,0),mx=used+roomLeft(d),f=mx>0?Math.max(0,Math.min(1,used/mx)):0,v=Math.floor(40+59*Math.pow(f,.75)+1e-9);if(ovrMemo.size>300)ovrMemo.clear();ovrMemo.set(key,v);return v},
  pOvr=p=>p.build?ovr(p.build):ovrOf(p.rt); // any player on the floor: created players use the invested-points OVR
 // ===== PLAYER PROGRESSION: LEVEL + EXP (separate from OVR) =====
 // Every created player has a total EXP (b.xp, saved with the slot). LEVEL is worked out from it, max level 25.
@@ -3060,7 +3085,7 @@ function archOf(d){const sc=archScores(d);if(!sc.length||sc[0][1]<ARCH_FLAT)retu
 function sanitize(b){
  if(!b||typeof b!='object')return null;
  const pos=mClamp(b.pos|0,0,4),h=mClamp(Math.round(+b.h)||DEF_H[pos],HRANGE[pos][0],HRANGE[pos][1]),wr=wRange(h),wt=mClamp(Math.round((+b.wt||DEF_W[pos])/5)*5,wr[0],wr[1]),ws=wsClamp(Math.round(+b.ws)||h+4,h),caps=statCaps(h,wt,ws,btEff({h,wt,bt:b.bt|0,btSet:!!b.btSet}));
- const st={};STATS.forEach(([k])=>{st[k]=mClamp(Math.round(+(b.st&&b.st[k]))||SMIN,SMIN,caps[k])});
+ const st={};STATS.forEach(([k])=>{st[k]=mClamp(Math.round(+(b.st&&b.st[k]))||SMIN,SMIN,caps[k])});fitLimits(st); // (v1.25: builds from before the rebalance give back what breaks the rivals / elite budget, as points to spend)
  let used=STATS.reduce((a,[k])=>a+st[k]-SMIN,0);
  const pool=poolOf(b);while(used>pool){let m=STATS[0][0];STATS.forEach(([k])=>{if(st[k]>st[m])m=k});st[m]--;used--}
  const sigLv=lvInfo(Math.max(0,Math.round(+b.xp)||0)).lv;
@@ -3317,11 +3342,12 @@ function drawDebut(){const D=MM.db,d=MM.cr,t=D.t,c01=v=>Math.max(0,Math.min(1,v)
  if(t>DB_CARD+1.3){g.textAlign='center';g.font='bold 13px system-ui';g.fillStyle='rgba(255,255,255,'+(.5+.4*Math.sin(t*4))+')';g.fillText('PRESS ENTER TO CONTINUE',480,523)}
  if(t<.6){g.fillStyle='rgba(0,0,0,'+(1-t/.6)+')';g.fillRect(0,0,960,540)}}
 function debutEnd(){S='career';MM.r=MM.slot;for(const k in P)P[k]=0}
-function adj(row,dd,big,fresh){ // attribute rows (6..): never above the cap the player's biometrics allow
+const capNow=k=>capInfo(MM.cr.st,k,MM.caps).c; // the editor's cap for k right now: his body cap, lowered by its rivals and the elite budget
+function adj(row,dd,big,fresh){ // attribute rows (6..): never above the cap the player's biometrics, rivals and elite budget allow
  const d=MM.cr;
- if(row>=6&&row<=5+STATS.length){const k=STATS[row-6][0],v=d.st[k];let nv=mClamp(v+dd*(big?5:1),stFloor(k),MM.caps[k]);if(dd>0)nv=Math.min(nv,v+Math.max(0,pointsLeft(d)));d.st[k]=nv}
+ if(row>=6&&row<=5+STATS.length){const k=STATS[row-6][0],v=d.st[k];let nv=mClamp(v+dd*(big?5:1),stFloor(k),Math.max(v,capNow(k)));if(dd>0)nv=Math.min(nv,v+Math.max(0,pointsLeft(d)));d.st[k]=nv}
 }
-function setBar(x){const d=MM.cr,k=STATS[MM.drag-6][0],v=d.st[k];d.st[k]=mClamp(Math.round(SMIN+(x-640)/210*(SMAX-SMIN)),stFloor(k),Math.max(stFloor(k),Math.min(MM.caps[k],v+Math.max(0,pointsLeft(d)))))} // (over budget = can lower, never forced down)
+function setBar(x){const d=MM.cr,k=STATS[MM.drag-6][0],v=d.st[k];d.st[k]=mClamp(Math.round(SMIN+(x-640)/210*(SMAX-SMIN)),stFloor(k),Math.max(stFloor(k),Math.min(Math.max(v,capNow(k)),v+Math.max(0,pointsLeft(d)))))} // (over budget = can lower, never forced down)
 // ===== BIOMETRICS page (step 2): name, height (limited by position), weight (limited by height), wingspan; a live 3D preview; and what each does to the attribute caps =====
 const bioRect=i=>[40,92+i*47,270,42],CHIP_Y=360,chipRect=i=>{const W=[40,46,58,70,46];let x=40;for(let q=0;q<i;q++)x+=W[q]+4;return[x,CHIP_Y,W[i],22]},BIO_NEXT=[40,424,270,44],BIO_BACK=[40,476,270,34],BV=[330,96,170,350],BAR_X=700,BAR_W=140;
 const bsc=new THREE.Scene(),bcam=new THREE.PerspectiveCamera(30,BV[2]/BV[3],.5,100);let bioM=null;
@@ -3382,7 +3408,7 @@ function menuStep(dt){
  if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
  const nm=!(S=='cbio'&&MM.bi==0);
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
- if(S=='menu'){mainMenuStep(dt);if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
+ if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
  else if(S=='career'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.r=MM.r==3?(lr>0?0:2):(MM.r+lr+3)%3;if(dn)MM.r=3;if(up&&MM.r==3)MM.r=0;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
  else if(S=='pnmode'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.md=(MM.md+lr+3)%3;if(ok)modeEnter();if(P.Escape||P.Backspace)modeBack()}
  else if(S=='playnow'){
@@ -3436,7 +3462,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  if(type==2){MM.drag=-1;MM.pd=-1;MM.hdr=null;return}
  const[x,y]=cpos(e);
  if(ONL_S.has(S)){onlPtr(x,y,type);return}
- if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
+ if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(PN.on){pnPtr(x,y,type);return}if(!MN.gate&&mIn(x,y,PN_BTN)){if(type==0)pnOpen();return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
  else if(S=='career'){for(let i=0;i<4;i++)if(mIn(x,y,mainRect(i))){MM.r=i;if(type==0)mainEnter();return}}
  else if(S=='playnow'){
   if(type==0&&mIn(x,y,PN_BACK)){pnBack();return}
@@ -4142,7 +4168,44 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.24'; // bump with every published update (shown top right of the main menu)
+const GAME_VER='v1.26'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+// ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
+// EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
+const PATCH=[
+ ['v1.26','Patch notes',['New PATCH NOTES button on the main menu (top right, or press N). It shows what changed in the five most recent versions.']],
+ ['v1.25','Player builder rebalance',['Attribute caps are much stricter: a 99 now needs the one body that is extreme for it. 99 3PT takes a 6\'0" player at 130 lb with the minimum wingspan; 99 SPEED a 5\'9"-5\'10" lightweight; 99 DUNKING a 7-footer with very long arms.',
+  'RIVAL attributes: eight pairs share one allowance past 70, so raising one lowers the other\'s cap. 99 3PT holds SPEED to 81. The pairs: 3PT/SPEED, MID-RANGE/SPEED, SPEED/STRENGTH, 3PT/DUNKING, MID-RANGE/DUNKING, 3PT/PERIMETER D, PERIMETER/INTERIOR D, BLOCKING/POST MOVES.',
+  'ELITE BUDGET: every point above 80, across all attributes, comes out of one budget of 50 (two 99s and a 92, or five 90s).',
+  'The attribute page shows an orange tick where a rival or the budget holds a cap down, an ELITE BUDGET meter, and what is limiting the attribute you have selected.',
+  'Saved players over the new limits are trimmed when the game loads, and the points come back to spend.']],
+ ['v1.24','Fast breaks',['Every AI team now pushes the ball ahead in the 5 seconds after a steal, block or defensive rebound: the ball handler looks up the floor first and hits an open runner early instead of dribbling into the retreating defence.',
+  'He re-reads every fraction of a second, so the pass goes the moment a runner breaks free. If no one is open he pushes it himself.']],
+ ['v1.23','Your HUD only',['The shot meter and the Signature list on the right now only show for the player you control (in Career, your created player), not for your AI teammates.']],
+ ['v1.22','Superman alley-oop',['The SUPERMAN dunk is now a two-foot alley-oop finish thrown from way out: the lob is caught in the layout.',
+  'The LEANING TOMAHAWK takes off from two feet, about 8 ft out, further than before.']],
+ ['v1.21','Right-handed finishes',['Every dunk and layup is now finished right-handed.']]];
+const PN={on:false,sel:0},PN_BTN=[764,8,146,28],PN_BOX=[80,52,800,440],PN_TAB=i=>[100,112+i*66,220,58],PN_X=[770,66,92,30],pnList=()=>PATCH.slice(0,5);
+function pnOpen(){PN.on=true;PN.sel=0;beep(520,.06,'triangle')}
+function pnClose(){PN.on=false;beep(300,.06,'triangle')}
+function pnKeys(up,dn,ok){const n=pnList().length;if(up)PN.sel=(PN.sel+n-1)%n;if(dn)PN.sel=(PN.sel+1)%n;if(P.Escape||P.Backspace||P.KeyN||ok)pnClose()}
+function pnPtr(x,y,type){if(mIn(x,y,PN_X)||!mIn(x,y,PN_BOX)){if(type==0)pnClose();return}for(let i=0;i<pnList().length;i++)if(mIn(x,y,PN_TAB(i))){if(type==0)PN.sel=i;return}}
+function pnBtnDraw(){if(MN.gate||MN.t<T_READY-.6)return;const[x,y,w,h]=PN_BTN;mRR(x,y,w,h,15,PN.on?'rgba(40,32,8,.9)':'rgba(8,10,16,.72)',GOLD);
+ g.save();g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('☰  PATCH NOTES',x+w/2,y+19);g.restore()}
+function pnDraw(){const L=pnList(),[bx,by,bw,bh]=PN_BOX,cur=L[PN.sel];g.save();
+ g.fillStyle='rgba(4,5,9,.72)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.97)',GOLD);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('PATCH NOTES',bx+20,by+40);const tw=g.measureText('PATCH NOTES').width;
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('the '+L.length+' most recent versions  ·  you are on '+GAME_VER,bx+34+tw,by+38);
+ {const[x,y,w,h]=PN_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
+ L.forEach(([v,t],i)=>{const[x,y,w,h]=PN_TAB(i),on=i==PN.sel;mRR(x,y,w,h,9,on?'rgba(255,210,63,.16)':'rgba(255,255,255,.05)',on?GOLD:null);
+  g.textAlign='left';g.font='bold 20px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(v,x+14,y+26);
+  if(v==GAME_VER){g.font='bold 9px system-ui';const tw=g.measureText('CURRENT').width+12;mRR(x+w-tw-10,y+10,tw,16,8,'rgba(76,255,122,.15)','#4cff7a');g.textAlign='center';g.fillStyle='#4cff7a';g.fillText('CURRENT',x+w-10-tw/2,y+22);g.textAlign='left'}
+  let f=12;g.font='12px system-ui';while(g.measureText(t).width>w-28&&f>9){f-=.5;g.font=f+'px system-ui'}g.fillStyle=on?GOLD:'#8a90a0';g.fillText(t,x+14,y+46)});
+ if(cur){const x=346,w=bx+bw-x-22;let y=by+86;g.textAlign='left';g.fillStyle='#fff';g.font='bold 22px Georgia';g.fillText(cur[0]+'  ·  '+cur[1].toUpperCase(),x,y);y+=30;
+  // shrink the text until every bullet fits the panel
+  let fz=13.5,lh;const fit=()=>{g.font=fz+'px system-ui';lh=fz*1.42;let yy=y;for(const b of cur[2]){let line='',n=1;for(const wd of b.split(' ')){const tt=line?line+' '+wd:wd;if(g.measureText(tt).width>w-16&&line){n++;line=wd}else line=tt}yy+=n*lh+8}return yy};
+  while(fit()>by+bh-40&&fz>9.5)fz-=.5;
+  g.font=fz+'px system-ui';for(const b of cur[2]){g.fillStyle=GOLD;g.fillText('•',x,y);g.fillStyle='#dfe3ea';y=wrapT(b,x+16,y,w-16,lh)+8}}
+ g.textAlign='center';g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ pick a version  ·  Esc / Enter / N close  ·  or click',480,by+bh-14);g.restore()}
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
@@ -4363,14 +4426,15 @@ const HL_CREATE=[
  {t:'YOUR CAREER SLOTS',tag:'START HERE',d:'Go to CAREER on the main menu. You have 3 save slots, so you can keep up to 3 created players. Pick an empty slot to create a player, or a saved one to PLAY, EDIT PLAYER or DELETE PLAYER (delete asks you to confirm first).\nPlayers are saved in this browser.'},
  {t:'STEP 1: POSITION',tag:'PG · SG · SF · PF · C',d:'Choose Point Guard, Shooting Guard, Small Forward, Power Forward or Center. The screen shows the two best players in the league at that position and the typical size for it.\nYour player replaces the AI starter at that position on the team you sign with. The position can\'t be changed later, so pick carefully.'},
  {t:'STEP 2: NAME AND BODY',tag:'BIOMETRICS',d:'• NAME: type up to 12 characters.\n• HEIGHT: each position has its own range (PG 5\'9"–6\'4" up to C 6\'9"–7\'2").\n• WEIGHT: in 5 lb steps (hold Shift for 15 lb).\n• WINGSPAN: from 3" shorter than your height to 10" longer.\n• BUILD: slim, toned, regular, muscular or fatty (which ones you can pick depends on your weight for your height).\nThe ATTRIBUTE CAPS panel updates as you change these: it shows the highest each rating can ever reach, compared with an average player at your position. Your body is locked once the player is saved.'},
- {t:'HOW YOUR BODY SETS YOUR CAPS',tag:'TRADE-OFFS',d:'• Taller: higher dunking, interior defense, blocking, rebounding and strength caps, but lower speed, ball handle, perimeter defense and stealing.\n• Heavier: more strength, post moves, rebounding and interior defense, but less speed, perimeter defense, dunking, stealing and shooting.\n• Longer arms: better blocking, stealing, rebounding and defense, slightly worse shooting.\n• A body built for a skill can take it to 99: e.g. a guard under 6\'4" with short arms can reach 99 3PT and MID-RANGE, a 7-footer with long arms 99 DUNKING and BLOCKING.\nHeight, weight and arm length also matter on the court (reach, contact, blocks), not just for the caps.'},
- {t:'STEP 3: ATTRIBUTES',tag:'190 POINTS',d:'Every rating starts at 25 and you get 190 points to spread across the 14 attributes, never above each cap. Use ←/→ (Shift for bigger steps) or click / drag the bars.\nYour OVR goes up as you invest more of your possible points. Your ARCHETYPE (the kind of player you are, e.g. a slashing playmaker) is worked out automatically from where you put your points.\nSee the ATTRIBUTES page for what each rating does.'},
+ {t:'HOW YOUR BODY SETS YOUR CAPS',tag:'BODY',d:'• Taller: higher dunking, interior defense, blocking, rebounding and strength caps, but lower speed, ball handle, passing, stealing and shooting.\n• Heavier: more strength, post moves, rebounding and interior defense, but less speed, ball handle, perimeter defense, dunking, stealing and shooting.\n• Longer arms: better blocking, stealing, rebounding, defense, dunking and layups, but worse shooting.\n• A 99 needs the one body that is extreme for it: 99 3PT takes a 6\'0" player at 130 lb with the minimum wingspan; 99 SPEED a 5\'9"–5\'10" lightweight; 99 DUNKING a 7-footer with very long arms; 99 BLOCKING 7\'2" with the longest arms.\nHeight, weight and arm length also matter on the court (reach, contact, blocks), not just for the caps.'},
+ {t:'RIVALS AND THE ELITE BUDGET',tag:'TRADE-OFFS',d:'Your body sets each cap, but you can\'t reach them all at once.\n• RIVALS: some attributes fight each other. Past 70, a pair shares one allowance, so raising one lowers the other\'s cap: 3PT and SPEED (99 3PT holds SPEED to 81; 90 and 90 is the most for both), MID-RANGE and SPEED, SPEED and STRENGTH, 3PT and DUNKING, MID-RANGE and DUNKING, 3PT and PERIMETER DEFENSE, PERIMETER and INTERIOR DEFENSE, BLOCKING and POST MOVES.\n• ELITE BUDGET: every point above 80, across all your attributes, comes out of one budget of 50. That is two 99s and a 92, or five 90s; everything else stays at 80 or below.\n• On the attribute page an orange tick shows a cap held lower by a rival or the budget; select an attribute to see what holds it down and what its rivals are.\n• Players made before this rule keep everything that fits; anything over the limits is lowered and the points come back to spend.'},
+ {t:'STEP 3: ATTRIBUTES',tag:'190 POINTS',d:'Every rating starts at 25 and you get 190 points to spread across the 14 attributes, never above each cap. Use ←/→ (Shift for bigger steps) or click / drag the bars.\nRivals and the elite budget (see TRADE-OFFS) stop you maxing everything at once. Your OVR goes up as you invest more of your possible points. Your ARCHETYPE (the kind of player you are, e.g. a slashing playmaker) is worked out automatically from where you put your points.\nSee the ATTRIBUTES page for what each rating does.'},
  {t:'APPEARANCE',tag:'LOOK',d:'From the attributes page, open APPEARANCE to choose a hair style (13 styles), hair colour (32), skin tone (24) and face (8). Drag the preview to spin your player around. You can change your look any time.'},
  {t:'STORE',tag:'ANIMATIONS',d:'From the attributes page, move to APPEARANCE and press \u2192 twice (or click STORE). It lists every animation your player can use, in four tabs: LAYUPS, DUNKS, PASSES and SHOTS (fadeaways). The tabs run along the top and that tab\'s animations down the left: hover over or click one and your own player performs it on loop in the PREVIEW to the right, so you can see exactly what it looks like (locked ones too).\n• The ones your ratings have unlocked can be switched ON or OFF; a switched-off animation is never used in your games, offline or online.\n• Locked ones show the rating they need (e.g. the 360 dunk needs DUNKING 85) and unlock as you upgrade.\n• Each tab keeps at least one ON (except fadeaways, which you can switch off completely).\n• Your choices are saved when you SAVE PLAYER.'},
  {t:'SIGNATURES',tag:'BADGES',d:'From the attributes page, move to APPEARANCE and press → to switch to SIGNATURES. Your ratings unlock Bronze, Silver and Gold tiers, and you spend each category\'s Signature Points to equip them. See the SIGNATURES page for every one.'},
  {t:'STEP 4: PICK YOUR TEAM',tag:'SIGNING',d:'Press SAVE PLAYER, then choose which of the 6 teams to sign with. Each team card shows its lineup with you in it. Confirm with YES and you replace that team\'s starter at your position. Your team can\'t be changed afterwards.\nYou then get your debut: a welcome card for your new team.'},
  {t:'LEVELS AND EXP',tag:'PROGRESSION',d:'You earn EXP for what your created player does in a career game: steals, layups, mid-range shots, threes, dunks, rebounds and assists. Finishing the whole game adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1); leaving early keeps your EXP but loses the bonus.\n• No EXP is earned in Play Now or online.\n• There are 25 levels. Each level-up gives attribute points (15 at the first and more every level after).\n• Each level also gives more Signature Points in every category.'},
- {t:'UPGRADING YOUR PLAYER',tag:'EDIT PLAYER',d:'Pick your player on the CAREER screen and choose EDIT PLAYER (it shows how many points you have to spend). Attributes can only go up, never down, and never past their caps. Appearance and Signatures can be changed freely; name, position, body and team are locked.\nIf your upgrades change what kind of player you are, the game asks whether you want to adopt the new archetype or keep your old one.'},
+ {t:'UPGRADING YOUR PLAYER',tag:'EDIT PLAYER',d:'Pick your player on the CAREER screen and choose EDIT PLAYER (it shows how many points you have to spend). Attributes can only go up, never down, and never past their caps (including the caps lowered by rivals and the elite budget). Appearance and Signatures can be changed freely; name, position, body and team are locked.\nIf your upgrades change what kind of player you are, the game asks whether you want to adopt the new archetype or keep your old one.'},
  {t:'PLAYING YOUR CAREER',tag:'PLAY',d:'Pick your player and choose PLAY, then CAREER for games against the AI teams: 5V5, 3V3 (your team\'s best three, and you always play) or 1V1 against the player at your position on the team you pick. Or choose ONLINE to play a friend (see ONLINE PLAY).\nIn career you always control your own player. On offence, Space when someone else has the ball makes that teammate shoot, and E calls for the pass.'}];
 const HL_ONLINE=[
  {t:'WHAT ONLINE PLAY IS',tag:'1V1',d:'Online play is a 1v1 game against a friend, each of you using your own created player (with all your ratings and Signatures), playing for the team you signed with.'},
@@ -4662,6 +4726,7 @@ function drawCareer(){
  }
  {const[x,y,w,h]=mainRect(3),on=MM.r==3;mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText('BACK',x+w/2,y+23)}
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2190/\u2192 choose a slot  \u00b7  \u2193 back  \u00b7  Enter confirm  \u00b7  or click',560,509)}
+const OVER_C='#ff9f43'; // trade-off orange: a cap held lower by a rival attribute or the elite budget
 function drawCreate(){
  const d=MM.cr,rem=pointsLeft(d),caps=MM.caps;
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText((bioLocked()?'EDIT PLAYER':'CREATE PLAYER')+'  ·  SLOT '+(MM.slot+1),40,48);drawPosPill(450);
@@ -4677,18 +4742,28 @@ function drawCreate(){
  {const[ax,ay,aw,ah]=AP_RECT,on=MM.row==5&&!MM.apS;mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText('APPEARANCE \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('skin \u00b7 hair \u00b7 face',ax+aw/2,ay+36)}
  {const[ax,ay,aw,ah]=SIG_BTN,on=MM.row==5&&!!MM.apS,u=sigUse(d.sig),sp=spOf(lvInfo(d.xp||0).lv);mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,210,63,.07)',on?GOLD:'rgba(255,210,63,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':GOLD;g.fillText('SIGNATURES \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(u.n+' equipped \u00b7 '+sp+' SP',ax+aw/2,ay+36)}
  {const[ax,ay,aw,ah]=STORE_BTN,on=MM.row==5&&MM.apS==2,off=(d.anim&&d.anim.off||[]).length;mRR(ax,ay,aw,ah,8,on?HL:'rgba(127,255,160,.07)',on?GOLD:'rgba(127,255,160,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':'#7fffa0';g.fillText('STORE \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(off?off+' animation'+(off>1?'s':'')+' off':'all animations on',ax+aw/2,ay+36)}
- g.textAlign='left';g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('The tick on each bar is that attribute’s cap, set by',44,316);g.fillText('your height, weight and wingspan. You can never',44,332);g.fillText('raise an attribute past it.',44,348);
+ // TRADE-OFFS (v1.25): the elite budget meter, then what holds the selected attribute down and its rivals
+ {const eu=eliteUsed(d.st),full=eu>=ELITE[1],sk=MM.row>=6&&MM.row<6+STATS.length?STATS[MM.row-6][0]:null;
+  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('ELITE BUDGET',44,314);
+  mRR(130,305,190,10,5,'rgba(255,255,255,.12)');if(eu>0)mRR(130,305,Math.max(10,190*Math.min(1,eu/ELITE[1])),10,5,full?OVER_C:GOLD);
+  g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=full?OVER_C:'#cfd3dc';g.fillText(eu+' / '+ELITE[1]+' ABOVE '+ELITE[0],426,314);
+  g.textAlign='left';
+  if(sk){const ci=capInfo(d.st,sk,caps),rv=rivOf(sk),t=ci.why?stName(sk)+' CAPPED AT '+ci.c+'  ·  '+(ci.why=='ELITE'?'ELITE BUDGET USED UP':'HELD DOWN BY '+stName(ci.why)+' '+d.st[ci.why]):stName(sk)+' CAP '+ci.c+'  ·  set by your body';
+   let f=12;g.font='bold 12px system-ui';while(g.measureText(t).width>382&&f>8){f-=.5;g.font='bold '+f+'px system-ui'}g.fillStyle=ci.why?OVER_C:'#cfd3dc';g.fillText(t,44,334);
+   g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText(rv.length?'Rivals past '+RIV_T+': '+rv.map(stName).join(' · '):'No rivals: only the elite budget limits it',44,351)}
+  else{g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('White tick = body cap. Orange = held lower by a rival',44,334);g.fillText('attribute or by the elite budget (points above '+ELITE[0]+').',44,351)}}
  {const nw=archOf(d),cur=d.arch&&!MM.bioNew?d.arch:null;g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText(cur&&cur!=nw?'ARCHETYPE  '+cur+'  \u00b7  NOW PLAYS LIKE':'ARCHETYPE',44,370);g.font='bold 15px Georgia';g.fillStyle=GOLD;g.fillText(nw,44,384)} // live: what the current spread of points plays like
  mRR(40,388,390,46,8,'rgba(255,255,255,.04)');g.textAlign='left';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('OVERALL',56,416);g.font='bold 30px Georgia';g.fillStyle=ovrCol(ovr(d));g.fillText(ovr(d),132,423);
  g.textAlign='right';g.font='13px system-ui';g.fillStyle='#cfd3dc';g.fillText(fmtH(d.h)+'  ·  '+d.wt+' lb  ·  WS '+fmtH(d.ws),414,408);g.fillStyle=GOLD;g.fillText('Replaces your AI '+POS[d.pos],414,426);
  [['SAVE PLAYER',SAVE_R,6+STATS.length],['CANCEL',CANCEL_R,7+STATS.length]].forEach(([t,r,ix])=>{const on=MM.row==ix;mRR(r[0],r[1],r[2],r[3],8,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 18px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText(t,r[0]+r[2]/2,r[1]+30)});
- STATS.forEach(([k,l],j)=>{const[x,y,w,h]=statRect(j),on=MM.row==6+j,v=d.st[k],cx=640+(caps[k]-SMIN)/(SMAX-SMIN)*210;
+ STATS.forEach(([k,l],j)=>{const[x,y,w,h]=statRect(j),on=MM.row==6+j,v=d.st[k],cx=640+(caps[k]-SMIN)/(SMAX-SMIN)*210,ec=capInfo(d.st,k,caps).c,ex=640+(ec-SMIN)/(SMAX-SMIN)*210,held=ec<caps[k];
   mRR(x,y,w,h,8,on?HL:null);g.textAlign='left';g.font='bold 13px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(l,x+16,y+19);
   g.textAlign='center';g.font='bold 18px system-ui';g.fillStyle=on?GOLD:'#6a7080';g.fillText('−',614,y+20);g.fillText('+',872,y+20);
   mRR(640,y+9,210,10,5,'rgba(255,255,255,.12)');mRR(640,y+9,Math.max(8,(v-SMIN)/(SMAX-SMIN)*210),10,5,statCol(v));
-  if(caps[k]<SMAX){g.fillStyle='rgba(8,10,16,.55)';g.fillRect(cx,y+9,850-cx,10)} // beyond the cap: not reachable
-  g.fillStyle='rgba(255,255,255,.9)';g.fillRect(cx-1,y+6,2,16);
-  g.textAlign='right';g.font='bold 16px Georgia';g.fillStyle='#fff';g.fillText(v,x+w-10,y+20)});
+  if(caps[k]<SMAX){g.fillStyle='rgba(8,10,16,.55)';g.fillRect(cx,y+9,850-cx,10)} // beyond the body cap: not reachable
+  if(held){g.fillStyle='rgba(255,159,67,.3)';g.fillRect(ex,y+9,cx-ex,10);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(cx-1,y+7,2,14);g.fillStyle=OVER_C;g.fillRect(ex-1,y+6,2,16)} // held lower by a rival / the elite budget
+  else{g.fillStyle='rgba(255,255,255,.9)';g.fillRect(cx-1,y+6,2,16)}
+  g.textAlign='right';g.font='bold 16px Georgia';g.fillStyle=held&&v>=ec?OVER_C:'#fff';g.fillText(v,x+w-10,y+20)});
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'↑/↓ row  ·  →/+ raise an attribute (Shift = bigger steps)  ·  Esc cancel  ·  mouse: click or drag the bars':'↑/↓ row  ·  ←/→ change (Shift = bigger steps)  ·  Esc back to biometrics  ·  mouse: click or drag the bars',480,520);
 }
 
