@@ -387,7 +387,7 @@ function autoSig(st,c,h){const m={},L=[],n=c.n[0]+Math.min(c.n[1]-c.n[0],Math.fl
 // an AI player's loadout (team ti, position i): fixed per player, shared by games and the roster screen
 const aiSigOf=(ti,i)=>{const t=TEAMS[ti];t.sig=t.sig||[];return t.sig[i]||(t.sig[i]=drSig(t,i,autoSig(t.rt[i],isStar(t,i)?SIG_AI.star:SIG_AI.role,(Math.imul(ti*5+i+1,2654435761)>>>0)/4294967296)))};
 // D.RYERSON (v1.28): on top of his own loadout he gets EVERY Signature his 3PT unlocks (anything that needs 3PT), plus OFF-BALANCE ARTIST for shooting off his own dribble moves and FADEAWAY ARTIST for his step-backs, each at the highest tier his ratings reach. No SP or Gold limits.
-const DR_N='D.Ryerson',DR_SIG=['offbal','fadeaway'];
+const DR_N='D.Ryerson',DR_SIG=['offbal','fadeaway'],DR_SHOW=['ice','spotup','fadeaway','offbal','relentless']; // DR_SHOW: the only 5 the roster screen lists (he still has them all)
 function drSig(t,i,m){if(t.pl[i]!==DR_N)return m;for(const sd of SIG_DEF)if(sd.req.tp||DR_SIG.includes(sd.id)){const q=sigQual(sd,t.rt[i]);if(q>(m[sd.id]||0))m[sd.id]=q}return m}
 // the value of Signature id for player p at the tier he has it equipped (0 if not equipped) - every gameplay hook reads it through this
 const sigv=(p,id)=>{const t=p&&p.sig&&p.sig[id];return t?SIGM[id].v[t-1]:0};
@@ -982,10 +982,11 @@ const ROLE={'FLOOR GENERAL':'PM','SPEEDSTER':'PM','SLASHING PLAYMAKER':'PM','COM
 const roleOf=p=>ROLE[p.arch]||['PM','SH','WG','WG','BG'][p.i]; // created players: by position
 // D.RYERSON's AI (v1.28): the smartest offensive AI in the league. Off the ball he keeps sprinting to a fresh open spot on the arc; on it he judges contested
 // shots with his Signatures in mind, isolates with dribble moves and shoots straight off them when they get him open, and still gives the ball up when you call for it.
-//  reloc = seconds between his sprints to a new spot on the arc [min, random extra] · pop = his sprint speed · near = how close a defender gets before he bursts away
+//  half = his off-ball smarts only switch on once he and the ball are within this distance of the hoop (the half court), never on the break
+//  reloc = seconds between his sprints to a new spot on the arc [min, random extra] · pop = his burst speed · run = his speed getting to a new spot · near = how close a defender gets before he bursts away
 //  open = contest under which he simply shoots · thr = how much lower his bar is for a contested shot · pass = how much better a teammate's shot must look before he gives it up
 //  iso = chance he works a move when guarded · moves = most moves in one isolation · mv = the moves he picks from (step-back twice as often)
-const DR_AI={reloc:[1.1,.8],pop:190,near:62,open:.3,thr:.14,pass:.22,iso:.85,moves:3,mv:'VZXBV'},isDR=p=>!!p&&!p.build&&!!TEAMS[TI[p.team]]&&TEAMS[TI[p.team]].pl[p.i]===DR_N;
+const DR_AI={half:430,reloc:[1.1,.8],pop:175,run:135,near:62,open:.3,thr:.14,pass:.22,iso:.85,moves:3,mv:'VZXBV'},isDR=p=>!!p&&!p.build&&!!TEAMS[TI[p.team]]&&TEAMS[TI[p.team]].pl[p.i]===DR_N;
 // style: pass = bonus (x2 points) towards passing, shoot = extra appetite to shoot (neg = shoots more), drv = drive appetite 0-1, mv = favourite dribble moves (Z cross · X hesitation · C spin · V step-back · B between legs · N behind back)
 const STY={'FLOOR GENERAL':{pass:.2,shoot:.06,drv:.3,mv:'ZXN'},'SPEEDSTER':{pass:.04,shoot:.08,drv:.95,mv:'ZCB'},'SLASHING PLAYMAKER':{pass:.07,shoot:.07,drv:1,mv:'CZ'},'COMBO GUARD':{pass:.09,shoot:0,drv:.5,mv:'ZVB'},
  'CHONKY':{pass:.22,shoot:.05,drv:.2,mv:'XZ'},'SHOT CREATOR':{pass:-.04,shoot:-.07,drv:.45,mv:'ZVCN'},'MICROWAVE SCORER':{pass:-.03,shoot:-.1,drv:.35,mv:'VZ'},'MID-RANGE MAESTRO':{pass:0,shoot:-.08,drv:.3,mv:'XV'},
@@ -1209,7 +1210,8 @@ function offBall(p,i,dt){
  const dv=driving(bh)?1:0,side=bh?(toLoc(p,bh.x,bh.y)[1]>=0?1:-1):(p.y>=HY?1:-1);
  if(dv!=ai.dv){ai.dv=dv;ai.t=0} // a teammate starts (or stops) driving: re-think straight away
  const gp=GP[p.team],sp_=gp?gk(p.team,'space'):0,mv_=gp?gk(p.team,'move'):0,ck_=gp?gk(p.team,'cut'):0;if(ai.pu)ai.pu=null; // (his post-up ended when he gave the ball up)
- const drA=isDR(p);if(drA&&bh&&B.mode=='held'&&!dv){ai.drT=(ai.drT==null?.6:ai.drT)-dt;if(ai.drT<=0){ai.drT=DR_AI.reloc[0]+Math.random()*DR_AI.reloc[1];ai.t=0;ai.rel=1;ai.cut=0}} // D.Ryerson: always on the move to a new spot on the arc
+ const drA=isDR(p)&&Math.hypot(H-p.x,HY-p.y)<DR_AI.half&&!(bh&&Math.hypot(H-bh.x,HY-bh.y)>DR_AI.half);if(drA&&bh&&B.mode=='held'&&!dv){ // (half court only: on the break he runs like everyone else)
+ ai.drT=(ai.drT==null?.6:ai.drT)-dt;if(ai.drT<=0){ai.drT=DR_AI.reloc[0]+Math.random()*DR_AI.reloc[1];ai.t=0;ai.rel=1;ai.cut=0}} // D.Ryerson: always on the move to a new spot on the arc
  if(gp){ // TEAM GAME PLAN: transition lanes, the screen, the hub's spot, the post player's block, who crashes - these replace the plain AI's target
   const g_=gpOffT(p,ai,role,bh,dv,side,dt);if(g_){const dx=g_[0]-p.x,dy=g_[1]-p.y,dl=Math.hypot(dx,dy)||1,mv=dl>6?Math.min(g_[2]*spdM(p)*trk(p),dl*3.2):0;
    p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);const fx=(bh?bh.x:H)-p.x,fy=(bh?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;ai.t=Math.min(ai.t,.15);return}
@@ -1253,7 +1255,7 @@ function offBall(p,i,dt){
     ai.tx=best[0];ai.ty=best[1]}}}
  ai.pop=Math.max(0,(ai.pop||0)-dt);ai.ct2=(ai.ct2||0)-dt;
  const tx=ai.cut>0?ai.cx:ai.tx+Math.sin(T*.8+i)*6,ty=ai.cut>0?ai.cy:ai.ty+Math.cos(T*.7+i)*6,dx=tx-p.x,dy=ty-p.y,dl=Math.hypot(dx,dy)||1;
- const spd=ai.cut>0?150:ai.pop>0?(drA?DR_AI.pop:158+14*mv_):drA&&dl>40?150:dl>150?125:dv&&role=='BG'?145:108,mv=dl>7?Math.min(spd*spdM(p)*trk(p),dl*3.2):0;
+ const spd=ai.cut>0?150:ai.pop>0?(drA?DR_AI.pop:158+14*mv_):drA&&dl>40?DR_AI.run:dl>150?125:dv&&role=='BG'?145:108,mv=dl>7?Math.min(spd*spdM(p)*trk(p),dl*3.2):0;
  p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);
  const fx=(bh&&!(ai.cut>0)?bh.x:H)-p.x,fy=(bh&&!(ai.cut>0)?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;
 }
@@ -4941,7 +4943,7 @@ function drawRTeam(){const ti=MM.ro,t=TEAMS[ti],hx=n=>'#'+n.toString(16).padStar
    list.forEach(([k,l],j)=>{const yy=y0+16+j*15;g.textAlign='left';g.font='11px system-ui';g.fillStyle='#cfd3dc';g.fillText(l,x+10,yy);g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle=ovrCol(r[k]);g.fillText(r[k],x+w-10,yy)})};
   sec('BEST 3','#7fffa0',srt.slice(0,3),ny+38);sec('WORST 3','#ff7b7b',srt.slice(-3).reverse(),ny+98);
   // Signatures (his AI loadout), Gold first - hover one for what it does
-  {const m=SIG_AI.on?aiSigOf(ti,i):{},L=Object.keys(m).sort((a,b2)=>m[b2]-m[a]||SIGM[a].no-SIGM[b2].no),y0=ny+162,lab='SIGNATURES  '+L.length;
+  {const m=SIG_AI.on?aiSigOf(ti,i):{},L=(t.pl[i]===DR_N?DR_SHOW.filter(id=>m[id]):Object.keys(m)).sort((a,b2)=>m[b2]-m[a]||SIGM[a].no-SIGM[b2].no),y0=ny+162,lab='SIGNATURES  '+L.length;
    g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle=GOLD;g.fillText(lab,x+10,y0);g.fillRect(x+10+g.measureText(lab).width+6,y0-4,w-26-g.measureText(lab).width,1);
    if(!L.length){g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle='#6a7080';g.fillText('NONE',cx,y0+22)}
    const sp=Math.min(24,(w-16)/Math.max(1,L.length)),sz=Math.min(22,sp-1),x0=cx-sp*L.length/2+sp/2;
