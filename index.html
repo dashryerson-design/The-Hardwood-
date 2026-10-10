@@ -385,7 +385,10 @@ function autoSig(st,c,h){const m={},L=[],n=c.n[0]+Math.min(c.n[1]-c.n[0],Math.fl
  for(let t=o.q;t>0;t--){if(t==3&&u.gold>=c.gold)continue;if(!sigWhy(m,st,99,o.s.id,t)&&u.sp+sigCost(o.s,t)<=c.sp){m[o.s.id]=t;break}}}
  return m}
 // an AI player's loadout (team ti, position i): fixed per player, shared by games and the roster screen
-const aiSigOf=(ti,i)=>{const t=TEAMS[ti];t.sig=t.sig||[];return t.sig[i]||(t.sig[i]=autoSig(t.rt[i],isStar(t,i)?SIG_AI.star:SIG_AI.role,(Math.imul(ti*5+i+1,2654435761)>>>0)/4294967296))};
+const aiSigOf=(ti,i)=>{const t=TEAMS[ti];t.sig=t.sig||[];return t.sig[i]||(t.sig[i]=drSig(t,i,autoSig(t.rt[i],isStar(t,i)?SIG_AI.star:SIG_AI.role,(Math.imul(ti*5+i+1,2654435761)>>>0)/4294967296)))};
+// D.RYERSON (v1.28): on top of his own loadout he gets EVERY Signature his 3PT unlocks (anything that needs 3PT), plus OFF-BALANCE ARTIST for shooting off his own dribble moves and FADEAWAY ARTIST for his step-backs, each at the highest tier his ratings reach. No SP or Gold limits.
+const DR_N='D.Ryerson',DR_SIG=['offbal','fadeaway'];
+function drSig(t,i,m){if(t.pl[i]!==DR_N)return m;for(const sd of SIG_DEF)if(sd.req.tp||DR_SIG.includes(sd.id)){const q=sigQual(sd,t.rt[i]);if(q>(m[sd.id]||0))m[sd.id]=q}return m}
 // the value of Signature id for player p at the tier he has it equipped (0 if not equipped) - every gameplay hook reads it through this
 const sigv=(p,id)=>{const t=p&&p.sig&&p.sig[id];return t?SIGM[id].v[t-1]:0};
 const sigVal=(s,t)=>{const v=s.v[t-1];return s.f=='+%'?'+'+Math.round(v*100)+'%':s.f=='%'?Math.round(v*100)+'%':s.f=='s'?v.toFixed(2).replace(/0$/,'')+'s':v>=99?'the whole floor':v+' ft'};
@@ -446,7 +449,8 @@ const chaseMul=(bl,p)=>{const c=sigv(bl,'chase');return c&&sigBehind(bl,p)?1+c:1
 function blkMul(bl,p,rim){if(!bl)return 1;let m=chaseMul(bl,p);if(rim)m*=1+sigv(bl,'rimprot');return m}
 function chaser(p,r){for(const d of TM[1-p.team]){if(!d.sig||d.stun>0||!(d.jump>0))continue;const c=sigv(d,'chase');if(c&&sigBehind(d,p)&&Math.hypot(d.x-p.x,d.y-p.y)<r*(1+c))return d}return null}
 // steals: success multiplier for defender d against ball handler h
-function stealMul(d,h){let m=1;const mv=h.burst>0||!!h.bm||h.rec>0;
+function stealMul(d,h){if(isDR(h)&&!isHum(d))return 0; // D.Ryerson: AI defenders can't strip him (a human still can)
+ let m=1;const mv=h.burst>0||!!h.bm||h.rec>0;
  if(mv){const th=sigv(h,'tight');if(th)m*=1-th;const hc=sigv(h,'handles');if(hc&&h.chain&&T-(h.mvT==null?-99:h.mvT)<1)m*=1-hc*h.chain}else{const pp=sigv(d,'pickpocket');if(pp)m*=1+pp}
  const fg=fgOf(h);if(fg)m*=1-fg;return m}
 // contest multiplier for defender d on shooter p (Clamps on the ball handler he's in front of, Anchor from a teammate nearby)
@@ -976,6 +980,12 @@ const ROLE={'FLOOR GENERAL':'PM','SPEEDSTER':'PM','SLASHING PLAYMAKER':'PM','COM
  'ATHLETIC WING':'WG','ACROBATIC FINISHER':'WG','TWO-WAY FORWARD':'WG','PLAYMAKING FORWARD':'WG','SCORING FORWARD':'WG','LOCKDOWN DEFENDER':'WG','DEFENSIVE PEST':'WG','UNICORN':'WG',
  'RIM PROTECTOR':'BG','POST SCORER':'BG','ENFORCER':'BG','FINESSE BIG':'BG','PLAYMAKING BIG':'BG','LOB THREAT':'BG','RAVAGER':'BG'};
 const roleOf=p=>ROLE[p.arch]||['PM','SH','WG','WG','BG'][p.i]; // created players: by position
+// D.RYERSON's AI (v1.28): the smartest offensive AI in the league. Off the ball he keeps sprinting to a fresh open spot on the arc; on it he judges contested
+// shots with his Signatures in mind, isolates with dribble moves and shoots straight off them when they get him open, and still gives the ball up when you call for it.
+//  reloc = seconds between his sprints to a new spot on the arc [min, random extra] · pop = his sprint speed · near = how close a defender gets before he bursts away
+//  open = contest under which he simply shoots · thr = how much lower his bar is for a contested shot · pass = how much better a teammate's shot must look before he gives it up
+//  iso = chance he works a move when guarded · moves = most moves in one isolation · mv = the moves he picks from (step-back twice as often)
+const DR_AI={reloc:[1.1,.8],pop:190,near:62,open:.3,thr:.14,pass:.22,iso:.85,moves:3,mv:'VZXBV'},isDR=p=>!!p&&!p.build&&!!TEAMS[TI[p.team]]&&TEAMS[TI[p.team]].pl[p.i]===DR_N;
 // style: pass = bonus (x2 points) towards passing, shoot = extra appetite to shoot (neg = shoots more), drv = drive appetite 0-1, mv = favourite dribble moves (Z cross · X hesitation · C spin · V step-back · B between legs · N behind back)
 const STY={'FLOOR GENERAL':{pass:.2,shoot:.06,drv:.3,mv:'ZXN'},'SPEEDSTER':{pass:.04,shoot:.08,drv:.95,mv:'ZCB'},'SLASHING PLAYMAKER':{pass:.07,shoot:.07,drv:1,mv:'CZ'},'COMBO GUARD':{pass:.09,shoot:0,drv:.5,mv:'ZVB'},
  'CHONKY':{pass:.22,shoot:.05,drv:.2,mv:'XZ'},'SHOT CREATOR':{pass:-.04,shoot:-.07,drv:.45,mv:'ZVCN'},'MICROWAVE SCORER':{pass:-.03,shoot:-.1,drv:.35,mv:'VZ'},'MID-RANGE MAESTRO':{pass:0,shoot:-.08,drv:.3,mv:'XV'},
@@ -1199,6 +1209,7 @@ function offBall(p,i,dt){
  const dv=driving(bh)?1:0,side=bh?(toLoc(p,bh.x,bh.y)[1]>=0?1:-1):(p.y>=HY?1:-1);
  if(dv!=ai.dv){ai.dv=dv;ai.t=0} // a teammate starts (or stops) driving: re-think straight away
  const gp=GP[p.team],sp_=gp?gk(p.team,'space'):0,mv_=gp?gk(p.team,'move'):0,ck_=gp?gk(p.team,'cut'):0;if(ai.pu)ai.pu=null; // (his post-up ended when he gave the ball up)
+ const drA=isDR(p);if(drA&&bh&&B.mode=='held'&&!dv){ai.drT=(ai.drT==null?.6:ai.drT)-dt;if(ai.drT<=0){ai.drT=DR_AI.reloc[0]+Math.random()*DR_AI.reloc[1];ai.t=0;ai.rel=1;ai.cut=0}} // D.Ryerson: always on the move to a new spot on the arc
  if(gp){ // TEAM GAME PLAN: transition lanes, the screen, the hub's spot, the post player's block, who crashes - these replace the plain AI's target
   const g_=gpOffT(p,ai,role,bh,dv,side,dt);if(g_){const dx=g_[0]-p.x,dy=g_[1]-p.y,dl=Math.hypot(dx,dy)||1,mv=dl>6?Math.min(g_[2]*spdM(p)*trk(p),dl*3.2):0;
    p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);const fx=(bh?bh.x:H)-p.x,fy=(bh?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;ai.t=Math.min(ai.t,.15);return}
@@ -1227,21 +1238,22 @@ function offBall(p,i,dt){
     let sc=openness(p.team,x,y)-.12*Math.hypot(x-p.x,y-p.y);
     for(const q of TM[p.team]){if(q===p)continue;const tq=q.ai&&q!==bh?[q.ai.tx,q.ai.ty]:[q.x,q.y],dd=Math.hypot(tq[0]-x,tq[1]-y);if(dd<SR)sc-=(SR-dd)*1.4} // spacing: don't crowd a teammate (wider when the plan spreads the floor)
     if(bh){sc+=laneClr(p.team,bh.x,bh.y,x,y)*.6;const dh=Math.hypot(bh.x-x,bh.y-y);if(dh<CR)sc-=(CR-dh)*1.2} // (clear out further for the star's isolation)
+    if(drA)sc+=openness(p.team,x,y)*.5; // D.Ryerson reads where the defence ISN'T
+    if(ai.rel&&Math.hypot(x-p.x,y-p.y)<110)sc-=220; // relocating: a NEW spot
     if(gp){const cd=Math.hypot(c[0],c[1]);if(sp_>0&&cd<150)sc-=70*sp_; // spread the floor: stay out of the paint
      if(bh&&bh===sP&&stk&&Math.sign(c[1])==-side)sc+=35*stk; // the star isolates: the others go weak side
-     if(bh&&bh.ai&&bh.ai.pu&&cd<130)sc-=80; // a teammate is posting up: clear the block
-     if(ai.rel&&Math.hypot(x-p.x,y-p.y)<110)sc-=220} // relocating: a NEW spot
+     if(bh&&bh.ai&&bh.ai.pu&&cd<130)sc-=80} // a teammate is posting up: clear the block
     if(dv&&segD(bh.x,bh.y,H,HY,x,y)<90)sc-=250; // keep out of the driver's lane
     if(role=='BG'&&!dv)sc+=(160-c[0])*.5; // bigs live near the basket
     if(dv&&role=='BG'&&c[0]<100)sc+=45; // bigs wait at the dunker spot / short corner for the dump-off
     if(role=='BG'&&c[0]<100&&!dv&&bh&&Math.sign(c[1])==side)sc+=25; // ball-side block
     if(Math.hypot(x-ai.tx,y-ai.ty)<25)sc+=18; // don't dither
     if(sc>bs){bs=sc;best=[x,y]}}
-   if(best){if(ai.rel){ai.pop=.9;ai.rel=0}if((role=='SH'||role=='WG')&&bh&&B.mode=='held'&&(ai.ct2||0)<=0&&near(p,TM[1-p.team],42)&&Math.hypot(best[0]-p.x,best[1]-p.y)>50){ai.pop=.85;ai.ct2=(2.2+Math.random()*2.5)*(1-.5*mv_)} // a defender is on him: burst to a new spot and get open
+   if(best){if(ai.rel){ai.pop=.9;ai.rel=0}if((role=='SH'||role=='WG')&&bh&&B.mode=='held'&&(ai.ct2||0)<=0&&near(p,TM[1-p.team],drA?DR_AI.near:42)&&Math.hypot(best[0]-p.x,best[1]-p.y)>50){ai.pop=.85;ai.ct2=drA?.9+Math.random()*.7:(2.2+Math.random()*2.5)*(1-.5*mv_)} // a defender is on him: burst to a new spot and get open
     ai.tx=best[0];ai.ty=best[1]}}}
  ai.pop=Math.max(0,(ai.pop||0)-dt);ai.ct2=(ai.ct2||0)-dt;
  const tx=ai.cut>0?ai.cx:ai.tx+Math.sin(T*.8+i)*6,ty=ai.cut>0?ai.cy:ai.ty+Math.cos(T*.7+i)*6,dx=tx-p.x,dy=ty-p.y,dl=Math.hypot(dx,dy)||1;
- const spd=ai.cut>0?150:ai.pop>0?158+14*mv_:dl>150?125:dv&&role=='BG'?145:108,mv=dl>7?Math.min(spd*spdM(p)*trk(p),dl*3.2):0;
+ const spd=ai.cut>0?150:ai.pop>0?(drA?DR_AI.pop:158+14*mv_):drA&&dl>40?150:dl>150?125:dv&&role=='BG'?145:108,mv=dl>7?Math.min(spd*spdM(p)*trk(p),dl*3.2):0;
  p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);
  const fx=(bh&&!(ai.cut>0)?bh.x:H)-p.x,fy=(bh&&!(ai.cut>0)?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;
 }
@@ -1250,7 +1262,7 @@ function offBall(p,i,dt){
 const FBRK={pass:.85,think:[.15,.1]};
 function cpuH(p,dt){
  p.think-=dt;
- const ai=p.ai||(p.ai={t:0,tx:p.x,ty:p.y,cut:0,ct:2,cx:0,cy:0,dv:0}),H=hx(p.team),D=dr(p.team),d=Math.hypot(H-p.x,HY-p.y),role=roleOf(p),st=styleOf(p),bc=d>430,lt=toLoc(p,p.x,p.y)[1];
+ const ai=p.ai||(p.ai={t:0,tx:p.x,ty:p.y,cut:0,ct:2,cx:0,cy:0,dv:0}),H=hx(p.team),D=dr(p.team),d=Math.hypot(H-p.x,HY-p.y),role=roleOf(p),drA=isDR(p),st=drA?Object.assign({},styleOf(p),{mv:DR_AI.mv}):styleOf(p),bc=d>430,lt=toLoc(p,p.x,p.y)[1];
  ai.drive=Math.max(0,(ai.drive||0)-dt);
  const gp=GP[p.team],brk=!!gp&&gk(p.team,'pace')>0&&gBrk(p.team); // the team's game plan / its fast-break window
  if(gp&&ai.pu){if(!p.fire&&!p.lay&&!p.dunk){gpPost(p,dt);return}ai.pu=null} // backing his man down in the post
@@ -1285,19 +1297,29 @@ if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoeve
   return}
  if(gp&&gpHalf(p,ai,r,d,lt,late))return; // the game plan's read first: a post-up, early offence, the pick and roll
  if(d<130){if(((p.rt&&p.rt.dnk)||50)>=62&&r<.6)startDunk(p);else if(layOK(p))startLayup(p);else release(p,qpick(c,p));return}
- const own=shotEV(p,p.x,p.y,c)-st.shoot*2;let best=null,bs=-9;
+ // D.Ryerson judges a contest through his Signatures (Deadeye takes the sting out of it, Off-Balance Artist out of shooting off a move), so he rises up over a hand others pass on
+ const cS=drA?c*(1-sigv(p,'deadeye')):c,own=shotEV(p,p.x,p.y,cS)-st.shoot*2;let best=null,bs=-9;
  for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const ql=Math.hypot(q.x-p.x,q.y-p.y);if(ql<60||ql>560)continue;const lcl=laneClr(p.team,p.x,p.y,q.x,q.y);if(lcl<24)continue;
   const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);let ev=shotEV(q,q.x,q.y,cont(q))+passBoost(p)*(qd>R3?3:2);if(lcl<46)ev*=.75;ev+=st.pass*2;if(gp)ev+=gpPassB(p,q,qd,d);if(ev>bs){bs=ev;best=q}}
  // you are calling for the ball (E): he may ignore it - more readily with a good shot of his own, less so when you are open - but every extra call wears him down, and on the 4th he gives in
  if(p.team==0&&CALL.n>0&&!(ai.drive>0)&&CLK()){const me=TM[0][ctl];
   if(me&&me!==p&&me.stun<=0&&!me.dunk&&!me.lay){const ql=Math.hypot(me.x-p.x,me.y-p.y),lcl=laneClr(0,p.x,p.y,me.x,me.y);
-   if(ql>=45&&ql<650&&(lcl>=22||CALL.n>=5)){let pr=.08+.17*(CALL.n-1)+.22*(1-cont(me));if(own>=th+.35)pr*=.55;if(CALL.n>=4)pr=1;
+   if(ql>=45&&ql<650&&(lcl>=22||CALL.n>=5)){let pr=.08+.17*(CALL.n-1)+.22*(1-cont(me));if(own>=th+.35)pr*=.55;if(CALL.n>=4||drA)pr=1;
     if(Math.random()<pr){CALL.n=0;CALL.t=0;pass(p,me);return}else if(!(p.shrug>0))p.shrug=.85}}}
+ // D.RYERSON's read: open (Signatures included) or open off his own move -> shoot; a teammate with a clearly better look -> pass; guarded -> ISO with
+ // up to DR_AI.moves dribble moves, re-reading straight after each; still guarded after that -> he trusts his ratings and takes the contested shot.
+ if(drA&&!late&&d>=MIDS&&!(ai.drive>0)){const dm=near(p,TM[1-p.team],80),offMv=p.mvT!=null&&T-p.mvT<1.1;if(T-(p.mvT==null?-99:p.mvT)>3)ai.isoN=0;
+  if(p.burst>0)return; // mid-move: read when it ends
+  if(own>=th-.05&&(cS<DR_AI.open||offMv&&cS<DR_AI.open+.15)){release(p,qpick(c,p));return} // open, or open off the move: straight up, no hesitation
+  if(best&&bs>=th&&bs>own+DR_AI.pass&&r<.85){pass(p,best);return} // not a ball hog: a clearly better look gets the ball
+  if(d>R3+40&&!dm){ai.drive=.6;ai.dy=lt*.6;return} // nobody on him but too deep: walk into range
+  if(dm&&(ai.isoN||0)<DR_AI.moves&&shot>4&&r<DR_AI.iso){ai.isoN=(ai.isoN||0)+1;move(p,d>R3-30&&d<R3+70&&r<.45?'V':DR_AI.mv[Math.random()*DR_AI.mv.length|0]);p.think=.1+Math.random()*.08;return} // ISO
+  if(own+DR_AI.thr>=th){release(p,qpick(c,p));return}} // contested, but he knows he can hit it
  const k3=gp?gk(p.team,'three'):0;
  if(ai.drive>0&&!late){if(best&&bs>=th+.3-.2*k3&&r<.3+.35*k3)pass(p,best);return} // committed to the drive: only a kick-out to a clearly open man (drive-and-kick teams kick it more)
  const thr=th+(d>R3&&role!='SH'?.15:0)-(role=='SH'?.05:0)+(gp?gpThr(p,d,c):0); // non-shooters need a better look from deep; shooters let it fly sooner
  if(!late&&st.drv>=.8&&d>=130&&own<thr+.35&&r<.55){ai.drive=1.4;ai.dy=lt*.3+(Math.random()<.5?-1:1)*30;if(dn0)move(p,st.mv[Math.random()*st.mv.length|0]);return} // slashers attack the rim unless the shot is wide open
- if(late||(own>=thr&&own>=bs-.05&&r<.9)){if(gp&&!late&&d>=MIDS&&Math.hypot(p.vx,p.vy)>60&&!(ai.set>T)&&!near(p,TM[1-p.team],70)){ai.set=T+.3;p.think=.1;return} // open: set his feet before a jump shot
+ if(late||(own>=thr&&own>=bs-.05&&r<.9)){if(gp&&!drA&&!late&&d>=MIDS&&Math.hypot(p.vx,p.vy)>60&&!(ai.set>T)&&!near(p,TM[1-p.team],70)){ai.set=T+.3;p.think=.1;return} // open: set his feet before a jump shot
   release(p,qpick(c,p));return}
  if(best&&bs>=th&&bs>own&&r<.85){pass(p,best);return}
  if(role=='BG'){if(best&&bs>.6){pass(p,best);return}ai.drive=1.2;ai.dy=lt*.3+(Math.random()<.5?-1:1)*30;return} // a big with no shot and no pass: kick it out or go at the rim, no fancy moves
@@ -1588,6 +1610,7 @@ const tp3=o=>{if(o.tp>=80)o.tp-=5;o.tp=Math.min(92,o.tp);o.spd=Math.min(93,o.spd
 // FINAL ratings, applied after the league-wide caps (exact values, nothing touches them afterwards)
 const FIX={
  '4-3':{str:91,tp:90,mid:87,reb:72,lay:68,dnk:68,idf:66,post:59,pas:57}, // C.King: best 3 each -1 (OVR 90 -> 89), mid-level stats -4
+ '4-1':{tp:97}, // D.Ryerson: the league's best shooter - 97 3PT, above the AI cap of 92 (v1.28)
  '5-4':{pd:78}}; // B.Randy: perimeter defense 85 -> 78 so RAINBOW SLAYERS lose ELITE DEFENCE (only YELLOW VIKINGS + PINKIE PIES keep it); OVR unchanged
 TEAMS.forEach((t,ti)=>{t.ar=ARCH_ASSIGN[ti];t.rt=t.ar.map((a,i)=>Object.assign(tp3(Object.assign(mkRatings(a,ti*5+i+1,TARGET[ti][i]),ADJ[ti+'-'+i]||{})),FIX[ti+'-'+i]||{}));t.ov=t.rt.map(ovrOf);const te=teamEval(t.rt,t.ov,t.ar);t.tov=te.o;t.tags=te.tags;t.pro=te.pro;t.con=te.con;t.cons=te.cons});
 {const used=new Set(),all=TEAMS.flatMap(t=>t.cons.map(c=>[t,...c])).sort((a,b)=>b[2]-a[2]),done=new Set();for(const[t,l]of all)if(!done.has(t)&&!used.has(l)){t.con=l;used.add(l);done.add(t)}} // unique CON per team
@@ -4168,10 +4191,16 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.27'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.28'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.28','D.Ryerson unleashed',['D.Ryerson (Blue Crusaders) now has 97 3PT, above the 92 cap every other AI player has: the best shooter in the league (OVR 95).',
+  'He gets every Signature his 3PT unlocks, all at Gold: Ice Water, Deadeye, Heat Check, Corner Specialist, Deep Range, Catch & Release, Spot Up Sniper, Green Machine and Logo Range, plus Off-Balance Artist and Fadeaway Artist.',
+  'The smartest offensive AI in the game. Off the ball he sprints to a fresh open spot on the arc every 1-2 seconds, and bursts away the moment a defender gets close.',
+  'On the ball he shoots when he is open, works his man with up to 3 dribble moves (step-backs, crossovers, hesitations) when he is guarded, and pulls up straight off a move that gets him open. If he is still covered he trusts his ratings and Signatures and takes the contested shot.',
+  'Not a ball hog: he passes to a teammate with a clearly better look, and always gives you the ball when you call for it (E) in Career.',
+  'AI defenders can no longer strip him. A human defender still can.']],
  ['v1.27','Signatures you can actually earn',['Every Signature tier was checked against every legal body under the v1.25 caps, rivals and elite budget. Some Golds could only be reached by a handful of exact builds (Momentum Takeoff Gold by 0.1% of bodies, Posterizer Gold by 0.1%).',
   'Requirements lowered so every Gold is reachable by at least 5% of bodies, every Silver by 15% and every Bronze by 30%. Bronze is unchanged almost everywhere.',
   'MOMENTUM TAKEOFF Gold: 79 DUNKING + 79 SPEED (was 86 + 86). POSTERIZER Gold: 84 DUNKING + 72 STRENGTH (was 94 + 82). RIM PROTECTOR Gold: 88 BLOCKING + 82 INTERIOR D (was 94 + 88). LOB CITY Gold: 89 DUNKING (was 94). ANCHOR Gold: 89 INTERIOR D (was 94).',
