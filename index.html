@@ -365,17 +365,20 @@ const SIG_CATS=['SHOOTING','FINISHING','PLAYMAKING','DEFENCE','REBOUNDING & HUST
 const SIGM={};SIG_DEF.forEach(s=>SIGM[s.id]=s);
 // SP budget by level, given to EACH of the 5 categories separately: 4 at level 1, +1 a level to 13 at level 10, then +1 every odd level -> 21 at level 25.
 // Cost: Bronze 1 · Silver 2 · Gold 3 (+1 if ELITE), paid from the budget of the Signature's own category.
-const spOf=lv=>lv<=10?3+lv:13+Math.ceil((lv-10)/2),sigCost=(s,t)=>t+(s.el?1:0),SIG_TN=['','BRONZE','SILVER','GOLD'];
+// REBIRTH (v1.29): a max-level player can be reborn as a brand-new build in the same slot. Every rebirth (rb, saved with the slot) stacks forever:
+//  exp = +25% EXP on everything he earns per rebirth (x1.25, x1.5, x1.75 ...) · sp = +2 SP in EVERY Signature category per rebirth (21 -> 23 -> 25 ... at level 25)
+const REBIRTH={exp:.25,sp:2},rbOf=d=>Math.max(0,(d&&d.rb)|0),rbExp=d=>1+REBIRTH.exp*rbOf(d);
+const spOf=(lv,rb)=>(lv<=10?3+lv:13+Math.ceil((lv-10)/2))+REBIRTH.sp*Math.max(0,rb|0),sigCost=(s,t)=>t+(s.el?1:0),SIG_TN=['','BRONZE','SILVER','GOLD'];
 // the highest tier a player's ratings unlock (0 = locked)
 function sigQual(s,st){let t=0;for(let k=1;k<=3;k++){for(const a in s.req)if(!(st&&st[a]>=s.req[a][k-1]))return t;t=k}return t}
 // what a loadout uses: sp = total, csp = SP spent in each category, cat = Signatures equipped in each category
 function sigUse(m,skip){const u={sp:0,n:0,gold:0,elite:0,cat:[0,0,0,0,0],csp:[0,0,0,0,0]};if(m)for(const id in m){if(id===skip)continue;const s=SIGM[id],t=m[id];if(!s||!t)continue;u.sp+=sigCost(s,t);u.csp[s.cat]+=sigCost(s,t);u.n++;if(t==3)u.gold++;if(s.el)u.elite++;u.cat[s.cat]++}return u}
 // why id can't be equipped at tier t (replacing its current tier) - '' when it can
-function sigWhy(m,st,lv,id,t){const s=SIGM[id];if(!s)return'UNKNOWN';const q=sigQual(s,st);if(t>q)return q?'NEEDS HIGHER RATINGS FOR '+SIG_TN[t]:'LOCKED: RATINGS TOO LOW';
+function sigWhy(m,st,lv,id,t,rb){const s=SIGM[id];if(!s)return'UNKNOWN';const q=sigQual(s,st);if(t>q)return q?'NEEDS HIGHER RATINGS FOR '+SIG_TN[t]:'LOCKED: RATINGS TOO LOW';
  const u=sigUse(m,id),R=SIG_RULES;if(R.max&&u.n+1>R.max)return'MAX '+R.max+' SIGNATURES EQUIPPED';if(R.gold&&t==3&&u.gold+1>R.gold)return'MAX '+R.gold+' GOLD';if(R.elite&&s.el&&u.elite+1>R.elite)return'MAX '+R.elite+' ELITE';
- if(R.perCat&&u.cat[s.cat]+1>R.perCat)return'MAX '+R.perCat+' FROM ONE CATEGORY';if(u.csp[s.cat]+sigCost(s,t)>spOf(lv))return'NOT ENOUGH '+SIG_CATS[s.cat].replace('REBOUNDING & HUSTLE','HUSTLE')+' SP';return''}
+ if(R.perCat&&u.cat[s.cat]+1>R.perCat)return'MAX '+R.perCat+' FROM ONE CATEGORY';if(u.csp[s.cat]+sigCost(s,t)>spOf(lv,rb))return'NOT ENOUGH '+SIG_CATS[s.cat].replace('REBOUNDING & HUSTLE','HUSTLE')+' SP';return''}
 // a saved loadout made legal: unknown ids dropped, tiers lowered to what the ratings unlock and what the limits allow
-function sigClean(m,st,lv){const o={};if(m&&typeof m=='object')for(const id in m){const s=SIGM[id];if(!s)continue;let t=Math.min(3,Math.max(0,m[id]|0),sigQual(s,st));while(t>0&&sigWhy(o,st,lv,id,t))t--;if(t>0)o[id]=t}return o}
+function sigClean(m,st,lv,rb){const o={};if(m&&typeof m=='object')for(const id in m){const s=SIGM[id];if(!s)continue;let t=Math.min(3,Math.max(0,m[id]|0),sigQual(s,st));while(t>0&&sigWhy(o,st,lv,id,t,rb))t--;if(t>0)o[id]=t}return o}
 // AI loadout: best fits first (highest tier, then the most margin over the requirement), within c = SIG_AI.star / .role and the same limits.
 // h (0-1) picks where in c.n's range this player's count lands; a Signature past the Gold cap is equipped a tier lower instead.
 function autoSig(st,c,h){const m={},L=[],n=c.n[0]+Math.min(c.n[1]-c.n[0],Math.floor((h||0)*(c.n[1]-c.n[0]+1)));
@@ -2967,7 +2970,8 @@ function lvBonus(xp){const lv=lvInfo(xp).lv;let p=0;for(let l=1;l<lv;l++)p+=LV_P
 function poolOf(d){return POOL+lvBonus(d&&d.xp)} // total attribute points this player has earned (start + level-ups)
 function lvInfo(xp){xp=Math.max(0,xp|0);let L=1,left=xp;while(L<LV_MAX&&left>=expNeed(L)){left-=expNeed(L);L++}return{lv:L,into:L>=LV_MAX?0:left,need:L>=LV_MAX?0:expNeed(L),total:xp}}
 let xpPop={n:0,t:0,why:''},lvUp=0,matchXp=0,gameXp=null;
-function addExp(n,why,bonus){const b=ACTIVE>=0?SLOTS[ACTIVE]:null;n=Math.round(n);if(!b||!(n>0))return null;
+function addExp(n,why,bonus){const b=ACTIVE>=0?SLOTS[ACTIVE]:null;n=Math.round(n*rbExp(b)); // (rebirths: +25% each)
+if(!b||!(n>0))return null;
  const before=lvInfo(b.xp).lv;b.xp=Math.min(9999999,(b.xp|0)+n);if(!bonus)matchXp+=n;const a=lvInfo(b.xp);saveSlots();
  xpPop={n:(xpPop.t>0?xpPop.n:0)+n,t:2.2,why:why||''};
  if(a.lv>before){lvUp=2.6;let pts=0;for(let l=before;l<a.lv;l++)pts+=LV_PTS(l);a.pts=pts;say('LEVEL UP!  LEVEL '+a.lv+'  \u00b7  +'+pts+' ATTRIBUTE POINTS','#ffd23f');beep(660,.15,'triangle',.05);beep(880,.25,'triangle',.05)}
@@ -3114,7 +3118,7 @@ function sanitize(b){
  let used=STATS.reduce((a,[k])=>a+st[k]-SMIN,0);
  const pool=poolOf(b);while(used>pool){let m=STATS[0][0];STATS.forEach(([k])=>{if(st[k]>st[m])m=k});st[m]--;used--}
  const sigLv=lvInfo(Math.max(0,Math.round(+b.xp)||0)).lv;
- return{anim:animClean(b.anim),sig:sigClean(b.sig,st,sigLv),name:String(b.name||'PLAYER').slice(0,12).toUpperCase(),sk:/^#[0-9a-f]{6}$/i.test(b.sk)?b.sk.toLowerCase():'#c68642',hs:mClamp(b.hs|0,0,HSTY.length-1),fc:b.fc!=null&&b.fc>=0&&b.fc<8?b.fc|0:null,xp:mClamp(Math.round(+b.xp)||0,0,9999999),tm:b.tm!=null&&b.tm>=0&&b.tm<TEAMS.length?b.tm|0:null,hc:/^#[0-9a-f]{6}$/i.test(b.hc)?b.hc.toLowerCase():'#17110c',pos,h,wt,ws,bt:mClamp(b.bt|0,0,4),btSet:!!b.btSet,st,arch:ARCH_N.has(b.arch)?b.arch:archOf({st,pos,h}),archSk:ARCH_N.has(b.archSk)?b.archSk:null}
+ return{anim:animClean(b.anim),sig:sigClean(b.sig,st,sigLv,rbOf(b)),rb:Math.min(999,rbOf(b)),name:String(b.name||'PLAYER').slice(0,12).toUpperCase(),sk:/^#[0-9a-f]{6}$/i.test(b.sk)?b.sk.toLowerCase():'#c68642',hs:mClamp(b.hs|0,0,HSTY.length-1),fc:b.fc!=null&&b.fc>=0&&b.fc<8?b.fc|0:null,xp:mClamp(Math.round(+b.xp)||0,0,9999999),tm:b.tm!=null&&b.tm>=0&&b.tm<TEAMS.length?b.tm|0:null,hc:/^#[0-9a-f]{6}$/i.test(b.hc)?b.hc.toLowerCase():'#17110c',pos,h,wt,ws,bt:mClamp(b.bt|0,0,4),btSet:!!b.btSet,st,arch:ARCH_N.has(b.arch)?b.arch:archOf({st,pos,h}),archSk:ARCH_N.has(b.archSk)?b.archSk:null}
 }
 function saveSlots(){try{localStorage.setItem(SLOT_KEY,JSON.stringify({slots:SLOTS,active:ACTIVE}))}catch(e){}}
 function loadSlots(){try{const v=JSON.parse(localStorage.getItem(SLOT_KEY)||'null');
@@ -3130,7 +3134,7 @@ function applyRoster(){
   const w=b?1+(b.wt-215)/(W_MAX-W_MIN)*.08:widFor(0,i),a=b?mClamp(b.ws/(b.h+4),.88,1.14):1;
   p.m.scale.set(p.ht*w,p.ht,p.ht*w);p.m.aL.scale.y=p.m.aR.scale.y=a;
  });
- FULL.forEach((tm,t)=>tm.forEach((p,i)=>{let m=p.build?sigClean(p.build.sig,p.build.st,lvInfo(p.build.xp).lv):SIG_AI.on?Object.assign({},aiSigOf(TI[t],i)):null;p.sig=m&&Object.keys(m).length?m:null;
+ FULL.forEach((tm,t)=>tm.forEach((p,i)=>{let m=p.build?sigClean(p.build.sig,p.build.st,lvInfo(p.build.xp).lv,rbOf(p.build)):SIG_AI.on?Object.assign({},aiSigOf(TI[t],i)):null;p.sig=m&&Object.keys(m).length?m:null;
   Object.assign(p,{hot:0,perfRun:0,ct0:-99,mvT:-99,mvK:'',chain:0,phT:-99,postT:0,ckT:-99,still:0,qfsT:0,trT:0,jrc:0,offb:0,csh:false,spot:false,_sfx:null})}));
 }
 function toMenu(){ms.on=false;MM.r=ACTIVE>=0?ACTIVE:0;MM.del=0;S='menu';menuEnter(false)}
@@ -3166,15 +3170,15 @@ function charRead(r,arch,pos){
 const DEF_H=[74,76,79,82,85],DEF_W=[185,200,215,235,255]; // default height (in) and weight (lb) for a newly created PG SG SF PF C
 function openCreate(slot,pos){
  MM.slot=slot;MM.row=0;MM.hold=0;MM.drag=-1;
- const b=SLOTS[slot],ps=pos==null?0:pos;
- MM.cr=b?JSON.parse(JSON.stringify(b)):{name:'PLAYER '+(slot+1),sk:'#c68642',hs:0,hc:'#17110c',pos:ps,h:DEF_H[ps],wt:DEF_W[ps],ws:DEF_H[ps]+4,bt:2,btSet:false,st:Object.fromEntries(STATS.map(([k])=>[k,SMIN]))};
+ const old=SLOTS[slot],b=MM.rbNew?null:old,ps=pos==null?0:pos; // REBIRTH: a brand-new build in an occupied slot (the old one stays until the new one is saved)
+ MM.cr=b?JSON.parse(JSON.stringify(b)):{rb:MM.rbNew||0,name:MM.rbNew&&old?old.name:'PLAYER '+(slot+1),sk:'#c68642',hs:0,hc:'#17110c',pos:ps,h:DEF_H[ps],wt:DEF_W[ps],ws:DEF_H[ps]+4,bt:2,btSet:false,st:Object.fromEntries(STATS.map(([k])=>[k,SMIN]))};
  MM.posLock=true;MM.bi=0;MM.bioNew=!b;MM.bd=1; // the position never changes after the position page (editing a saved player keeps his)
  MM.floor=null;
  if(b){ // AFTER CREATION: name, position, height, weight, wingspan and build are locked - only the look (face, hair, hair colour, skin) changes, and attributes only go UP from what is saved
   const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));MM.floor=Object.assign({},d.st);MM.row=5;S='create';return}
  S='cbio';
 }
-const bioLocked=()=>!MM.bioNew&&!!SLOTS[MM.slot]; // editing a saved player
+const bioLocked=()=>!MM.bioNew&&!MM.rbNew&&!!SLOTS[MM.slot]; // editing a saved player
 const stFloor=k=>MM.floor?Math.max(SMIN,MM.floor[k]|0):SMIN; // lowest an attribute may go in this edit
 // ===== CREATE PLAYER · STEP 1: POSITION. Five positions down the left, the two best players at that position in the middle (live 3D), the role described on the right. Locking in slides across to the attribute page. =====
 const POSD=[
@@ -3193,7 +3197,7 @@ function cpBuild(){ // the two highest-rated players at the chosen position (any
  cpRef.forEach(r=>{r.read=charRead(TEAMS[r.ti].rt[r.i],TEAMS[r.ti].ar[r.i],r.i)});
  cpM=cpRef.map(r=>{const t=TEAMS[r.ti],l=TLK[r.ti][r.i],pp={team:0,tm:r.ti,i:r.i,n:r.i+1,sk:l.sk,hs:l.hs,hc:l.hc,ht:t.ht[r.i],wd:1};build(pp);
   const fl=new THREE.Mesh(new THREE.CircleGeometry(2.2,32),new THREE.MeshBasicMaterial({color:t.sm}));fl.rotation.x=-Math.PI/2;fl.position.y=-.02;fl.scale.set(1/pp.ht,1/pp.ht,1);pp.m.add(fl);cpsc.add(pp.m);return pp.m})}
-function openCPos(slot){MM.slot=slot;MM.cp=MM.cp|0;S='cpos';cpBuild()}
+function openCPos(slot,rb){MM.slot=slot;MM.rbNew=rb||0;MM.cp=MM.cp|0;S='cpos';cpBuild()}
 function cpSet(i){if(i!=MM.cp){MM.cp=i;cpBuild();beep(420+i*40,.05,'triangle',.03)}}
 function cpLock(){ // lock the position in, then slide to the attribute page
  openCreate(MM.slot,MM.cp);startTrans('cpos','cbio',1)}
@@ -3234,10 +3238,12 @@ function renderCPos(ox){const tm=performance.now();R.setScissorTest(true);
   R.setViewport(vx,vy,w,h);R.setScissor(sx,vy,ex-sx,h);R.render(cpsc,cpcam)});
  cpM.forEach(o=>o.visible=true);R.setScissorTest(false);R.setViewport(0,0,960,540)}
 // layout (shared by drawing and mouse hit-testing)
-const mainRect=i=>i<3?[36+i*300,74,288,404]:[36,488,130,34],CAR_MV=i=>[44+i*300,100,272,184],actRect=i=>[320,222+i*46,320,38];
+const mainRect=i=>i<3?[36+i*300,74,288,404]:[36,488,130,34],CAR_MV=i=>[44+i*300,100,272,184],
+ actOpts=()=>{const b=SLOTS[MM.slot];return b&&lvInfo(b.xp).lv>=LV_MAX?['play','edit','rebirth','del','back']:['play','edit','del','back']}, // REBIRTH only for a max-level player
+ actRect=i=>[320,(actOpts().length>4?208:222)+i*46,320,38];
 const BIO_BTN=[56,196,358,30],AP_RECT=[40,246,126,44],SIG_BTN=[172,246,126,44],STORE_BTN=[304,246,126,44],statRect=j=>[470,82+j*30,450,28],SAVE_R=[40,440,185,46],CANCEL_R=[245,440,185,46];
 function mainEnter(){ // CAREER screen: pick / create a player slot
- if(MM.r<3){if(SLOTS[MM.r]){MM.slot=MM.r;MM.sub=0;MM.del=0;S='slotact'}else openCPos(MM.r)}
+ if(MM.r<3){MM.rbNew=0;if(SLOTS[MM.r]){MM.slot=MM.r;MM.sub=0;MM.del=0;S='slotact'}else openCPos(MM.r)}
  else S='menu';
 }
 // ===== top-level menu: CAREER · PLAY NOW · CUSTOMISATION =====
@@ -3297,10 +3303,11 @@ function pnEnter(){
  else if(MM.ps==3){MM.pA=MM.pc;MM.ps=4;MM.pc=0}
  else{PICK=[MM.pA,MM.pc];if(MM.side==0)playNow(MM.pa,MM.pb);else playNow(MM.pb,MM.pa)}}
 function actEnter(){
- const s=MM.slot;
- if(MM.sub==0)onlOpen(); // PLAY -> ONLINE / CAREER
- else if(MM.sub==1)openCreate(s);
- else if(MM.sub==2){if(MM.del){SLOTS[s]=null;if(ACTIVE==s)ACTIVE=-1;saveSlots();MM.del=0;S='career'}else MM.del=1}
+ const s=MM.slot,o=actOpts()[MM.sub];
+ if(o=='play')onlOpen(); // PLAY -> ONLINE / CAREER
+ else if(o=='edit'){MM.rbNew=0;openCreate(s)}
+ else if(o=='rebirth'){MM.del=0;openCPos(s,rbOf(SLOTS[s])+1);beep(660,.12,'triangle');beep(990,.2,'triangle',.04)} // a brand-new build: position, body, attributes, team
+ else if(o=='del'){if(MM.del){SLOTS[s]=null;if(ACTIVE==s)ACTIVE=-1;saveSlots();MM.del=0;S='career'}else MM.del=1}
  else S='career';
 }
 function createSave(){if(MM.bioNew){openCTeam();return} // a NEW player picks his team before he is saved; editing keeps his team
@@ -3322,7 +3329,7 @@ const CF_PANEL=[240,140,480,240],CF_YES=[290,300,170,46],CF_NO=[500,300,170,46];
 function openCTeam(){MM.ts=MM.cr.tm!=null?MM.cr.tm:TI[0];MM.yn=0;S='cteam'}
 function cteamBack(){S='create'}
 function cteamPick(i){MM.ts=i;MM.yn=0;S='cconf'}
-function cconfYes(){const d=MM.cr;d.tm=MM.ts;SLOTS[MM.slot]=sanitize(d);saveSlots();MM.r=MM.slot;startDebut()}
+function cconfYes(){const d=MM.cr;d.tm=MM.ts;SLOTS[MM.slot]=sanitize(d);MM.rbNew=0;saveSlots();MM.r=MM.slot;startDebut()}
 function drawCTeam(){const d=MM.cr,t=TEAMS[MM.ts];drawRosters({pos:d.pos,name:d.name,ov:ovr(d)});
  if(S=='cconf'){g.fillStyle='rgba(0,0,0,.66)';g.fillRect(0,0,960,540);mRR(CF_PANEL[0],CF_PANEL[1],CF_PANEL[2],CF_PANEL[3],16,'#14161d',t.hud);
   g.textAlign='center';g.font='bold 28px Georgia';g.fillStyle='#fff';g.fillText('SIGN WITH '+t.n+'?',480,196);
@@ -3441,7 +3448,7 @@ function menuStep(dt){
   if(MM.ps<2){if(lr)MM.pc=(MM.pc+lr+6)%6;if(ud)MM.pc=(MM.pc+3)%6}else if(MM.ps>=3){if(lr&&!pkLock())MM.pc=(MM.pc+lr+5)%5}else if(lr)MM.pc=1-MM.pc;
   if(ok)pnEnter();if(P.Escape||P.Backspace)pnBack()}
  else if(S=='slotact'){
-  if(up){MM.sub=(MM.sub+3)%4;MM.del=0}if(dn){MM.sub=(MM.sub+1)%4;MM.del=0}
+  {const n=actOpts().length;if(up){MM.sub=(MM.sub+n-1)%n;MM.del=0}if(dn){MM.sub=(MM.sub+1)%n;MM.del=0}}
   if(ok)actEnter();if(P.Escape||P.Backspace)S='career'}
  else if(S=='cust')custStep(up,dn);
  else if(S=='look')lookStep(up,dn,ok,dt);
@@ -3494,7 +3501,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
   const n=MM.ps<2?6:MM.ps>=3?5:2;for(let i=0;i<n;i++)if(mIn(x,y,MM.ps<2?pnCard(i):MM.ps>=3?pkCard(i):pnSide(i))){if(pkLock()&&i!=pkLock().pos){if(type==0)beep(200,.1,'square');return}MM.pc=i;if(type==0)pnEnter();return}}
  else if(S=='pnmode'){if(type==0&&mIn(x,y,PN_BACK)){modeBack();return}for(let i=0;i<3;i++)if(mIn(x,y,modeRect(i))){MM.md=i;if(type==0)modeEnter();return}}
  else if(S=='slotact'){
-  for(let i=0;i<4;i++)if(mIn(x,y,actRect(i))){if(MM.sub!=i)MM.del=0;MM.sub=i;if(type==0)actEnter();return}
+  for(let i=0;i<actOpts().length;i++)if(mIn(x,y,actRect(i))){if(MM.sub!=i)MM.del=0;MM.sub=i;if(type==0)actEnter();return}
   if(type==0&&!mIn(x,y,[300,170,360,240]))S='career'}
  else if(S=='cust'){for(let i=0;i<4;i++)if(mIn(x,y,custRect(i))){MM.cs=i;if(type==0){if(i==3)custBack();else custChange(i,x<480?-1:1)}return}}
  else if(S=='look')lookPtr(x,y,type);
@@ -3996,7 +4003,7 @@ async function netJoinCode(code){if(NET.busy)return;if(!/^\d{4}$/.test(code)){NE
 // the opponent's created player on a roster model: build first (so setLook rebuilds the body type and face), then look, size and Signatures
 function netApplyBuild(p,b){p.build=b;p.rt=Object.assign({},b.st);p.arch='CREATED PLAYER';p.attr=Object.assign({},b.st);p.wgt=b.wt;p.wsp=b.ws;p.mass=null;
  setLook(p,b.sk,b.hs,b.hc);p.ht=htOf(b.h);const w=1+(b.wt-215)/(W_MAX-W_MIN)*.08,a=mClamp(b.ws/(b.h+4),.88,1.14);p.m.scale.set(p.ht*w,p.ht,p.ht*w);p.m.aL.scale.y=p.m.aR.scale.y=a;p.m.visible=true;
- const m=sigClean(b.sig,b.st,lvInfo(b.xp).lv);p.sig=m&&Object.keys(m).length?m:null}
+ const m=sigClean(b.sig,b.st,lvInfo(b.xp).lv,rbOf(b));p.sig=m&&Object.keys(m).length?m:null}
 function netBegin(oppRaw,myTeam,oppTeam,set){const me=SLOTS[MM.slot],op=sanitize(oppRaw);if(!me||!op)return false;set=set||{};
  ACTIVE=MM.slot;MODE=1;ONE_WIN=NET_WINS.includes(set.w)?set.w:11;if(NET_COURTS.includes(set.c)&&COURT!=set.c)setCourt(set.c);
  PICK=[me.pos,op.pos];setTeams(myTeam,oppTeam);newLooks();ES_LBL[0]='LEAVE ONLINE';ES_LBL[1]='BACK TO LOBBY';
@@ -4193,10 +4200,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.28'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.29'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.29','Rebirth',['Reach the max level (25) and a new REBIRTH option appears when you pick that player on the CAREER screen, between EDIT and DELETE.',
+  'Rebirth starts a brand-new build in the same slot: choose a new position, body, attributes and team, starting again from level 1. Your old player is only replaced when you save the new one, so backing out keeps him.',
+  'Every rebirth earns +25% EXP on everything you do and +2 maximum SP in every Signature category. It stacks forever: rebirth 2 is +50% EXP and +4 SP, rebirth 3 is +75% and +6, and so on.',
+  'Reborn players show a gold star and their rebirth count next to their level on the career card.']],
  ['v1.27','Signatures you can actually earn',['Every Signature tier was checked against every legal body under the v1.25 caps, rivals and elite budget. Some Golds could only be reached by a handful of exact builds (Momentum Takeoff Gold by 0.1% of bodies, Posterizer Gold by 0.1%).',
   'Requirements lowered so every Gold is reachable by at least 5% of bodies, every Silver by 15% and every Bronze by 30%. Bronze is unchanged almost everywhere.',
   'MOMENTUM TAKEOFF Gold: 79 DUNKING + 79 SPEED (was 86 + 86). POSTERIZER Gold: 84 DUNKING + 72 STRENGTH (was 94 + 82). RIM PROTECTOR Gold: 88 BLOCKING + 82 INTERIOR D (was 94 + 88). LOB CITY Gold: 89 DUNKING (was 94). ANCHOR Gold: 89 INTERIOR D (was 94).',
@@ -4464,6 +4475,7 @@ const HL_CREATE=[
  {t:'SIGNATURES',tag:'BADGES',d:'From the attributes page, move to APPEARANCE and press → to switch to SIGNATURES. Your ratings unlock Bronze, Silver and Gold tiers, and you spend each category\'s Signature Points to equip them. See the SIGNATURES page for every one.'},
  {t:'STEP 4: PICK YOUR TEAM',tag:'SIGNING',d:'Press SAVE PLAYER, then choose which of the 6 teams to sign with. Each team card shows its lineup with you in it. Confirm with YES and you replace that team\'s starter at your position. Your team can\'t be changed afterwards.\nYou then get your debut: a welcome card for your new team.'},
  {t:'LEVELS AND EXP',tag:'PROGRESSION',d:'You earn EXP for what your created player does in a career game: steals, layups, mid-range shots, threes, dunks, rebounds and assists. Finishing the whole game adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1); leaving early keeps your EXP but loses the bonus.\n• No EXP is earned in Play Now or online.\n• There are 25 levels. Each level-up gives attribute points (15 at the first and more every level after).\n• Each level also gives more Signature Points in every category.'},
+ {t:'REBIRTH',tag:'MAX LEVEL',d:'Once your player reaches level 25, pick him on the CAREER screen and choose REBIRTH. You make a brand-new build in that slot (new position, body, attributes and team) starting from level 1. Your old player is only replaced when you save the new one.\nEvery rebirth stacks forever:\n\u2022 +25% EXP on everything you earn (rebirth 2 = +50%, rebirth 3 = +75% ...).\n\u2022 +2 maximum SP in every Signature category (rebirth 2 = +4 ...).\nYour rebirth count shows as a gold star next to your level.'},
  {t:'UPGRADING YOUR PLAYER',tag:'EDIT PLAYER',d:'Pick your player on the CAREER screen and choose EDIT PLAYER (it shows how many points you have to spend). Attributes can only go up, never down, and never past their caps (including the caps lowered by rivals and the elite budget). Appearance and Signatures can be changed freely; name, position, body and team are locked.\nIf your upgrades change what kind of player you are, the game asks whether you want to adopt the new archetype or keep your old one.'},
  {t:'PLAYING YOUR CAREER',tag:'PLAY',d:'Pick your player and choose PLAY, then CAREER for games against the AI teams: 5V5, 3V3 (your team\'s best three, and you always play) or 1V1 against the player at your position on the team you pick. Or choose ONLINE to play a friend (see ONLINE PLAY).\nIn career you always control your own player. On offence, Space when someone else has the ball makes that teammate shoot, and E calls for the pass.'}];
 const HL_ONLINE=[
@@ -4702,9 +4714,12 @@ function drawMenus(){
  drawCareer();if(S=='archq'){drawArchQ();return}
  if(S=='slotact'){
   g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,0,960,540);
-  mRR(300,170,360,240,14,'#14161d',GOLD);g.textAlign='center';g.font='bold 22px Georgia';g.fillStyle='#fff';g.fillText(SLOTS[MM.slot].name+'  ·  '+POS[SLOTS[MM.slot].pos],480,200);if(SLOTS[MM.slot].tm!=null){g.font='bold 12px system-ui';g.fillStyle=TEAMS[SLOTS[MM.slot].tm].hud;g.fillText(TEAMS[SLOTS[MM.slot].tm].n,480,216)}
-  ['PLAY',pointsLeft(SLOTS[MM.slot])>0?'EDIT  \u00b7  '+pointsLeft(SLOTS[MM.slot])+' PTS TO SPEND':'EDIT PLAYER',MM.del?'CONFIRM DELETE?':'DELETE PLAYER','BACK'].forEach((t,i)=>{const[x,y,w,h]=actRect(i),on=MM.sub==i;
-   mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?(i==2&&MM.del?'#ff6b6b':GOLD):null);g.font='bold 18px Georgia';g.fillStyle=i==2&&MM.del?'#ff6b6b':on?'#fff':'#9aa';g.fillText(t,480,y+26)});
+  const AO=actOpts(),b5=AO.length>4,sb=SLOTS[MM.slot],r0=rbOf(sb);
+  mRR(300,b5?132:170,360,b5?346:240,14,'#14161d',GOLD);g.textAlign='center';g.font='bold 22px Georgia';g.fillStyle='#fff';g.fillText(sb.name+'  ·  '+POS[sb.pos],480,b5?172:200);if(sb.tm!=null){g.font='bold 12px system-ui';g.fillStyle=TEAMS[sb.tm].hud;g.fillText(TEAMS[sb.tm].n+(r0?'  \u00b7  \u2605 REBIRTH '+r0:''),480,b5?190:216)}
+  AO.forEach((o,i)=>{const[x,y,w,h]=actRect(i),on=MM.sub==i,dl=o=='del'&&MM.del,rbk=o=='rebirth',t=o=='play'?'PLAY':o=='edit'?(pointsLeft(sb)>0?'EDIT  \u00b7  '+pointsLeft(sb)+' PTS TO SPEND':'EDIT PLAYER'):o=='rebirth'?'\u2605  REBIRTH  \u2605':o=='del'?(MM.del?'CONFIRM DELETE?':'DELETE PLAYER'):'BACK';
+   mRR(x,y,w,h,8,on?HL:rbk?'rgba(255,210,63,.1)':'rgba(255,255,255,.05)',on?(dl?'#ff6b6b':GOLD):rbk?'rgba(255,210,63,.45)':null);g.font='bold 18px Georgia';g.fillStyle=dl?'#ff6b6b':rbk?GOLD:on?'#fff':'#9aa';g.fillText(t,480,y+26)});
+  if(b5){const rs=AO[MM.sub]=='rebirth';g.font=rs?'bold 11px system-ui':'11px system-ui';g.fillStyle=rs?GOLD:'#8a90a0';g.fillText('REBIRTH '+(r0+1)+':  +'+Math.round(REBIRTH.exp*(r0+1)*100)+'% EXP  \u00b7  +'+REBIRTH.sp*(r0+1)+' SP in every Signature category',480,450);
+   g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('a brand-new build in this slot from level 1 (saved over this one)',480,466)}
  }
 }
 // ===== CAREER: three player slots side by side - a live 3D model of each saved player with his card underneath =====
@@ -4745,7 +4760,7 @@ function drawCareer(){
   {const pl=pointsLeft(b);if(pl>0){g.save();g.font='bold 10px system-ui';const tx='+'+pl+' POINTS TO SPEND',tw=g.measureText(tx).width+16;mRR(mx+mw-tw-6,my+6,tw,18,9,'rgba(255,210,63,.22)',GOLD);g.textAlign='center';g.fillStyle=GOLD;g.fillText(tx,mx+mw-6-tw/2,my+19);g.restore()}}
   // OVR + level
   g.font='bold 30px Georgia';g.fillStyle=ovrCol(ov);g.fillText(ov,x+12,cy+76);const ow=g.measureText(ov).width;g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('OVR',x+16+ow,cy+76);
-  {const bx=x+86,bw=w-98;g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('LEVEL '+li.lv,bx,cy+60);g.textAlign='right';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(li.need?li.into+' / '+li.need+' EXP':'MAX',bx+bw,cy+60);
+  {const bx=x+86,bw=w-98;g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('LEVEL '+li.lv+(rbOf(b)?'  \u00b7  \u2605'+rbOf(b):''),bx,cy+60);g.textAlign='right';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(li.need?li.into+' / '+li.need+' EXP':'MAX',bx+bw,cy+60);
    mRR(bx,cy+67,bw,7,3.5,'rgba(255,255,255,.12)');mRR(bx,cy+67,li.need?Math.max(5,li.into/li.need*bw):bw,7,3.5,GOLD)}
   // biometrics
   [['HEIGHT',fmtH(b.h)],['WEIGHT',b.wt+' LB'],['WINGSPAN',fmtH(b.ws)]].forEach(([l,v],k)=>{const bw=(w-32)/3,bx=x+12+k*(bw+4),by=cy+88;mRR(bx,by,bw,36,6,'rgba(255,255,255,.06)');
@@ -4759,7 +4774,7 @@ function drawCareer(){
 const OVER_C='#ff9f43'; // trade-off orange: a cap held lower by a rival attribute or the elite budget
 function drawCreate(){
  const d=MM.cr,rem=pointsLeft(d),caps=MM.caps;
- g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText((bioLocked()?'EDIT PLAYER':'CREATE PLAYER')+'  ·  SLOT '+(MM.slot+1),40,48);drawPosPill(450);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText((bioLocked()?'EDIT PLAYER':MM.rbNew?'\u2605 REBIRTH '+MM.rbNew:'CREATE PLAYER')+'  ·  SLOT '+(MM.slot+1),40,48);drawPosPill(450);
  g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'APPEARANCE & ATTRIBUTE UPGRADES  ·  biometrics are locked after creation':'STEP 3  ·  APPEARANCE & ATTRIBUTES',40,76);
  g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('POINTS LEFT',920,26);g.font='bold 32px Georgia';g.fillStyle=rem>0?'#7fffa0':GOLD;g.fillText(rem,920,60);
  // the biometrics chosen on the previous page (read only here; the button goes back to change them)
@@ -4770,7 +4785,7 @@ function drawCreate(){
  {let tx=58;g.font='bold 9px system-ui';bioTags(d).forEach(([t,c])=>{const w=g.measureText(t).width+14;mRR(tx,166,w,20,10,'rgba(255,255,255,.06)',c);g.textAlign='center';g.fillStyle=c;g.fillText(t,tx+w/2,180);tx+=w+5})}
  {const[bx,by,bw,bh]=BIO_BTN,lk=bioLocked(),on=MM.row==4&&!lk;mRR(bx,by,bw,bh,8,on?HL:lk?'rgba(255,255,255,.03)':'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font=lk?'bold 12px system-ui':'bold 14px Georgia';g.fillStyle=lk?'#6a7080':on?'#fff':'#cfd3dc';g.fillText(lk?'\u{1F512}  BIOMETRICS LOCKED AFTER CREATION':'◀   EDIT BIOMETRICS',bx+bw/2,by+21)}
  {const[ax,ay,aw,ah]=AP_RECT,on=MM.row==5&&!MM.apS;mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText('APPEARANCE \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('skin \u00b7 hair \u00b7 face',ax+aw/2,ay+36)}
- {const[ax,ay,aw,ah]=SIG_BTN,on=MM.row==5&&!!MM.apS,u=sigUse(d.sig),sp=spOf(lvInfo(d.xp||0).lv);mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,210,63,.07)',on?GOLD:'rgba(255,210,63,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':GOLD;g.fillText('SIGNATURES \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(u.n+' equipped \u00b7 '+sp+' SP',ax+aw/2,ay+36)}
+ {const[ax,ay,aw,ah]=SIG_BTN,on=MM.row==5&&!!MM.apS,u=sigUse(d.sig),sp=spOf(lvInfo(d.xp||0).lv,rbOf(d));mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,210,63,.07)',on?GOLD:'rgba(255,210,63,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':GOLD;g.fillText('SIGNATURES \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(u.n+' equipped \u00b7 '+sp+' SP',ax+aw/2,ay+36)}
  {const[ax,ay,aw,ah]=STORE_BTN,on=MM.row==5&&MM.apS==2,off=(d.anim&&d.anim.off||[]).length;mRR(ax,ay,aw,ah,8,on?HL:'rgba(127,255,160,.07)',on?GOLD:'rgba(127,255,160,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':'#7fffa0';g.fillText('STORE \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(off?off+' animation'+(off>1?'s':'')+' off':'all animations on',ax+aw/2,ay+36)}
  // TRADE-OFFS (v1.25): the elite budget meter, then what holds the selected attribute down and its rivals
  {const eu=eliteUsed(d.st),full=eu>=ELITE[1],sk=MM.row>=6&&MM.row<6+STATS.length?STATS[MM.row-6][0]:null;
@@ -4815,10 +4830,10 @@ function sigsBack(){S='create';MM.row=5;MM.apS=1;for(const k in P)P[k]=0}
 const sgLv=()=>lvInfo(MM.cr.xp||0).lv;
 function sgSel(){return sgList(MM.sg.cat)[MM.sg.sel]}
 function sgSet(id,t){const d=MM.cr,m=d.sig||(d.sig={});if(!t){if(m[id]){delete m[id];beep(300,.06,'triangle')}return}
- const why=sigWhy(m,d.st,sgLv(),id,t);if(why){MM.sg.msg=why;MM.sg.mt=2.2;beep(160,.12,'square');return}m[id]=t;MM.sg.msg='';beep(620+t*80,.08,'triangle')}
+ const why=sigWhy(m,d.st,sgLv(),id,t,rbOf(d));if(why){MM.sg.msg=why;MM.sg.mt=2.2;beep(160,.12,'square');return}m[id]=t;MM.sg.msg='';beep(620+t*80,.08,'triangle')}
 function sgToggle(){const s=sgSel();if(!s)return;const m=MM.cr.sig||{};if(m[s.id]){sgSet(s.id,0);return}
- const q=sigQual(s,MM.cr.st);if(!q){MM.sg.msg=sigWhy(m,MM.cr.st,sgLv(),s.id,1);MM.sg.mt=2.2;beep(160,.12,'square');return}
- for(let t=q;t>0;t--)if(!sigWhy(m,MM.cr.st,sgLv(),s.id,t)){sgSet(s.id,t);return}sgSet(s.id,1)} // nothing fits: show why the lowest tier doesn't
+ const q=sigQual(s,MM.cr.st);if(!q){MM.sg.msg=sigWhy(m,MM.cr.st,sgLv(),s.id,1,rbOf(MM.cr));MM.sg.mt=2.2;beep(160,.12,'square');return}
+ for(let t=q;t>0;t--)if(!sigWhy(m,MM.cr.st,sgLv(),s.id,t,rbOf(MM.cr))){sgSet(s.id,t);return}sgSet(s.id,1)} // nothing fits: show why the lowest tier doesn't
 function sigsKeys(up,dn,ok){const sg=MM.sg,n=sgList(sg.cat).length,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);
  if(P.KeyQ||P.KeyE||P.Tab){sg.cat=(sg.cat+(P.KeyQ?4:1))%5;sg.sel=0;sg.msg=''}
  if(lr)sg.sel=Math.max(0,Math.min(n-1,sg.sel+lr));if(up&&sg.sel>=3)sg.sel-=3;if(dn&&sg.sel+3<n)sg.sel+=3;
@@ -4830,7 +4845,7 @@ function sigsPtr(x,y,type){const sg=MM.sg;
  const L=sgList(sg.cat);for(let j=0;j<L.length;j++)if(mIn(x,y,SG_TILE(j))){if(type==0){if(sg.sel==j)sgToggle();else sg.sel=j}return}
  const s=sgSel();if(s&&type==0)for(let i=0;i<4;i++)if(mIn(x,y,SG_TB(i))){sgSet(s.id,i<3?i+1:0);return}}
 function sgWrap(t,x,y,w,lh){const ws=t.split(' ');let l='';for(const wd of ws){const tt=l?l+' '+wd:wd;if(g.measureText(tt).width>w&&l){g.fillText(l,x,y);y+=lh;l=wd}else l=tt}if(l)g.fillText(l,x,y);return y+lh}
-function drawSigs(){const d=MM.cr,sg=MM.sg,m=d.sig||{},lv=sgLv(),sp=spOf(lv),u=sigUse(m),R=SIG_RULES;sg.mt=Math.max(0,sg.mt-1/60);
+function drawSigs(){const d=MM.cr,sg=MM.sg,m=d.sig||{},lv=sgLv(),sp=spOf(lv,rbOf(d)),u=sigUse(m),R=SIG_RULES;sg.mt=Math.max(0,sg.mt-1/60);
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 30px Georgia';g.fillText('SIGNATURES',40,48);
  g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(d.name+'  ·  '+POS[d.pos]+'  ·  LEVEL '+lv+'  ·  your ratings unlock each tier, every category has its own '+sp+' SP',40,70);
  // budget of the open category + limits
@@ -4864,7 +4879,7 @@ function drawSigs(){const d=MM.cr,sg=MM.sg,m=d.sig||{},lv=sgLv(),sp=spOf(lv),u=s
      g.font='bold 9.5px system-ui';g.fillStyle=have>=need?'#7fffa0':'#ff7b7b';g.fillText(lbl,rx,ry+35);rx+=g.measureText(lbl).width+10}
     if(!met&&t>q){g.textAlign='right';g.font='bold 9px system-ui';g.fillStyle='#6a7080';g.fillText('LOCKED',x+w-18,ry+35)}}
    // equip buttons
-   ['BRONZE','SILVER','GOLD','REMOVE'].forEach((l,i)=>{const[bx,by,bw,bh]=SG_TB(i),t=i<3?i+1:0,cur=t?et==t:false,can=t?!sigWhy(m,d.st,lv,s.id,t):!!et;
+   ['BRONZE','SILVER','GOLD','REMOVE'].forEach((l,i)=>{const[bx,by,bw,bh]=SG_TB(i),t=i<3?i+1:0,cur=t?et==t:false,can=t?!sigWhy(m,d.st,lv,s.id,t,rbOf(d)):!!et;
     mRR(bx,by,bw,bh,7,cur?SG_TCOL[t]:can?'rgba(255,255,255,.09)':'rgba(255,255,255,.03)',cur?null:can?(t?SG_TCOL[t]:'#ff7b7b'):'rgba(255,255,255,.08)');
     g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle=cur?'#14161d':can?(t?SG_TCOL[t]:'#ff7b7b'):'#4c5260';g.fillText(cur?'✓ '+l:l,bx+bw/2,by+20)});
    if(sg.mt>0&&sg.msg){g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#ff7b7b';g.fillText(sg.msg,x+w/2,y+h-4)}}}
