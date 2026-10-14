@@ -107,7 +107,7 @@ function cont(p){let c=0,cb=null,nb=null,nl=1e9;const H=hx(p.team),hxv=H-p.x,hyv
  for(const d of TM[1-p.team]){{const l0=Math.hypot(d.x-p.x,d.y-p.y);if(l0<nl){nl=l0;nb=d}}if(d.stun>0)continue;const dx=d.x-p.x,dy=d.y-p.y,l=Math.hypot(dx,dy),n=dfN(d,wp),R=95*dfRng(n)*(1+sigv(d,'spoiler'))*(1+GUARD.rng*(d.grd||0));if(l>R||l<.1)continue;
   const al=(dx*hxv+dy*hyv)/hl/l;let k=(1-l/R)*(.45+.55*Math.max(0,al));const lane=Math.abs(dx*hyv-dy*hxv)/hl;if(al>0&&lane<14)k+=.2*(1-lane/14);if(d.jump>0)k+=.3;{const v=k*dfEff(n)*cBoost(d,p)*(1+GUARD.eff*(d.grd||0));if(v>c){c=v;cb=d}}}
  CBY=cb||nb;if(p.sep>0)c*=.3;if(p.fdk)c*=1-FADE.cont*p.fdk;return Math.max(0,Math.min(1,c))}
-function post(kind,h,next){ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:1.2;B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
+function post(kind,h,next){ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:Math.max(1.2,...TM.flat().map(q=>q.kd?KD.T-q.kd.t+.2:0));B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
 function finRP(){if(RP.mk){RP.clip=RP.fr.filter(f=>f.t>=RP.rel-5&&f.t<=RP.rel+2);RP.mk=0;RP.has=RP.clip.length>5?1:0}}
 const CHK={t:0},SC1=15;
 function checkBall(team){off=team;const o=TM[team][0],d=TM[1-team][0],H=hx(team),D=dr(team);
@@ -641,7 +641,7 @@ function aiBlocks(){const h=B.mode=='held'?B.h:null;if(!bkInHand(h))return;const
  for(const d of TM[1-h.team]){if(isHum(d)){if(d.bkF!==ev){d.bkF=ev;aim(d,Math.max(0,Math.min(1,(((d.rt&&d.rt.blk)||50)-25)/75)))}continue} // you: your timing, your rating's aim
   if(d.stun>0||d.air||d.jph||d.jump>0||d.jrc>0||(d.lock>0&&!(k&&d===k.by)))continue;
   const de=Math.hypot(d.x-ex,d.y-ey);if(de>70)continue;const r=d.rt||{},rt=x=>Math.max(0,Math.min(1,((r[x]>0?r[x]:50)-25)/75)),n=rt('blk');
-  if(d.bkF!==ev){const pv=k&&k.sty==4&&d===k.by; // (the man being posterized always goes up, but a beat late)
+  if(d.bkF!==ev){const pv=k&&k.pst&&d===k.by; // (the man being posterized always goes up, but a beat late)
    d.bkF=ev;d.bkGo=pv||Math.random()<BLK.go[0]+BLK.go[1]*n-(de>40?.25:0);d.bkE=(Math.random()*2-1)*(BLK.err[0]-BLK.err[1]*n)-(pv?BLK.late:0);aim(d,n)}
   if(!d.bkGo)continue;
   const hj=blkHop(d),ta=.11+pushT(d)+Math.sqrt(2*G*hj)/G;
@@ -684,16 +684,25 @@ function dunkMiss(p){const H=hx(p.team),D=dr(p.team),bk=Math.random()<.35;p.hot=
 // td[0] + td[1] x the badge value (Bronze .25 -> ~14.5 ft from the rim, Silver .5 -> ~16 ft, Gold .8 -> ~18 ft). The flight floats (gravity x gs) and goes hz higher so the
 // distance is covered in a glide. Same dunk animations, just the take-off point: never in the Store, only for a player with the badge equipped (AI included).
 const MOMT={td:[110,60],gs:.55,hz:4};
+// KNOCKED DOWN (posterized): a reaction to the contact, a fall that speeds up like a real one, a little bounce, lying there, then back up (KD.T s in all).
+// Which way he goes depends on where the push comes from relative to his body: straight back (or forward when hit from behind), or to his left / right.
+const KD={r:34,T:2.2,A:1.4,push:85};
+function knockDown(d,p){let vx=p.dunk&&p.dunk.ax!=null?p.dunk.ax:d.x-p.x,vy=p.dunk&&p.dunk.ay!=null?p.dunk.ay:d.y-p.y,l=Math.hypot(vx,vy)||1;vx/=l;vy/=l; // pushed the way the dunker is going
+ const bk=-(vx*d.fx+vy*d.fy),lf=vx*d.fy-vy*d.fx; // push along his back / his left (his left = (fy, -fx): the rig's +x)
+ d.kd={t:0,s:Math.abs(lf)>Math.abs(bk)*.7?(lf>0?'L':'R'):bk>=0?'B':'F'};d.stun=KD.T;d.stb=0;d.jump=0;d.lock=0;d.vx=d.avx=vx*KD.push;d.vy=d.avy=vy*KD.push}
+// his body tilt (pitch about his own x axis, roll about his own z) at time t of the knockdown
+function kdAng(k){const t=k.t,A=KD.A,a=t<.14?.15*t/.14:t<.66?.15+(A-.15)*Math.pow((t-.14)/.52,2):t<.82?A-.08*Math.sin((t-.66)/.16*Math.PI):t<KD.T-.6?A:A*(1-sm3(Math.min(1,(t-KD.T+.6)/.6)));
+ return k.s=='B'?[-a,0]:k.s=='F'?[a*.9,0]:[-.35*a,k.s=='L'?-a:a]}
 function startDunk(p){
  const H=hx(p.team),d=Math.hypot(H-p.x,HY-p.y);const mo=sprintN(p)?sigv(p,'momentum'):0,td=mo?MOMT.td[0]+MOMT.td[1]*mo:0;if(d>Math.max(150*(1+mo),td+60)){if(p.team==0)say('GET CLOSER TO DUNK');return}
  if(p.air||p.jph||p.dunk)return;
  const pt_={x:H-dr(p.team)*30,y:HY},pz=sigv(p,'poster'),d0=nearD(pt_,TM[1-p.team],75,0),dd=d0||(pz?nearD(pt_,TM[1-p.team],75*(1+pz),0):null),blk=false,pos=!!dd, // (blocks are physical now: see PHYSICAL BLOCKS)
   dn=p.rt&&p.rt.dnk>0?p.rt.dnk:50,sn=Math.max(0,Math.min(1,((p.rt&&p.rt.str>0?p.rt.str:50)-25)/75)),cc=cont(p),
-  sty=pos&&animOn(p,'dnk:4')&&Math.random()<Math.min(1,.15+.8*Math.max(0,Math.min(1,(dn-25)/75))+pz)?4:dunkPick(p,dn), // (style: dunkPick - the DUNKS he has the rating for and has switched on, see STORE) // (40% of tomahawks are the LEANING variation) POSTER attempts: from the DUNKING rating (15% at 25 -> 95% at 100) + Posterizer
-  mk=!blk&&dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),sty==4,sn);
- if(sty==4&&pz)sigFx(p,'poster');
+  pst=pos&&Math.random()<Math.min(1,.15+.8*Math.max(0,Math.min(1,(dn-25)/75))+pz),sty=dunkPick(p,dn), // pst: he goes right AT the defender under the rim (any dunk style): DUNKING rating (15% at 25 -> 95% at 100) + Posterizer // (style: dunkPick - the DUNKS he has the rating for and has switched on, see STORE) // (40% of tomahawks are the LEANING variation) POSTER attempts: from the DUNKING rating (15% at 25 -> 95% at 100) + Posterizer
+  mk=!blk&&dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),pst,sn);
+ if(pst&&pz)sigFx(p,'poster');
  const spd=Math.hypot(p.vx,p.vy),al=(p.vx*(H-p.x)+p.vy*(HY-p.y))/((spd||1)*(d||1)),p1=Math.min(.95,Math.max(.05,.1+.55*(spd/170)*(.5+.5*Math.max(0,al))+.35*Math.min(1,d/130))),ft=DKS[sty].ft||(sty==2||sty==5?2:Math.random()<p1?1:2),st_=DKS[sty];
- p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm;if(mo&&d-20>=td){Object.assign(p.dunk,{td,gs:MOMT.gs,mo});p.dunk.hzb+=MOMT.hz;sigFx(p,'momentum')} // (per-style take-off distance and jump height, see the v1.17 dunks) (long take-off: far enough out when he starts it)
+ p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,pst,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm;if(mo&&d-20>=td){Object.assign(p.dunk,{td,gs:MOMT.gs,mo});p.dunk.hzb+=MOMT.hz;sigFx(p,'momentum')} // (per-style take-off distance and jump height, see the v1.17 dunks) (long take-off: far enough out when he starts it)
  RP.rel=RT;RP.who=p;beep(180,.15,'sawtooth');
 }
 // phases: 0 run-up, 1 plant/load, 2 push (legs extend), 3 airborne rise to the dunk, 4 airborne fall + landing
@@ -754,7 +763,8 @@ function dunkStep(p,dt){
  if(k.ax==null){const a=mClamp(Math.atan2((k.sy!=null?k.sy:p.y)-HY,-D*((k.sx!=null?k.sx:p.x)-H)),-1.48,1.48);k.ax=D*Math.cos(a);k.ay=-Math.sin(a)} // (ax, ay) = his heading at the rim
  const Tx=H-k.ax*20,Ty=HY-k.ay*20;
  if(k.ph>0||k.pre>0)k.g=Math.min(1,(k.g||0)+dt/(k.ph?.12:.2)); // both hands gather the ball (render() moves it into them)
- if(dd&&(k.sty==4||k.blk)&&!k.hit&&k.ph<4){const fx_=k.sx-Tx,fy_=k.sy-Ty,fl=Math.hypot(fx_,fy_)||1,gx=Tx+fx_/fl*30,gy=Ty+fy_/fl*30;dd.x+=(gx-dd.x)*Math.min(1,dt*6);dd.y+=(gy-dd.y)*Math.min(1,dt*6);dd.lock=.1;dd.fx=-k.ax;dd.fy=-k.ay}
+ if(dd&&(k.pst||k.blk)&&!k.hit&&k.ph<4){const fx_=k.sx-Tx,fy_=k.sy-Ty,fl=Math.hypot(fx_,fy_)||1,gx=Tx+fx_/fl*30,gy=Ty+fy_/fl*30;dd.x+=(gx-dd.x)*Math.min(1,dt*6);dd.y+=(gy-dd.y)*Math.min(1,dt*6);dd.lock=.1} // (he keeps facing the way he was: how he is caught decides which way he falls)
+ // POSTERIZED: at the slam, any defender in contact with the dunker (within KD.r, not already down) is knocked over - whatever the dunk
  const mv=(vx,vy)=>{p.vx=vx;p.vy=vy;p.x=Math.max(8,Math.min(932,p.x+vx*dt));p.y=Math.max(8,Math.min(632,p.y+vy*dt))};
  if(k.ph==0){
   const dx=Tx-p.x,dy=Ty-p.y,Dr=Math.hypot(dx,dy)||1,ux=dx/Dr,uy=dy/Dr,vr=p.vx*ux+p.vy*uy;p.fx=ux;p.fy=uy;
@@ -773,11 +783,12 @@ function dunkStep(p,dt){
  if(k.ph==3){
   k.ta+=dt;const rem=Math.max(k.tA-k.ta,dt);p.vz-=G*(k.gs||1)*dt;p.z+=p.vz*dt;mv((Tx-p.x)/rem,(Ty-p.y)/rem);p.fx=k.ax;p.fy=k.ay;
   const u=Math.min(1,k.ta/k.tA);k.pt=u;k.t=.22+.78*u;
-  if(dd&&k.sty==4&&k.mk&&!k.lost&&!k.hit&&u>=.62){k.hit=1;dd.lock=0;dd.stun=1.3;dd.stb=0;dd.jump=0;dd.avx=D*70;dd.avy=0;dd.vx=D*70;dd.vy=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+dd.x)/20;FX.z=(p.y+dd.y)/20;FX.y=7.6}
+  if(k.mk&&!k.lost&&!k.hit&&u>=.62){let v=null,vd=KD.r;for(const q of TM[1-p.team]){const l=Math.hypot(q.x-p.x,q.y-p.y);if(q.stun<=0&&l<vd){vd=l;v=q}}
+   if(v){k.hit=1;k.vic=v;knockDown(v,p);if(v===dd)dd.lock=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}}
   if(k.ta>=k.tA){
    k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(dd)dd.lock=0;
    {const bx=D>0?932:8,LD=DKS[k.sty].land,cy=LD&&LD.keep>=.9?LD.keep:.8;let vx=(k.cvx||0)*cy,vy=(k.cvy||0)*cy;const rm=Math.max(0,Math.abs(bx-p.x)-14)*1.7;if(vx*D>0&&Math.abs(vx)>rm)vx=Math.sign(vx)*rm;p.vx=vx;p.vy=vy} // sprint momentum carries through the slam (capped so you don't slide out past the baseline)
-   if(k.pv)SPV.slam=1;else if(k.mk&&!k.lost){const jc=jumpCont(p,k.sty==4?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
+   if(k.pv)SPV.slam=1;else if(k.mk&&!k.lost){const jc=jumpCont(p,k.pst?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
    if(k.lost||k.pv){} // blocked on the way up (bkHit already sent the ball loose)
    else if(!k.mk)dunkMiss(p);
    else{p.hot=(p.hot||0)+1;shotAtt(p,false);shotMade(p,false);sc[off]+=2;crowdRoar();gpShot(off,'I',1);pstat(p).pts+=2;awardP(p,XP_DUNK,'DUNK');{const a=asstFor(p);if(a){pstat(a).ast++;awardP(a,XP_AST,'ASSIST')}}rimKick(p.team,1);shake=.7;netHit(p.team,1.5,D*40,0);say((off?TEAMS[TI[1]].n+': ':'')+(k.oop?OOP.names[k.sty]:DKS[k.sty].nm||['TOMAHAWK','WIDE TOMAHAWK','TWO-HAND SLAM','360 SPIN','POSTERIZED','LEANING TOMAHAWK'][k.sty])+' ('+k.ft+'-FOOT)! +2','#ffd23f');beep(120,.3,'sawtooth');B.x=H;B.y=HY;B.z=RZ;B.vx=B.vy=0;B.vz=-90;post('make',null,1-off)}
@@ -2499,7 +2510,11 @@ function pose(p,dt){
   q.lean+=.32*e;q.drop+=.1*e;if(S_=='L'){q.Lh-=.45*e;q.Lk+=.2*e}else{q.Rh-=.45*e;q.Rk+=.2*e}q.tw+=(S_=='L'?.25:-.25)*e;q.r=Math.max(q.r,30)} // PASS TYPES: wind-up, release, follow-through
  if(p.hg>0){const hs=.8-p.hg,sw=Math.sin(hs*5.4)*Math.min(1,hs/.2);q.Lx=q.Rx=-2.65;q.Le=q.Re=-.08;q.Lz=.14;q.Rz=-.14;q.Lw=q.Rw=-.3;q.Lh=q.Rh=.06+.34*sw;q.Lk=q.Rk=.4+.3*Math.max(0,-sw);q.lean=.1*sw;q.drop=0;q.tw=.08*Math.sin(hs*2.7);q.r=14;
   if(p.hgk){q.Lh=q.Rh=-1.15+.18*sw;q.Lk=q.Rk=1.55-.15*sw;q.lean=.05+.06*sw}} // backscratch hang: knees tucked up in front
- if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
+ if(p.kd&&p.kd.t<KD.T-.6){const t=p.kd.t,sd=p.kd.s=='L'?1:p.kd.s=='R'?-1:0; // KNOCKED DOWN (see kdAng): sd = +1 going down to his left
+  if(t<.14)Object.assign(q,{Lh:-.25,Rh:-.25,Lk:.35,Rk:.35,Lx:-2.3,Rx:-2.3,Le:-.4,Re:-.4,Lz:-.7,Rz:.7,lean:-.3,drop:.05,tw:0,r:28}); // the hit: arms jolt up, head snaps back
+  else if(t<.82)Object.assign(q,{Lh:-.9,Rh:-.6,Lk:1,Rk:.7,Lx:sd>0?-.4:-2.4,Rx:sd<0?-.4:-2.4,Le:-.5,Re:-.5,Lz:sd>0?-1.5:-1,Rz:sd<0?1.5:1,lean:-.35,drop:.1,tw:0,r:12}); // going down: legs fold, the arm on the falling side reaches for the floor
+  else Object.assign(q,{Lh:-.6,Rh:-.25,Lk:.8,Rk:.3,Lx:-1.4,Rx:-1.6,Le:-.3,Re:-.5,Lz:-1.3,Rz:1.3,lean:-.1,drop:.05,tw:0,r:8})} // down: limbs splayed, one knee up (getting up: the normal pose eases back in)
+ else if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
  const r=q.r,S=(j,v)=>{j.rotation.x=ex(j.rotation.x,v,dt,r)};
  S(m.L,q.Lh);S(m.L.k,q.Lk);S(m.R,q.Rh);S(m.R.k,q.Rk);S(m.aL,q.Lx);S(m.aL.e,q.Le);S(m.aR,q.Rx);S(m.aR.e,q.Re);S(m.aL.w,q.Lw);S(m.aR.w,q.Rw);
@@ -2561,7 +2576,9 @@ function render(dt){
   const sp3=p.dunk&&p.dunk.sty==3?sm3(Math.max(0,Math.min(1,(p.dunk.t-p.dunk.f0)/((1-p.dunk.f0)*.8))))*2*Math.PI:0;
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
   m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw;
-  m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10); // stumble (stb) = a slight backward lean; any other stun = full fall
+  m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
+  if(p.kd){p.kd.t+=dt;if(p.kd.t>=KD.T||p.stun<=0)p.kd=null}
+  if(p.kd){const[ax,az]=kdAng(p.kd);m.rotation.x=ax;m.rotation.z=az}else{m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);m.rotation.z=ex(m.rotation.z,0,dt,10)} // stumble (stb) = a slight backward lean; any other stun = full fall
   if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
  }));
@@ -4233,10 +4250,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.50'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.51'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.51','Posterized!',['Posterizing is no longer a dunk you equip: ANY dunk posterizes a defender who is in contact with you under the rim when you slam it. The POSTERIZERS package is gone from the STORE.',
+  'Getting dunked on looks real now: the defender reacts to the hit, then falls at a natural speed, lands, lies there for a moment and gets back up.',
+  'He falls the way he was hit: straight back, or to his left or right when you catch him from the side.']],
  ['v1.50','The King',['New KING option in APPEARANCE (FACE row, last option): your player\'s whole face becomes the King\'s face.']],
  ['v1.49','Baseline dunks',['Dunks from along the baseline now go up on the side of the rim they come from (up to 85 degrees off straight on, was 70), slamming it in from that side instead of drifting round towards the front.']],
  ['v1.48','Dunk from any angle',['Dunks now finish from the angle you attack from: drive in from the baseline or the wing and you go up and slam it on that line, instead of twisting round to face the rim straight on.','Rim hangs and posterizers follow the same angle.']],
@@ -4790,7 +4810,7 @@ function animAny(p,g,c,ok,def){const on=c.filter(x=>animOn(p,g+':'+x)),a=on.filt
 // in games: which dunk style (DUNKS: rating + switched on; 40% of the old pure tomahawks were the leaning one, kept as the weights)
 const DUNK_W={0:.15,1:.25,2:.25,3:.25,5:.1,9:.22,10:.2,11:.22,12:.2,13:.22,14:.2,15:.22,16:.2,17:.22};
 function dunkPick(p,dn){const L=[];let tot=0;for(const v of DUNKV){if(v.sty==4||DKS[v.sty].oop||dn<v.req||!animOn(p,'dnk:'+v.sty))continue;L.push(v.sty);tot+=DUNK_W[v.sty]}
- if(!L.length)return animAny(p,'dnk',DUNKV.map(v=>v.sty).filter(s=>s!=4&&!DKS[s].oop),null,animOn(p,'dnk:4')?4:0);let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
+ if(!L.length)return animAny(p,'dnk',DUNKV.map(v=>v.sty).filter(s=>s!=4&&!DKS[s].oop),null,0);let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
 // ---- the screen
 function storeBack(){if(MM.fromAct){actReturn();return}S='create';MM.row=5;MM.apS=2;for(const k in P)P[k]=0}
 const stHave=(it,at)=>((MM.cr.st&&MM.cr.st[at])||25)>=it.req;
@@ -4892,7 +4912,7 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
 // Dunk packages carry a DUNK RATING = 40% technique + 30% jump distance + 30% height reached (r = those three, 0-99).
 const AN_CAT=[
  {n:'FINISHING',ic:'fin',sub:[
-  {n:'DUNKS',at:'dnk',pk:[{n:'BASIC TWO-HANDERS',k:[2,13],r:[20,25,40]},{n:'BASIC TOMAHAWKS',k:[0,1,9],r:[35,30,50]},{n:'POSTERIZERS',k:[4],r:[55,35,80]},{n:'ALLEY-OOPS',k:[6,7,8],r:[60,40,75]},
+  {n:'DUNKS',at:'dnk',pk:[{n:'BASIC TWO-HANDERS',k:[2,13],r:[20,25,40]},{n:'BASIC TOMAHAWKS',k:[0,1,9],r:[35,30,50]},{n:'ALLEY-OOPS',k:[6,7,8],r:[60,40,75]},
    {n:'ATHLETIC TWO-HANDERS',k:[15,12,14],r:[70,50,85]},{n:'LONG TOMAHAWKS',k:[5,17,16],r:[65,90,75]},{n:'SPINS & WINDMILLS',k:[3,11],r:[95,45,88]},{n:'SUPERMAN',k:[10],r:[90,99,90]}].map(p=>Object.assign(p,{k:p.k.map(s=>'dnk:'+s)}))},
   {n:'LAYUPS',at:'lay',pk:[{n:'BASIC LAYUPS',k:[0,5]},{n:'TOUCH FINISHES',k:[1,4,2]},{n:'EURO STEP',k:[6]},{n:'REVERSE LAYUPS',k:[3,7]}].map(p=>Object.assign(p,{k:p.k.map(i=>'lay:'+i)}))}]},
  {n:'SHOOTING',ic:'sht',sub:[{n:'FADEAWAYS',at:'mid',pk:[{n:'FADEAWAY',k:['sht:fade']},{n:'POST FADEAWAY',k:['sht:pfade']}]}]},
