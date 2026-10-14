@@ -518,7 +518,7 @@ function passGo(p){const ps=p.ps,tg=ps.tg,P=PASS_T[ps.ty];ps.go=1;
   if(Math.hypot(tg.vx,tg.vy)>20)for(let i=0;i<2;i++){B.lx=mClamp(tg.x+tg.vx*B.dur,15,925);B.ly=mClamp(tg.y+tg.vy*B.dur,15,625);B.dur=du(Math.hypot(B.lx-B.sx,B.ly-B.sy))}}TM.forEach(t=>t.forEach(d=>d.chk=0));
  B.pty=ps.ty;B.bnc=0;B.z0=B.z;B.zc=P.zc*(tg.ht||1);B.vz0=(B.zc-B.z0+.5*G*B.dur*B.dur)/B.dur;beep(ps.ty=='bounce'?300:330,.06)}
 // every step (host / offline): wind-up -> release -> follow-through. A wind-up dies if he loses the ball (stripped, a loose ball, the half ends...).
-// an AI receiver runs onto a lead pass: straight to the spot it is thrown to, arriving as the ball does, then turns to it
+// the receiver (AI, or you - auto-steered) runs onto a lead pass: straight to the spot it is thrown to, arriving as the ball does, then turns to it
 function passRun(p,dt){const dx=B.lx-p.x,dy=B.ly-p.y,d=Math.hypot(dx,dy),left=Math.max(.05,(1-B.t)*B.dur),v=d<6?0:Math.min(260,d/left*1.15);
  p.vx=v?dx/d*v:0;p.vy=v?dy/d*v:0;const fx=B.x-p.x,fy=B.y-p.y,fl=Math.hypot(fx,fy)||1;p.fx=fx/fl;p.fy=fy/fl}
 function passStep(dt){TM.forEach(tm=>tm.forEach(p=>{const ps=p.ps;if(!ps)return;ps.t+=dt;
@@ -1403,7 +1403,8 @@ function step(dt){
   if(p.bm&&!(B.mode=='held'&&B.h===p))p.bm=null;
   if(p.lock>0){p.lock-=dt;p.vx=p.vy=0;p.avx=p.avy=0;return}
   if(p.stun>0){p.stun-=dt;if(p.stun<=0)p.stb=0;p.vx*=.8;p.vy*=.8;return}
-  if(t==0&&i==ctl&&!AUTO)ctrl(p,dt);
+  if((t==0&&i==ctl&&!AUTO||NET.host&&t==1)&&B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt); // a pass is on its way to you: you're steered onto it (control comes back on the catch)
+  else if(t==0&&i==ctl&&!AUTO)ctrl(p,dt);
   else if(NET.host&&t==1)netCtrl(p,dt); // online: the guest's player, on his own keys
   else if(B.mode=='loose'&&CH.includes(p))chase(p,dt);
   // (on offence: the handler's AI only while he still has it - his own jump shot can leave his hands earlier in this frame)
@@ -4220,10 +4221,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.44'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.45'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.45','Auto-catch',['When a pass is thrown to you, your player is steered straight onto it and turns to the ball, so you always arrive as it does. You get control back the moment you catch it.']],
  ['v1.44','Pass it!',['Career: when you call for the ball (E), your AI teammate now passes it to you almost every time, unless you are heavily guarded (HEAVY or SMOTHERED). Then he may still ignore you, but repeated calls wear him down as before.',
   'LEAD PASSES: a pass to a moving player is thrown to where he will be when it arrives, and flies there in a straight line, instead of chasing him through the air.',
   'Cut away from a lead pass at the last moment and it sails past you for a MISSED PASS.']],
