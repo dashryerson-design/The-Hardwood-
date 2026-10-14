@@ -735,9 +735,19 @@ function hop(p,h,dm){if(p.air||p.jph||p.dunk||p.jrc>0)return false;if(sigv(p,'po
 // closeout leaves him sailing past. Sprint momentum toward the shooter is never lost (only turned onto him). Rebound jumps (no ball handler) are plain jumps.
 const LUNGE={v0:70,v1:230,r:240,gap:14};
 function lungeSet(p){const h=B.mode=='held'&&B.h&&B.h.team!=p.team?B.h:null;p.lng=h&&Math.hypot(h.x-p.x,h.y-p.y)<LUNGE.r?h:null}
-function lunge(p){const t=p.lng;p.lng=null;if(!t||t.team==p.team)return;const ta=p.jvz/G,dx=t.x+t.vx*ta-p.x,dy=t.y+t.vy*ta-p.y,l=Math.hypot(dx,dy);if(l<4)return;
+function lunge(p){const t=p.lng;p.lng=null;if(!t||t.team==p.team)return;const ta=p.jvz/G,k=t.dunk,H=hx(t.team);
+ // against a DUNK he goes up toward the rim (a spot just in front of it on the dunker's line), still facing the dunker - both bodies travel the same way and meet at the rim instead of running through each other
+ const ux=k&&k.ax!=null?k.ax:dr(t.team),uy=k?k.ay||0:0,behind=k&&-((p.x-H)*ux+(p.y-HY)*uy)>-((t.x-H)*ux+(t.y-HY)*uy); // (beaten: already behind the dunker - then he chases up behind him)
+ const tx=!k?t.x+t.vx*ta:behind?t.x-ux*16:H-ux*6,ty=!k?t.y+t.vy*ta:behind?t.y-uy*16:HY-uy*6,dx=tx-p.x,dy=ty-p.y,l=Math.hypot(dx,dy);if(l<4)return;
  const n=Math.max(0,Math.min(1,((p.rt&&p.rt.blk>0?p.rt.blk:50)-25)/75)),vm=LUNGE.v0+LUNGE.v1*n,v=Math.min(vm,Math.max(0,l-LUNGE.gap)/ta),cur=Math.max(0,(p.avx*dx+p.avy*dy)/l),s=Math.max(v,cur);
- p.avx=dx/l*s;p.avy=dy/l*s;p.fx=dx/l;p.fy=dy/l}
+ p.avx=dx/l*s;p.avy=dy/l*s;p.dkd=k?t:null;if(k){const fx=t.x-p.x,fy=t.y-p.y,fl=Math.hypot(fx,fy)||1;p.fx=fx/fl;p.fy=fy/fl}else{p.fx=dx/l;p.fy=dy/l}}
+// BODY CONTACT in the air against a dunk: a defender who went up in front of the dunker stays at least ~1.8 ft ahead of him along the dunk line - the
+// dunker carries him back toward the rim (never past the spot just under it) instead of flying through him. (Off to the side or beaten: no contact.)
+function dkPush(p){const t=p.dkd;if(!p.air){p.dkd=null;return}if(!t||!t.dunk||t.team==p.team)return;
+ const k=t.dunk,H=hx(t.team),ux=k.ax!=null?k.ax:dr(t.team),uy=k.ay||0,a=q=>-((q.x-H)*ux+(q.y-HY)*uy),lt=q=>(q.x-H)*(-uy)+(q.y-HY)*ux,ad=a(p),ak=a(t);
+ if(Math.abs(lt(p)-lt(t))>22)return;
+ if(ad>ak){const want=Math.max(ad,ak+16);if(want>ad){const d=want-ad;p.x-=ux*d;p.y-=uy*d}return} // chasing from behind: a step behind him, never through his back
+ const want=Math.max(-8,Math.min(ad,ak-18));if(want<ad){const d=ad-want;p.x+=ux*d;p.y+=uy*d}}
 // ===== PHYSICAL BLOCKS (dunks and layups) =====
 // Nothing is rolled in advance: a dunk or layup is blocked only when a defender's forearm / hand (the real rig, elbow -> fingertips) touches the ball while it is
 // still in the shooter's hands. The ball is then smacked loose (a live ball: whoever gets to it has it). Reach is real: standing height + arm length + the jump.
@@ -1614,7 +1624,7 @@ function defAI(p,i,dt,hp){
 function step(dt){
  if(S=='play'&&PR&&PR<4&&B.mode=='held'&&B.h&&B.h.team==1&&CHK.t<=0)checkBall(0); // practice: you always have the ball
  if(S=='play')for(const p of TM.flat())if(p.rd&&p.rd.full&&p.rd.off!==off)calm(p); // the ball changed hands (a rebound / steal after a missed one): everyone back up
- for(const p of TM.flat()){p.spr=0;if(p.rch>0)p.rch=Math.max(0,p.rch-dt)} // (the sprint flag is set again by ctrl() for whoever is holding Shift this step)
+ for(const p of TM.flat()){p.spr=0;if(p.rch>0)p.rch=Math.max(0,p.rch-dt);if(p.dkd)dkPush(p)} // (the sprint flag is set again by ctrl() for whoever is holding Shift this step)
  T+=dt;msg.t-=dt;shake=Math.max(0,shake-dt*3);rim=Math.max(0,rim-dt);ms.show-=dt;
  if(S=='qend'){qt-=dt;if(qt<=0)nextQ();return}
  if(S!='play')return;
@@ -2737,7 +2747,7 @@ function pose(p,dt){
   const K=SHK,ax=-.5+(J.sx+.5)*sm3(gg),ae=-1+(J.se+1)*sm3(gg); // set point: ball up in front of the forehead, elbow bent under it
   q.Lx=ax+(J.xe-ax)*e1;q.Le=ae+(J.ee-ae)*e1;q.Lw=-.35+J.fa*fl;q.Lz=K.lz+J.lz-K.ls*e1;if(go)q.r=Math.max(q.r||0,24+30*(1-Math.min(1,J.et/.26))); // (the release is a snap: the joints track the jumper's motion tightly, quicker for a quicker jumper) // then the arm extends up to the release
   q.Rx=q.Lx+K.dx*(1-K.dxe*e1)+.55*lr;q.Re=q.Le+K.de*(1-K.dxe*e1);q.Rw=-.3;q.Rz=K.rz-K.rs*e1+.95*lr;
-  {const hv=J.hv*Math.sin(Math.PI*e1);q.lean=.06+.4*p.cr-.28*(p.ct||0)+J.ln*gg+.22*hv-.1*J.hv*(1-e1)*gg;q.tw+=0;if(air&&go&&!p.fdk){if(J.kk==1){q.Lh=q.Rh=-.6;q.Lk=q.Rk=.55}else if(J.kk==2){q.Lh=-.75;q.Rh=.3;q.Lk=.6;q.Rk=.45}}} // lean / heave (a dip then a lunge) / leg kickq.tw=Math.max(-.7,Math.min(.7,(p.sqd||0)*.5))+.2*(p.ct||0);
+  {const hv=J.hv*Math.sin(Math.PI*e1);q.lean=.06+.4*p.cr-.28*(p.ct||0)+J.ln*gg+.22*hv-.1*J.hv*(1-e1)*gg;q.tw+=0;if(air&&go&&!p.fdk){if(J.kk==1){q.Lh=q.Rh=-.6;q.Lk=q.Rk=.55}else if(J.kk==2){q.Lh=-.75;q.Rh=.3;q.Lk=.6;q.Rk=.45}}} /* lean / heave (a dip then a lunge) / leg kick */q.tw=Math.max(-.7,Math.min(.7,(p.sqd||0)*.5))+.2*(p.ct||0);
   if(p.fdk){const fk=p.fdk*(air?Math.min(1,.35+p.z/10):.35*sm3(ck(p.cr/.5))),pf=p.fdp; // FADEAWAY: lean back, release up and behind the head
    q.lean-=.4*fk;q.Lx-=.3*fk;q.Rx-=.3*fk;q.tw*=1-.4*fk;
    if(air){if(pf){q.Lh=-1.35*fk-.1;q.Lk=1.45*fk+.1;q.Rh=.12;q.Rk=.18}else{q.Lh=q.Rh=-.62*fk-.1;q.Lk=q.Rk=.32+.18*fk}q.r=Math.max(q.r,18)}} // post: one leg, right knee up · moving back: both legs kicked forward
@@ -4484,10 +4494,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.64'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.65'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.65','Contesting dunks',['A defender who jumps to contest a DUNK now goes up toward the rim (still facing the dunker) instead of launching himself at the dunker - so the two bodies travel the same way and meet at the rim. In the air the dunker carries him back toward the rim instead of flying through him; a defender who was beaten jumps up behind him, a step back, not through his back.',
+  'Fixed: jumpers had lost their body turn toward the rim during the shot.']],
  ['v1.64','Jump shots & new bodies',['24 JUMP SHOTS. Every player now has his own jumper - different set point (chest push to loaded above the head), release angle and height, elbow, wrist flick, release speed, guide hand, lean, leg kick, and some heave it with the shoulders and core. Quicker, higher releases have a faster shot meter and need a higher rating.',
   'BASIC 1-8, PRO 1-10 and six signature jumpers: D.RYERSON (the best in the game: the quickest meter, the highest release), E.LEWIS, M.JOHNSON, C.KING, M.ALLEN and L.SCOTT. Equip yours in the Store under ANIMATIONS > SHOOTING > JUMP SHOTS (it plays a preview); every AI player shoots his own.',
   'More human players: the jersey now covers the shoulders (straps, trimmed armholes, collar and V-neck), knee-length baggy shorts with a trim and side stripe, team-striped socks, shaped shoes, smoother rounder bodies and heads, triceps, forearms, quads and knee caps, eyelids, irises with pupils and a catchlight, real-shaped ears, a chin, and a soft sheen on skin and fabric.']],
