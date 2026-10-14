@@ -749,9 +749,12 @@ function oopStep(dt){const r=B.to,k=r&&r.dunk;
 // restart (p.rec seconds at p.rm of his speed: after a normal dunk you are a beat slow to get going again)
 const DK_LAND={fd:1.4,keep:.85,rec:.2,rm:.7};
 function dunkStep(p,dt){
- const k=p.dunk,H=hx(p.team),D=dr(p.team),dd=k.by,Tx=H-D*20,Ty=HY;k.age+=dt;
+ const k=p.dunk,H=hx(p.team),D=dr(p.team),dd=k.by;k.age+=dt;
+ // the dunk keeps the ANGLE he came in from (not squared up to the rim): the dunk point is 2 ft out from the rim along his approach line, clamped within 70 deg of straight on
+ if(k.ax==null){const a=mClamp(Math.atan2((k.sy!=null?k.sy:p.y)-HY,-D*((k.sx!=null?k.sx:p.x)-H)),-1.22,1.22);k.ax=D*Math.cos(a);k.ay=-Math.sin(a)} // (ax, ay) = his heading at the rim
+ const Tx=H-k.ax*20,Ty=HY-k.ay*20;
  if(k.ph>0||k.pre>0)k.g=Math.min(1,(k.g||0)+dt/(k.ph?.12:.2)); // both hands gather the ball (render() moves it into them)
- if(dd&&(k.sty==4||k.blk)&&!k.hit&&k.ph<4){const fx_=k.sx-Tx,fy_=k.sy-Ty,fl=Math.hypot(fx_,fy_)||1,gx=Tx+fx_/fl*30,gy=Ty+fy_/fl*30;dd.x+=(gx-dd.x)*Math.min(1,dt*6);dd.y+=(gy-dd.y)*Math.min(1,dt*6);dd.lock=.1;dd.fx=-D;dd.fy=0}
+ if(dd&&(k.sty==4||k.blk)&&!k.hit&&k.ph<4){const fx_=k.sx-Tx,fy_=k.sy-Ty,fl=Math.hypot(fx_,fy_)||1,gx=Tx+fx_/fl*30,gy=Ty+fy_/fl*30;dd.x+=(gx-dd.x)*Math.min(1,dt*6);dd.y+=(gy-dd.y)*Math.min(1,dt*6);dd.lock=.1;dd.fx=-k.ax;dd.fy=-k.ay}
  const mv=(vx,vy)=>{p.vx=vx;p.vy=vy;p.x=Math.max(8,Math.min(932,p.x+vx*dt));p.y=Math.max(8,Math.min(632,p.y+vy*dt))};
  if(k.ph==0){
   const dx=Tx-p.x,dy=Ty-p.y,Dr=Math.hypot(dx,dy)||1,ux=dx/Dr,uy=dy/Dr,vr=p.vx*ux+p.vy*uy;p.fx=ux;p.fy=uy;
@@ -766,9 +769,9 @@ function dunkStep(p,dt){
   return}
  const ex0=Tx-p.x,ey0=Ty-p.y,nd=Math.hypot(ex0,ey0)||1,ux=ex0/nd,uy=ey0/nd;
  if(k.ph==1){k.pt=Math.min(1,k.pt+dt/k.tl);const u=k.pt;mv(ux*(k.vr0+(k.vh-k.vr0)*u),uy*(k.vr0+(k.vh-k.vr0)*u));p.cr=k.dm*sm3(u);p.fx=ux;p.fy=uy;k.t=.12*u;if(u>=1){k.ph=2;k.pt=0}return}
- if(k.ph==2){k.pt=Math.min(1,k.pt+dt/k.tp);const u=k.pt;mv(ux*k.vh,uy*k.vh);p.cr=k.dm*(1-u*u);p.pu=u;p.fx=D;p.fy=0;k.t=.12+.1*u;if(u>=1){k.ph=3;k.pt=0;k.ta=0;p.cr=0;p.pu=0;p.air=1;p.vz=k.vz;p.z=.01}return}
+ if(k.ph==2){k.pt=Math.min(1,k.pt+dt/k.tp);const u=k.pt;mv(ux*k.vh,uy*k.vh);p.cr=k.dm*(1-u*u);p.pu=u;p.fx=k.ax;p.fy=k.ay;k.t=.12+.1*u;if(u>=1){k.ph=3;k.pt=0;k.ta=0;p.cr=0;p.pu=0;p.air=1;p.vz=k.vz;p.z=.01}return}
  if(k.ph==3){
-  k.ta+=dt;const rem=Math.max(k.tA-k.ta,dt);p.vz-=G*(k.gs||1)*dt;p.z+=p.vz*dt;mv((Tx-p.x)/rem,(Ty-p.y)/rem);p.fx=D;p.fy=0;
+  k.ta+=dt;const rem=Math.max(k.tA-k.ta,dt);p.vz-=G*(k.gs||1)*dt;p.z+=p.vz*dt;mv((Tx-p.x)/rem,(Ty-p.y)/rem);p.fx=k.ax;p.fy=k.ay;
   const u=Math.min(1,k.ta/k.tA);k.pt=u;k.t=.22+.78*u;
   if(dd&&k.sty==4&&k.mk&&!k.lost&&!k.hit&&u>=.62){k.hit=1;dd.lock=0;dd.stun=1.3;dd.stb=0;dd.jump=0;dd.avx=D*70;dd.avy=0;dd.vx=D*70;dd.vy=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+dd.x)/20;FX.z=(p.y+dd.y)/20;FX.y=7.6}
   if(k.ta>=k.tA){
@@ -779,7 +782,7 @@ function dunkStep(p,dt){
    else if(!k.mk)dunkMiss(p);
    else{p.hot=(p.hot||0)+1;shotAtt(p,false);shotMade(p,false);sc[off]+=2;crowdRoar();gpShot(off,'I',1);pstat(p).pts+=2;awardP(p,XP_DUNK,'DUNK');{const a=asstFor(p);if(a){pstat(a).ast++;awardP(a,XP_AST,'ASSIST')}}rimKick(p.team,1);shake=.7;netHit(p.team,1.5,D*40,0);say((off?TEAMS[TI[1]].n+': ':'')+(k.oop?OOP.names[k.sty]:DKS[k.sty].nm||['TOMAHAWK','WIDE TOMAHAWK','TWO-HAND SLAM','360 SPIN','POSTERIZED','LEANING TOMAHAWK'][k.sty])+' ('+k.ft+'-FOOT)! +2','#ffd23f');beep(120,.3,'sawtooth');B.x=H;B.y=HY;B.z=RZ;B.vx=B.vy=0;B.vz=-90;post('make',null,1-off)}
    if((k.sty==2||DKS[k.sty].hang)&&!k.lost&&k.mk){ // two-hand slam: grab the rim, hang and swing, momentum killed, then drop (handled by the p.hg step below)
-    p.hgk=DKS[k.sty].hang==1;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-D*(3.9+12.2*p.ht);p.hgy=HY;p.hfx=D;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;if(!k.pv)rimKick(p.team,1.4)}}
+    p.hgk=DKS[k.sty].hang==1;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-k.ax*(3.9+12.2*p.ht);p.hgy=HY-k.ay*(3.9+12.2*p.ht);p.hfx=k.ax;p.hfy=k.ay;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;if(!k.pv)rimKick(p.team,1.4)}}
   return}
  const LD=Object.assign({},DK_LAND,DKS[k.sty].land);k.pf+=dt;p.vz-=G*dt;p.z+=p.vz*dt;const e=Math.exp(-dt*LD.fd);mv(p.vx*e,p.vy*e);k.t=1;
  if(p.z<=0||k.age>6){const iv=Math.max(0,-p.vz);p.z=0;p.vz=0;p.air=0;p.pu=0;p.cr=LD.cr!=null?LD.cr:Math.min(.8,.2+iv/300);p.vx*=LD.keep;p.vy*=LD.keep;p.rec=LD.rec;p.rm=LD.rm;if(LD.sq){p.lsq=LD.sq;p.lsqd=LD.cr}p.dunk=null}
@@ -1403,7 +1406,7 @@ function step(dt){
   if(p.pause>0)p.pause-=dt;else if(p.burst>0)p.burst-=dt;
   {const mo=msOf(p),hold=mo&&mo.on&&B.h===p;if(hold&&!p.jph&&!p.air)p.cr+=((.12+.26*Math.min(1,mo.t/.7))-p.cr)*Math.min(1,dt*10);else vert(p,dt)}
   if(p.fire){p.fire.t-=dt;if(p.fire.t<=0){const fn=p.fire.f;p.fire=null;if(B.mode=='held'&&B.h===p)fn()}}
-  if(p.hg>0){p.hg-=dt;p.vx=p.vy=0;const k_=Math.min(1,dt*10);if(p.hgx!=null){p.x+=(p.hgx-p.x)*k_;p.y+=(p.hgy-p.y)*k_}p.z+=(p.lz-p.z)*Math.min(1,dt*14);p.fx=p.hfx;p.fy=0;if(p.hg<=0){p.hg=0;p.hgx=null;p.air=1;p.vz=0;p.avx=p.avy=0;p.gs=1;p.lnd=.45}return}
+  if(p.hg>0){p.hg-=dt;p.vx=p.vy=0;const k_=Math.min(1,dt*10);if(p.hgx!=null){p.x+=(p.hgx-p.x)*k_;p.y+=(p.hgy-p.y)*k_}p.z+=(p.lz-p.z)*Math.min(1,dt*14);p.fx=p.hfx;p.fy=p.hfy||0;if(p.hg<=0){p.hg=0;p.hgx=null;p.air=1;p.vz=0;p.avx=p.avy=0;p.gs=1;p.lnd=.45}return}
   if(p.bm&&!(B.mode=='held'&&B.h===p))p.bm=null;
   if(p.lock>0){p.lock-=dt;p.vx=p.vy=0;p.avx=p.avy=0;return}
   if(p.stun>0){p.stun-=dt;if(p.stun<=0)p.stb=0;p.vx*=.8;p.vy*=.8;return}
@@ -4225,10 +4228,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.47'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.48'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.48','Dunk from any angle',['Dunks now finish from the angle you attack from: drive in from the baseline or the wing and you go up and slam it on that line, instead of twisting round to face the rim straight on.','Rim hangs and posterizers follow the same angle.']],
  ['v1.47','Real Momentum Takeoff',['MOMENTUM TAKEOFF now really changes where you jump from: sprint (Shift) into a dunk from far out and your player keeps sprinting and leaves the floor way out, about 14 ft from the rim at Bronze, 16 ft at Silver and 18 ft at Gold, then glides in for the slam.',
   'Before, it only let you start the dunk from further away; your player still ran in close and jumped from the usual spot.',
   'These long take-offs use your equipped dunks and only happen with the badge equipped (for the AI too). They are not in the Store.']],
