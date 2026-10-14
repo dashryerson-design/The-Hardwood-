@@ -77,7 +77,7 @@ let AUTO=false; // testing aid: lets the AI play both teams
 const CLK=()=>!AUTO&&!!myP(),isYou=p=>!AUTO&&!!p&&p.team==0&&TM&&TM[0]&&TM[0][ctl]===p, // isYou: the player YOU control (in CAREER: your created player) - only his shot meter and Signatures show on screen
  setCtl=i=>{ctl=CLK()?myP().k:i};
 // CALL FOR THE BALL (E when off the ball on offence): every call counts; the AI ball handler may ignore it, but repeated calls (they fade after ~7s) wear him down until he passes.
-const CALL={n:0,t:0,last:-9};
+const CALL={n:0,t:0,last:-9},PASS_REACH=70; // PASS_REACH: how far (units, 10 = 1 ft) the receiver can be from a lead pass's spot and still catch it
 // TRANSITION BOOST: after a DEFENSIVE rebound the team that just lost the ball gets +30% speed for ~3.8s (fading in the last 1.2s) so it can get back on defence. tbk(p) = that team's speed multiplier.
 const TRB={team:-1,t:0},tbk=p=>(TRB.t>0&&p.team==TRB.team?1+.3*Math.min(1,TRB.t/1.2):1)*trk(p);
 function callBall(p){if(T-CALL.last<.3||p.stun>0||p.dunk||p.lay)return;CALL.last=T;CALL.n=Math.min(CALL.n+1,9);CALL.t=7;p.callT=1.1;beep(700+60*Math.min(CALL.n,5),.07,'triangle',.04);{const v=sigv(p,'callshot'),h=B.h;if(v&&h&&B.mode=='held'&&h.team==p.team&&h!==p){h.think=Math.max(0,(h.think||0)-v);sigFx(p,'callshot')}}}
@@ -513,9 +513,14 @@ function passHand(p,out){const ps=p.ps,m=p.m;if(!ps||!m||!m.aL.h)return false;
 function passGo(p){const ps=p.ps,tg=ps.tg,P=PASS_T[ps.ty];ps.go=1;
  if(sigv(p,'needle'))sigFx(p,'needle');B.bail=0;B.mode='pass';B.from=p;B.to=tg;B.t=0;
  if(passHand(p,_PSA)&&_PSA.y>0){B.x=_PSA.x*10;B.y=_PSA.z*10;B.z=_PSA.y*10}else B.z=Math.max(B.z,45);B.sx=B.x;B.sy=B.y;
- B.dur=(()=>{const L=Math.hypot(tg.x-p.x,tg.y-p.y),f=passSpd(p)*(1+sigv(p,'needle'))*P.sp;return Math.max(.16/f,L/((480+L*.5)*f))})();TM.forEach(t=>t.forEach(d=>d.chk=0));
+ {const f=passSpd(p)*(1+sigv(p,'needle'))*P.sp,du=L=>Math.max(.16/f,L/((480+L*.5)*f));B.dur=du(Math.hypot(tg.x-p.x,tg.y-p.y));B.lx=tg.x;B.ly=tg.y;
+  // LEAD PASS: thrown to where a moving receiver will be when it arrives (his velocity x the flight time, refined twice since the flight time depends on the distance)
+  if(Math.hypot(tg.vx,tg.vy)>20)for(let i=0;i<2;i++){B.lx=mClamp(tg.x+tg.vx*B.dur,15,925);B.ly=mClamp(tg.y+tg.vy*B.dur,15,625);B.dur=du(Math.hypot(B.lx-B.sx,B.ly-B.sy))}}TM.forEach(t=>t.forEach(d=>d.chk=0));
  B.pty=ps.ty;B.bnc=0;B.z0=B.z;B.zc=P.zc*(tg.ht||1);B.vz0=(B.zc-B.z0+.5*G*B.dur*B.dur)/B.dur;beep(ps.ty=='bounce'?300:330,.06)}
 // every step (host / offline): wind-up -> release -> follow-through. A wind-up dies if he loses the ball (stripped, a loose ball, the half ends...).
+// an AI receiver runs onto a lead pass: straight to the spot it is thrown to, arriving as the ball does, then turns to it
+function passRun(p,dt){const dx=B.lx-p.x,dy=B.ly-p.y,d=Math.hypot(dx,dy),left=Math.max(.05,(1-B.t)*B.dur),v=d<6?0:Math.min(260,d/left*1.15);
+ p.vx=v?dx/d*v:0;p.vy=v?dy/d*v:0;const fx=B.x-p.x,fy=B.y-p.y,fl=Math.hypot(fx,fy)||1;p.fx=fx/fl;p.fy=fy/fl}
 function passStep(dt){TM.forEach(tm=>tm.forEach(p=>{const ps=p.ps;if(!ps)return;ps.t+=dt;
  if(!ps.go){if(!((B.mode=='held'||B.mode=='inbound')&&B.h===p)||p.stun>0||p.dunk||p.lay||p.fire){p.ps=null;return}if(ps.fa!=null){p.fx=Math.sin(ps.fa);p.fy=Math.cos(ps.fa)}if(ps.t>=ps.wu)passGo(p)}
  if(ps.t>=ps.d)p.ps=null}))}
@@ -1285,6 +1290,9 @@ function cpuH(p,dt){
  if(p.pause>0||ai.set>T)sp=0;if(p.ps&&!p.ps.go)sp*=.5;
  sp*=spdM(p)*trk(p);if(p.burst<=0)sp*=ballMul(p);if(p.sig&&p.burst<=0&&sp>0){const sb=sigv(p,'speedb');if(sb){sp*=1+sb;sigFx(p,'speedb')}const qf=sigv(p,'qfs');if(qf){if((p.still||0)>.25)p.qfsT=.5;if(p.qfsT>0)sp*=1+qf}}const a=Math.min(1,dt*7);p.vx+=(dx/l*sp-p.vx)*a;p.vy+=(dy/l*sp-p.vy)*a;if(sp>0){p.fx=dx/l;p.fy=dy/l}
  if(p.fire||p.lay||p.dunk||(p.ps&&!p.ps.go))return;
+ // CALLED FOR (career, E): unless you are heavily guarded (HEAVY / SMOTHERED) or the lane to you is blocked, he gives it up 97% of the time, a moment (.2s) after each call
+ if(p.team==0&&CALL.n>0&&CLK()&&CALL.rd!==CALL.last&&T-CALL.last>.2){const me=TM[0][ctl];if(me&&me!==p&&me.stun<=0&&!me.dunk&&!me.lay){CALL.rd=CALL.last;const ql=Math.hypot(me.x-p.x,me.y-p.y);
+  if(cont(me)<.45&&ql>=45&&ql<650&&laneClr(0,p.x,p.y,me.x,me.y)>=22&&Math.random()<.97){CALL.n=0;CALL.t=0;pass(p,me);return}}}
  // finish the drive: dunk (if he can) or layup as soon as he is in range
  if(ai.drive>0&&d<115){if(((p.rt&&p.rt.dnk)||50)>=62&&Math.random()<.5)startDunk(p);else if(layOK(p))startLayup(p);if(p.dunk||p.lay){ai.drive=0;return}}
  if(p.think>0)return;
@@ -1310,10 +1318,11 @@ if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoeve
  const cS=drA?c*(1-sigv(p,'deadeye')):c,own=shotEV(p,p.x,p.y,cS)-st.shoot*2;let best=null,bs=-9;
  for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const ql=Math.hypot(q.x-p.x,q.y-p.y);if(ql<60||ql>560)continue;const lcl=laneClr(p.team,p.x,p.y,q.x,q.y);if(lcl<24)continue;
   const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);let ev=shotEV(q,q.x,q.y,cont(q))+passBoost(p)*(qd>R3?3:2);if(lcl<46)ev*=.75;ev+=st.pass*2;if(gp)ev+=gpPassB(p,q,qd,d);if(ev>bs){bs=ev;best=q}}
- // you are calling for the ball (E): he may ignore it - more readily with a good shot of his own, less so when you are open - but every extra call wears him down, and on the 4th he gives in
+ // you are calling for the ball (E): unless you are heavily guarded (HEAVY / SMOTHERED, contest .45+) he almost always (97%) gives it up. Heavily guarded: he may ignore it -
+ // more readily with a good shot of his own - but every extra call wears him down, and on the 4th he gives in
  if(p.team==0&&CALL.n>0&&!(ai.drive>0)&&CLK()){const me=TM[0][ctl];
   if(me&&me!==p&&me.stun<=0&&!me.dunk&&!me.lay){const ql=Math.hypot(me.x-p.x,me.y-p.y),lcl=laneClr(0,p.x,p.y,me.x,me.y);
-   if(ql>=45&&ql<650&&(lcl>=22||CALL.n>=5)){let pr=.08+.17*(CALL.n-1)+.22*(1-cont(me));if(own>=th+.35)pr*=.55;if(CALL.n>=4||drA)pr=1;
+   if(ql>=45&&ql<650&&(lcl>=22||CALL.n>=5)){const cm=cont(me);let pr=.08+.17*(CALL.n-1)+.22*(1-cm);if(own>=th+.35)pr*=.55;if(cm<.45)pr=.97;if(CALL.n>=4||drA)pr=1;
     if(Math.random()<pr){CALL.n=0;CALL.t=0;pass(p,me);return}else if(!(p.shrug>0))p.shrug=.85}}}
  // D.RYERSON's read: open (Signatures included) or open off his own move -> shoot; a teammate with a clearly better look -> pass; guarded -> ISO with
  // up to DR_AI.moves dribble moves, re-reading straight after each; still guarded after that -> he trusts his ratings and takes the contested shot.
@@ -1398,7 +1407,7 @@ function step(dt){
   else if(NET.host&&t==1)netCtrl(p,dt); // online: the guest's player, on his own keys
   else if(B.mode=='loose'&&CH.includes(p))chase(p,dt);
   // (on offence: the handler's AI only while he still has it - his own jump shot can leave his hands earlier in this frame)
-  else if(t==off){if(p===hp&&B.mode=='held'&&B.h===p&&(t==1||AUTO||CLK()))cpuH(p,dt);else if(B.mode=='inbound'&&p===B.h){p.vx=p.vy=0;p.fx=-dr(off);p.fy=0}else offBall(p,i,dt)}
+  else if(t==off){if(p===hp&&B.mode=='held'&&B.h===p&&(t==1||AUTO||CLK()))cpuH(p,dt);else if(B.mode=='inbound'&&p===B.h){p.vx=p.vy=0;p.fx=-dr(off);p.fy=0}else if(B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt);else offBall(p,i,dt)}
   else defAI(p,i,dt,hp);
  }));
  const ib=B.mode=='inbound'?B.h:null;
@@ -1426,9 +1435,11 @@ function step(dt){
  }
  if(B.mode=='pass'&&B.oop)oopStep(dt); // ALLEY-OOP lob
  else if(B.mode=='pass'){
-  B.t+=dt/B.dur;const f=Math.min(1,B.t),tx=B.to.x+B.to.vx*.15,ty=B.to.y+B.to.vy*.15;
+  // flies straight at the lead spot; over the last third it eases into his hands if he is within reach of that spot (PASS_REACH) - if he has cut away it sails past him
+  B.t+=dt/B.dur;const f=Math.min(1,B.t),rd=Math.hypot(B.to.x-B.lx,B.to.y-B.ly),u=rd<PASS_REACH&&f>.65?(f-.65)/.35:0,tx=B.lx+(B.to.x-B.lx)*u,ty=B.ly+(B.to.y-B.ly)*u;
   B.x=B.sx+(tx-B.sx)*f;B.y=B.sy+(ty-B.sy)*f;if(B.pty=='bounce'){const fb=.6;if(f>=fb&&!B.bnc){B.bnc=1;beep(140,.05,'triangle')}B.z=f<fb?B.z0+(4-B.z0)*Math.pow(f/fb,1.25):4+(B.zc-4)*Math.sin((f-fb)/(1-fb)*Math.PI/2)}else{const tt=f*B.dur;B.z=B.z0+B.vz0*tt-.5*G*tt*tt} // (a bounce pass hits the floor 60% of the way)
   for(const d of TM[1-B.from.team])if(!d.chk&&d.stun<=0&&Math.hypot(d.x-B.x,d.y-B.y)<20*stlR(d)*(1+sigv(d,'intercept'))&&B.z<d.ht*85+d.z){d.chk=1;if(Math.random()<((isHum(d)?(d.swp>0?.2:.01):(d.swp>0?AI_STL.icS:AI_STL.ic))*stlP(d)*(1+sigv(d,'intercept'))+(B.bail?SIG_BASE.bailRisk*(1-sigv(B.from,'bail')):0))*Math.max(0,1-1.6*sigv(B.from,'needle'))*(1-fgOf(B.from))){if(sigv(d,'intercept'))sigFx(d,'intercept');say('INTERCEPTED!',d.team?'#ff6b6b':'#4cff7a');(pstat(d).stl++,awardP(d,XP_STEAL,'STEAL'));post('tov',d,d.team);break}}
+  if(f>=1&&B.mode=='pass'&&rd>=PASS_REACH){B.mode='loose';B.h=null;B.age=0;B.so=B.from.team;B.bd=dr(B.so);B.vx=(B.lx-B.sx)/B.dur*.55;B.vy=(B.ly-B.sy)/B.dur*.55;B.vz=0;say('MISSED PASS','#ff9f43');beep(180,.08,'square')}
   if(f>=1&&B.mode=='pass'){B.mode='held';B.vz=0;B.h=B.to;B.to.ct0=T;B.to.think=Math.max(B.to.think||0,(roleOf(B.to)=='SH'?.12:.22)+Math.random()*.15);ALAST={from:B.from,to:B.to,q:qn,c:qc};if(B.to.team==0)setCtl(B.to.k);beep(500,.05)}
  }else if(B.mode=='shot'){
   B.t+=dt/B.dur;const f=Math.min(1,B.t),H=hx(off);
@@ -4209,10 +4220,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.43'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.44'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.44','Pass it!',['Career: when you call for the ball (E), your AI teammate now passes it to you almost every time, unless you are heavily guarded (HEAVY or SMOTHERED). Then he may still ignore you, but repeated calls wear him down as before.',
+  'LEAD PASSES: a pass to a moving player is thrown to where he will be when it arrives, and flies there in a straight line, instead of chasing him through the air.',
+  'Cut away from a lead pass at the last moment and it sails past you for a MISSED PASS.']],
  ['v1.43','Easier alley-oops',['You can now call for (and be thrown) an alley-oop with 50 DUNKING instead of 80.','The ALLEY-OOPS animation package (flush, tomahawk, tuck slam) now unlocks at 50 DUNKING too. The SUPERMAN still needs 88.']],
  ['v1.42','New Store',['STORE (player menu) now opens on two choices: COSMETICS (coming soon) and ANIMATIONS.',
   'ANIMATIONS: pick FINISHING, SHOOTING or PASSING along the bottom, then a group on the left (e.g. DUNKS or LAYUPS), then a PACKAGE. Your player shows it on the right.',
