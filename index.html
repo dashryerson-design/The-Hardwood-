@@ -495,7 +495,7 @@ function passType(p,tg,o){const dx=tg.x-p.x,dy=tg.y-p.y,L=Math.hypot(dx,dy)||1,s
  else if(lane)ty=lane.ht>=p.ht*.95||r<.6?'bounce':'over';
  else if(sp>95)ty=pa>=75&&Math.abs(side)>.55&&fwd<.6&&r<.4?'btb':r<.55?'one':r<.8?'chest':'bounce';
  else ty=pa>=85&&Math.abs(side)>.6&&r<.2?'btb':r<.5?'chest':r<.7?'bounce':r<.85?'one':'over';
- if(!animOn(p,'pas:'+ty)){const fb=['chest','one','bounce','over','base','btb'].filter(t=>animOn(p,'pas:'+t)&&(t!='btb'||pa>=75));ty=fb[0]||'chest'} // (STORE: a switched-off pass falls back to one he has on)
+ if(!animOn(p,'pas:'+ty))ty=animAny(p,'pas',['chest','one','bounce','over','base','btb'],t=>t!='btb'||pa>=75,'chest') // (STORE: a switched-off pass falls back to one he has on)
  const k=ty=='btb'?(side>0?-1:1):(PASS_T[ty].two?1:(side<-.2?-1:side>.2?1:(p.ls<0?-1:1))); // behind the back: the hand AWAY from the target wraps round
  return{ty,k}}
 function pass(p,tg,o){
@@ -698,13 +698,13 @@ function oopTarget(p){let best=null,bs=-1e9;const H=hx(p.team);
  for(const q of TM[p.team]){if(q===p||q.stun>0||q.air||q.jph||q.dunk||q.lay||q.fire)continue;if(((q.rt&&q.rt.dnk)||50)<OOP.dnk)continue;const d=Math.hypot(H-q.x,HY-q.y);if(d>OOP.range)continue;
   const df=near(q,TM[1-p.team],200),sep=df?Math.hypot(df.x-q.x,df.y-q.y):200,s=sep-d*.4;if(s>bs){bs=s;best=q}}return best}
 const OOP_STY=[6,7,8,10];
-function oopStyle(r){const dn=(r.rt&&r.rt.dnk)||80,L=OOP_STY.filter(s=>animOn(r,'dnk:'+s)&&dn>=((DUNKV.find(v=>v.sty==s)||{}).req||0));return L.length?L[Math.random()*L.length|0]:6}
+function oopStyle(r){const dn=(r.rt&&r.rt.dnk)||80,L=OOP_STY.filter(s=>animOn(r,'dnk:'+s)&&dn>=((DUNKV.find(v=>v.sty==s)||{}).req||0));return L.length?L[Math.random()*L.length|0]:animAny(r,'dnk',OOP_STY,null,6)}
 function startOop(r,sty){const H=hx(r.team),pt_={x:H-dr(r.team)*30,y:HY},d0=nearD(pt_,TM[1-r.team],75,0),dn=(r.rt&&r.rt.dnk)||80,sn=Math.max(0,Math.min(1,(((r.rt&&r.rt.str)||50)-25)/75)),cc=cont(r),
   mk=dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),false,sn),ft=DKS[sty].ft||(sty==6?2:1);
  r.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:r.x,sy:r.y,zE:Math.max(8,103-75*r.ht),js:[1,.92,.8,.7,.6][r.i]||.8,ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,
   blk:false,mk,by:null,hit:0,sty,hang:false,oop:1,cf:DKS[sty].cf,caught:0,hzb:DKS[sty].hz||0};if(DKS[sty].cm)r.dunk.cmax*=DKS[sty].cm;{const mo=sprintN(r)?sigv(r,'momentum'):0;if(mo){r.dunk.cmax*=1+mo;r.dunk.mo=mo}}RP.rel=RT;RP.who=r}
 function throwOop(p,r){if(!r)return false;const H=hx(p.team),sty=oopStyle(r);startOop(r,sty);
- const fa=Math.atan2(r.x-p.x,r.y-p.y);p.ps={ty:'over',k:1,t:0,wu:0,d:.38,go:1,fa,tg:r};p.bm=null; // the lob: an overhead follow-through
+ const fa=Math.atan2(r.x-p.x,r.y-p.y),lt=animOn(p,'pas:over')?'over':animAny(p,'pas',['chest','one','bounce','base','btb'],t=>t!='btb'||((p.rt&&p.rt.pas)||50)>=75,'over');p.ps={ty:lt,k:lt=='btb'?-1:1,t:0,wu:0,d:.38,go:1,fa,tg:r};p.bm=null; // the lob: an overhead follow-through
  B.mode='pass';B.oop=1;B.from=p;B.to=r;B.t=0;B.ou=0;B.bail=0;B.z=Math.max(B.z,70*p.ht);B.sx=B.x;B.sy=B.y;B.z0=B.z;B.arc=OOP.arc[0]+OOP.arc[1]*Math.hypot(H-p.x,HY-p.y);
  TM.forEach(t=>t.forEach(d=>{d.chk=0;d.ochk=0}));B.dur=1;beep(380,.08,'triangle');say('ALLEY-OOP!','#ffd23f');return true}
 // CALL FOR THE LOB (career, Q without the ball): your created player, at the rim or running at it (within OOP.call, 24 ft), shouts for the alley-oop and the
@@ -807,7 +807,8 @@ function layPick(p,d,a){
  const w=[1,.5+(sp>140&&!rim?1:0),.35+(rim?1.3:0),Math.abs(a)>.8&&d<110?.9:0,d>65?.35+(rim?1.4:0):0,d<90?.3+(sp<110?.6:0)+(lane&&Math.hypot(lane.x-p.x,lane.y-p.y)<28?.8:0):0,d>70?.25+(lane?1.4:0):0,Math.abs(a)>.8&&d<110?.9:0];
  {const at=sigT(p,'acrobat');if(at){for(const i of LAY_FLASH)w[i]=(w[i]+(i==1||i==2||i==6?ACRO.base[at-1]:0))*(1+ACRO.pick[at-1])}} // ACROBAT: goes for the flashy finishes more
  const lr=layR(p);for(let i=0;i<w.length;i++)if(lr<(LAYV[i].req||0)||!animOn(p,'lay:'+i))w[i]=0; // (STORE: switched-off finishes are never picked) // not good enough for that finish: he falls back to one he has
- let r=Math.random()*w.reduce((x,y)=>x+y,0);for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i}return 0}
+ let tot=w.reduce((x,y)=>x+y,0);if(tot<=0)return animAny(p,'lay',LAYV.map((v,i)=>i),i=>lr>=(LAYV[i].req||0),0); // none of his ON finishes suits this play: still one of HIS ON finishes (the STORE is absolute), never a switched-off one
+ let r=Math.random()*tot;for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i}return animAny(p,'lay',LAYV.map((v,i)=>i),i=>lr>=(LAYV[i].req||0),0)}
 const layR=p=>p.rt&&p.rt.lay>0?p.rt.lay:50;
 // LAYUP METER (you only; offline): hold Space from the press that starts the layup and let go at the top. 1 = the variant's natural release point.
 // Half-width of the PERFECT window: .035 at a 25 finisher -> .11 at 100 (the rating is 70% LAYUP + 30% the variant's second rating, if it has one),
@@ -4200,10 +4201,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.29'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.30'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.30','Store toggles are absolute',['The animations you switch ON in the STORE are now the only ones your player ever uses. Example: switch off every layup except the EURO STEP and every layup you take is a euro step.',
+  'Fixed: when none of your switched-on layups suited the play, the game quietly fell back to the overhand BANK LAYUP even if you had switched it off (in tests that was 42% of layups). The same fallback is gone for dunks and alley-oops.',
+  'The alley-oop lob throw now uses one of your switched-on passes too, instead of always the overhead pass.']],
  ['v1.29','Rebirth',['Reach the max level (25) and a new REBIRTH option appears when you pick that player on the CAREER screen, between EDIT and DELETE.',
   'Rebirth starts a brand-new build in the same slot: choose a new position, body, attributes and team, starting again from level 1. Your old player is only replaced when you save the new one, so backing out keeps him.',
   'Every rebirth earns +25% EXP on everything you do and +2 maximum SP in every Signature category. It stacks forever: rebirth 2 is +50% EXP and +4 SP, rebirth 3 is +75% and +6, and so on.',
@@ -4550,10 +4554,12 @@ const PASS_D={chest:'Two hands from the chest, step in, thumbs-down snap.',bounc
  one:'A quick one-handed push on the move.',btb:'The ball hand wraps behind the back to a teammate on the other side.',base:'Long outlet thrown like a baseball, arm cocked by the ear.'};
 function animClean(a){const ok=new Set(STORE_T.flatMap(t=>t.items().map(i=>i.k)));const off=a&&Array.isArray(a.off)?[...new Set(a.off.filter(k=>typeof k=='string'&&ok.has(k)))]:[];return{off}}
 const animOn=(p,k)=>!(p&&p.build&&p.build.anim&&p.build.anim.off&&p.build.anim.off.includes(k));
+// THE STORE IS ABSOLUTE: a random one of the candidates c he has switched ON (preferring the ones ok() allows - his rating), only falling back to def when he has none ON at all
+function animAny(p,g,c,ok,def){const on=c.filter(x=>animOn(p,g+':'+x)),a=on.filter(ok||(()=>true)),L=a.length?a:on;return L.length?L[Math.random()*L.length|0]:def}
 // in games: which dunk style (DUNKS: rating + switched on; 40% of the old pure tomahawks were the leaning one, kept as the weights)
 const DUNK_W={0:.15,1:.25,2:.25,3:.25,5:.1,9:.22,10:.2,11:.22,12:.2,13:.22,14:.2,15:.22,16:.2,17:.22};
 function dunkPick(p,dn){const L=[];let tot=0;for(const v of DUNKV){if(v.sty==4||DKS[v.sty].oop||dn<v.req||!animOn(p,'dnk:'+v.sty))continue;L.push(v.sty);tot+=DUNK_W[v.sty]}
- if(!L.length)return 0;let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
+ if(!L.length)return animAny(p,'dnk',DUNKV.map(v=>v.sty).filter(s=>s!=4&&!DKS[s].oop),null,animOn(p,'dnk:4')?4:0);let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
 // ---- the screen
 function openStore(){MM.st={tab:0,sel:0,sc:0,msg:'',mt:0,hov:null};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 function storeBack(){S='create';MM.row=5;MM.apS=2;for(const k in P)P[k]=0}
