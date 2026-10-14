@@ -881,11 +881,14 @@ const WOPEN=.2,contK=(p,d)=>{const k=.97-.72*shN(p,d);return .4+(k-.4)*zw(d)};
 // LIVE CONTEST: perfW() is re-evaluated every frame the meter is up (meter drawing) and again at the instant of release(), both from the CURRENT contest, so a defender closing out after the shot started shrinks the window.
 // cwin = how sharply the window reacts to that contest: concave, so even a slight contest (c~.1) costs ~25% of the full contest penalty, c=.4 -> ~58%, c=1 -> 100%. Lower the exponent for a stronger reaction, raise it for a gentler one.
 const cwin=c=>Math.pow(Math.max(0,Math.min(1,c)),.6);
-const reachL=n=>40+220*n;
+const reachL=n=>20+130*n; // how far past the arc the window holds up: the window halves at R3+reachL (tp 80: ~115 units out; it was 40+220n until v1.37, which left huge windows near half court)
+// BEYOND HALF COURT (further from the basket than the centre line): the window is a sliver (0.2% of the meter) unless the shooter is rated 95+ 3PT: then he keeps the normal
+// distance-shrunk window, 1% bigger per point above 95 (99 = x1.04). Under 95 this overrides the LOGO RANGE signature.
+const HALF_X=470-52,pastHalf=p=>p&&Math.abs(hx(p.team)-p.x)>HALF_X,halfW=(p,w)=>tpV(p)>=95?w*(1+.01*(tpV(p)-95)):.002;
 function perfW(p,d,c){const n=shN(p,d),w3=.016+.074*n;let w;
  if(d<=MIDS)w=.05;
  else if(d<R3)w=.05+(w3-.05)*zw(d);
- else{const g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));w=Math.max(.004,w3/(1+g*g));const lg=sigv(p,'logo');if(lg&&d>R3+60)w=Math.max(w,w3*lg)}
+ else{const g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));w=Math.max(.004,w3/(1+g*g));const lg=sigv(p,'logo');if(lg&&d>R3+60)w=Math.max(w,w3*lg);if(pastHalf(p))w=halfW(p,w)}
  return w*(1-contK(p,d)*cwin(c))*pwMul(p,d)*(p.fdk?1-(1-FADE.win-(1-FADE.win)*n)*p.fdk:1)} // (fadeaway: x0.8 window at rating 25 -> x1.0 at 100)
 const qpick=(c,p)=>{const r=Math.random(),d=p?Math.hypot(hx(p.team)-p.x,HY-p.y):0;if(p){shotPrep(p);c=shotC(p,d,c)}const a=.3*(1-c)*Math.min(1.6,perfW(p,d,0)/.05)*(1-contK(p,d)*c)/(1-.4*c);return r<a?2:r<a+.35?1:0};
 function release(p,qq){
@@ -898,7 +901,7 @@ function release(p,qq){
  if(bl&&bl.jump>0&&Math.random()<blkP(bl,.4*bm,Math.min(.9,.65*bm))){p.hot=0;ccBlock(bl);if(bm>1)sigFx(bl,'chase');shotAtt(p,three);say('BLOCKED!','#ff6b6b');shake=.4;gpShot(p.team,three?'3':'M',0);post('tov',bl,bl.team);return}
  let pr=[.12,.62,.97][q]-c*[.05,.3,.3][q];
  if(d<110&&q)pr+=.15;if(three&&q<2)pr-=.12;if(d>600)pr*=.4;
- if(three){const n=tpN(p),g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));let f_=(.85+.15*n)/(1+.35*g*g);const lg=sigv(p,'logo');if(lg&&d>R3+60)f_=Math.max(f_,(.85+.15*n)*lg);pr*=f_} // 3pt rating: better from deep, steadier at the arc
+ if(three){const n=tpN(p),g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));let f_=(.85+.15*n)/(1+.35*g*g);const lg=sigv(p,'logo');if(lg&&d>R3+60)f_=Math.max(f_,(.85+.15*n)*lg);pr*=f_;if(pastHalf(p))pr*=tpV(p)>=95?.35:.05} // 3pt rating: better from deep, steadier at the arc
  else if(d>=MIDS){const n=shN(p,d);pr*=1-(1-(.85+.15*n))*zw(d)} // mid-range: same rating effect, blended in from MIDS out to the arc
  pr+=passBoost(asstFor(p))+shotBonus(p,d,three); // (Signatures: corner / spot-up / closer / check-ball, minus the off-balance penalty) assisted shot: boost from the passer's PASSING rating
  // jump shot = load -> push -> leap; the ball is released at the apex by the RIGHT hand (rig arm aL; the rig faces +z so its -x arm is the anatomical right)
@@ -4203,10 +4206,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.36'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.37'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.37','Distance matters',['Deep threes are much harder: the PERFECT window now shrinks far faster the further you are past the arc, even when nobody is guarding you.',
+  'Beyond HALF COURT the window is a tiny sliver, unless your 3PT rating is 95+: then you keep a real (but still distance-shrunk) window, 1% bigger for every point above 95.',
+  'A GOOD (not perfect) release from beyond half court almost never goes in now, unless you are rated 95+ 3PT.',
+  'The same applies to the AI.']],
  ['v1.36','Leaderboard tidy-up',['FG MADE is now FGM and shows your FG % next to it.','3PT MADE is now 3PM and shows your 3PT % next to it. The separate 3PT % board is gone.']],
  ['v1.35','Online leaderboard',['New LEADERBOARD: the top 5 by WINS shows on the left of the main menu. Click it (or press L) for the full board.',
   'Filter by WINS, W/L RATIO, FG MADE, 3PT MADE, 3PT % (min. 10 attempts), ONLINE WINS, TOTAL EXP and TOTAL CC.',
