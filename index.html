@@ -135,7 +135,7 @@ function live(){
  const n=B.next,h=B.live?B.h:TM[n].reduce((a,b)=>Math.hypot(a.x-B.x,a.y-B.y)<Math.hypot(b.x-B.x,b.y-B.y)?a:b),orb=B.kind=='miss'&&n==off;
  off=n;B.mode='held';B.vz=0;B.h=h;shot=orb?14:24;if(n==0)setCtl(h.k);if(orb)say('OFFENSIVE REBOUND','#ffd23f');
 }
-function start(){musStop();CHK.t=0;SFX.length=0;matchXp=0;gameXp=null;hudP=null;PSTAT=[[],[]];ALAST=null;applyRoster();applyMode();gpInit();for(const q of FULL.flat())if(q.sig)for(const id in q.sig)drawSig(id,q.sig[id],-99,-99,1); // (load every badge image now, so the first pop over a player isn't blank)
+function start(){musStop();CHK.t=0;SFX.length=0;matchXp=0;gameXp=null;hudP=null;PSTAT=[[],[]];ccBlk=0;ALAST=null;applyRoster();applyMode();gpInit();for(const q of FULL.flat())if(q.sig)for(const id in q.sig)drawSig(id,q.sig[id],-99,-99,1); // (load every badge image now, so the first pop over a player isn't blank)
  RP.has=RP.mk=0;RP.fr=[];sc=[0,0];qn=1;qc=QL;reset(0);introInit()}
 
 // ===== MATCH INTRO CUTSCENE (~31s, T skips). Two clocks: IN.rt = real time (camera, cards, timeline) · IN.t = game time (walk-on, leg animation), which runs at IN.ts speed.
@@ -627,7 +627,7 @@ function bkHit(h,d){const k=h.dunk,L=h.lay,ev=k||L;if(d.bkT===ev)return;d.bkT=ev
  const bp=ballM.position;B.mode='loose';B.h=null;B.age=0;B.so=h.team;B.bd=dr(h.team);B.x=bp.x*10;B.y=bp.z*10;B.z=bp.y*10;
  const dx=B.x-d.x,dy=B.y-d.y,l=Math.hypot(dx,dy)||1,sp=150+Math.random()*120;B.vx=dx/l*sp+.5*(d.air?d.avx:d.vx);B.vy=dy/l*sp+.5*(d.air?d.avy:d.vy);B.vz=Math.random()<.35?-60:40+Math.random()*120; // smacked away (sometimes spiked down)
  if(k)k.lost=1;else{L.lost=1;h.fire=null}
- h.hot=0;shotAtt(h,false);gpShot(h.team,'I',0);say('BLOCKED!','#ff6b6b');shake=.5;beep(100,.2,'square');beep(70,.15,'sawtooth');
+ h.hot=0;ccBlock(d);shotAtt(h,false);gpShot(h.team,'I',0);say('BLOCKED!','#ff6b6b');shake=.5;beep(100,.2,'square');beep(70,.15,'sawtooth');
  if(sigv(d,'rimprot'))sigFx(d,'rimprot');if(sigv(d,'chase')&&sigBehind(d,h))sigFx(d,'chase');RP.rel=RT;RP.who=h}
 // AI shot-blockers: jump so the hands peak as the ball gets to the rim (dunk) / the release (layup)
 function aiBlocks(){const h=B.mode=='held'?B.h:null;if(!bkInHand(h))return;const k=h.dunk,L=h.lay,ev=k||L,H=hx(h.team),D=dr(h.team);if(k&&k.ph==0)return;
@@ -895,7 +895,7 @@ function release(p,qq){
  if(q==null){const pw=perfW(p,d,c);if(ae<pw){q=2;txt='PERFECT!'}else if(ae<.11){q=1;txt='GOOD'}else{q=0;txt=e<0?'EARLY':'LATE'}}
  if(qq==null&&(p.team==0||NET.host&&p.team==1))shotStat(p,three?'3PT JUMPER':d>=MIDS?'MID-RANGE':'CLOSE JUMPER',{q,ms:e*p.st*1000},c,shV(p,d),d);shotFx(p,d,c0);p.perfRun=q==2?(p.perfRun||0)+1:0;
  let bl=near(p,TM[1-p.team],45);if(!(bl&&bl.jump>0))bl=chaser(p,45)||bl;const bm=blkMul(bl,p,0);
- if(bl&&bl.jump>0&&Math.random()<blkP(bl,.4*bm,Math.min(.9,.65*bm))){p.hot=0;if(bm>1)sigFx(bl,'chase');shotAtt(p,three);say('BLOCKED!','#ff6b6b');shake=.4;gpShot(p.team,three?'3':'M',0);post('tov',bl,bl.team);return}
+ if(bl&&bl.jump>0&&Math.random()<blkP(bl,.4*bm,Math.min(.9,.65*bm))){p.hot=0;ccBlock(bl);if(bm>1)sigFx(bl,'chase');shotAtt(p,three);say('BLOCKED!','#ff6b6b');shake=.4;gpShot(p.team,three?'3':'M',0);post('tov',bl,bl.team);return}
  let pr=[.12,.62,.97][q]-c*[.05,.3,.3][q];
  if(d<110&&q)pr+=.15;if(three&&q<2)pr-=.12;if(d>600)pr*=.4;
  if(three){const n=tpN(p),g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));let f_=(.85+.15*n)/(1+.35*g*g);const lg=sigv(p,'logo');if(lg&&d>R3+60)f_=Math.max(f_,(.85+.15*n)*lg);pr*=f_} // 3pt rating: better from deep, steadier at the arc
@@ -2999,7 +2999,7 @@ function endInit(){profRecord();
   if(u>-.25&&u<1.2&&r<300)u=u<.47?-.45:1.4;f=a+u;q.x=mClamp(fp.x+Math.sin(f)*r,20,920);q.y=mClamp(fp.y+Math.cos(f)*r,20,620)});
  if(IN&&IN.pz)poseReset(IN.pz);
  IN.pz={sd:-1,p:fp,kind:won?'FLEX':'FOLD',t0:0};IN.rt=0;IN.rdt=1/60;
- ES={t:0,p:fp,won,a,sel:1,box:false};ms.on=false;B.mode='over';B.h=null; // (the ball is put away)
+ ccMatch(fp);ES={t:0,p:fp,won,a,sel:1,box:false};ms.on=false;B.mode='over';B.h=null; // (the ball is put away)
 beep(won?520:200,.25,'triangle')}
 function endLeave(){if(IN&&IN.pz){poseReset(IN.pz);IN.pz=null}ES=null}
 function endPick(i){if(!ES)return;beep(440,.06,'triangle');if(NET.on&&i<2){endLeave();netAfter(i);return} // online: LEAVE ONLINE / BACK TO LOBBY
@@ -3330,7 +3330,7 @@ const CF_PANEL=[240,140,480,240],CF_YES=[290,300,170,46],CF_NO=[500,300,170,46];
 function openCTeam(){MM.ts=MM.cr.tm!=null?MM.cr.tm:TI[0];MM.yn=0;S='cteam'}
 function cteamBack(){S='create'}
 function cteamPick(i){MM.ts=i;MM.yn=0;S='cconf'}
-function cconfYes(){const d=MM.cr;d.tm=MM.ts;SLOTS[MM.slot]=sanitize(d);MM.rbNew=0;saveSlots();MM.r=MM.slot;startDebut()}
+function cconfYes(){const d=MM.cr;d.tm=MM.ts;SLOTS[MM.slot]=sanitize(d);if(MM.rbNew)ccAdd(3000);MM.rbNew=0;saveSlots();MM.r=MM.slot;startDebut()}
 function drawCTeam(){const d=MM.cr,t=TEAMS[MM.ts];drawRosters({pos:d.pos,name:d.name,ov:ovr(d)});
  if(S=='cconf'){g.fillStyle='rgba(0,0,0,.66)';g.fillRect(0,0,960,540);mRR(CF_PANEL[0],CF_PANEL[1],CF_PANEL[2],CF_PANEL[3],16,'#14161d',t.hud);
   g.textAlign='center';g.font='bold 28px Georgia';g.fillStyle='#fff';g.fillText('SIGN WITH '+t.n+'?',480,196);
@@ -4201,10 +4201,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.32'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.33'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.33','Court Credits',['New currency: COURT CREDITS (CC). Your balance shows top right of the CAREER screen.',
+  'Earned by your created player in every Career game: a win pays 500 CC, a loss 300 CC. On top of that: +20 CC for every shot you take, +30 per block, +30 per steal and +50 per assist.',
+  'Named PLAYER OF THE GAME? That match pays +10%.',
+  'Every REBIRTH pays +3000 CC. Credits are their own currency: rebirth EXP bonuses do not boost them.']],
  ['v1.32','Accounts',['New ACCOUNT section at the top of your PROFILE (press P on the main menu). CREATE ACCOUNT gives you a 6-character code made of letters and numbers. Write it down.',
   'Your whole save (career players, profile, stats and settings) is backed up online under that code, and backed up again whenever it changes.',
   'If this browser\'s data is ever cleared, or you play on another device, open PROFILE, choose SIGN IN WITH CODE (or press C) and type your code to get everything back.',
@@ -4354,6 +4358,15 @@ function acDraw(){g.save();g.textAlign='left';const btn=(r,t)=>{const[x,y,w,h]=r
  else{btn(AC_B1,'CREATE ACCOUNT');btn(AC_B2,'SIGN IN WITH CODE');msg(ACCT.busy?'...':ACCT.msg||'not signed in',600)}
  g.restore()}
 setTimeout(acPush,4000);setInterval(()=>{if(S=='menu'||S=='over')acPush()},20000);
+// ===== COURT CREDITS (CC): a standalone currency with its own wallet (not per slot, and NOT boosted by rebirths like EXP is), shown top right of the CAREER screen.
+// Earned by your created player in Career games: win 500 / loss 300, +20 per shot taken (2PT or 3PT), +30 per block, +30 per steal, +50 per assist, then +10% if he is PLAYER OF THE GAME. Each rebirth: +3000.
+const CC_KEY='hardwood27.credits.v1';let CC=0,ccBlk=0;try{CC=Math.max(0,parseInt(localStorage.getItem(CC_KEY))||0)}catch(e){}
+function ccAdd(n){CC=Math.min(999999999,CC+Math.max(0,Math.round(n)));try{localStorage.setItem(CC_KEY,String(CC))}catch(e){}}
+function ccMatch(fp){const me=NET.on?null:myP();if(!me)return;const s=pstat(me);ccAdd(((sc[0]>sc[1]?500:300)+20*(s.fga+s.tpa)+30*ccBlk+30*s.stl+50*s.ast)*(fp===me?1.1:1))}
+const ccBlock=d=>{if(d&&d===myP())ccBlk++};
+function ccDraw(){const t=CC.toLocaleString('en-US');g.save();g.font='bold 15px system-ui';const w=g.measureText(t).width+58,x=946-w,y=14;mRR(x,y,w,30,15,'rgba(8,10,16,.8)',GOLD);
+ g.beginPath();g.arc(x+17,y+15,10,0,6.283);g.fillStyle=GOLD;g.fill();g.fillStyle='#2a2006';g.font='bold 9px system-ui';g.textAlign='center';g.fillText('CC',x+17,y+18);
+ g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle='#fff';g.fillText(t,x+33,y+20);g.restore()}
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
@@ -4845,7 +4858,7 @@ function renderCareer(){const tm=performance.now();for(let i=0;i<3;i++)careerMod
  for(let i=0;i<3;i++){const m=cM[i];if(!m)continue;cM.forEach(o=>{if(o)o.visible=o===m});m.rotation.y=Math.sin(tm/1300+i*1.7)*.5+(MM.r==i?Math.sin(tm/500)*.05:0);
   const[x,y,w,h]=CAR_MV(i),vy=540-y-h;R.setViewport(x,vy,w,h);R.setScissor(x,vy,w,h);R.render(csc,ccam)}
  R.setScissorTest(false);R.setViewport(0,0,960,540)}
-function drawCareer(){
+function drawCareer(){ccDraw();
  g.textAlign='center';g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('CAREER',480,50);
  g.font='13px system-ui';g.fillStyle='#9aa';g.fillText('Your players  \u00b7  pick a slot to play, edit or create',480,68);
  for(let i=0;i<3;i++){const[x,y,w,h]=mainRect(i),on=MM.r==i,b=SLOTS[i],[mx,my,mw,mh]=CAR_MV(i);
