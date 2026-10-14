@@ -2945,6 +2945,12 @@ const btRatio=(h,wt)=>wt/wExp(h),btAllowed=(h,wt)=>{const r=btRatio(h,wt);return
  btAuto=(h,wt)=>{const r=btRatio(h,wt);return r<.9?0:r<1.12?2:r<1.3?3:4},
  btEff=d=>d.btSet&&btAllowed(d.h,d.wt)[d.bt]?d.bt:btAuto(d.h,d.wt); // his chosen build while it still fits his weight, else the one his weight suggests
 const STATS=[['bh','BALL HANDLE'],['stl','STEALING'],['mid','MID-RANGE'],['tp','3PT'],['spd','SPEED'],['lay','LAYUP / CLOSE SHOT'],['dnk','DUNKING'],['str','STRENGTH'],['pas','PASSING'],['pd','PERIMETER DEFENSE'],['idf','INTERIOR DEFENSE'],['blk','BLOCKING'],['reb','REBOUNDING'],['post','POST MOVES']];
+// ATTRIBUTE PAGE LAYOUT (2K style): five colour-coded groups of vertical bars. CR_ORD = STATS indexes in screen order (also the ←/→ order).
+const CR_GRP=[['FINISHING','#2f7bff',['lay','dnk','post']],['SHOOTING','#2fd35a',['mid','tp']],['PLAYMAKING','#ffc83d',['bh','pas']],['DEFENSE','#ff3b4a',['pd','idf','stl','blk','reb']],['PHYSICALS','#f5c49c',['spd','str']]],
+ CR_NM={bh:'BALL HANDLE',stl:'STEALING',mid:'MID-RANGE',tp:'3PT',spd:'SPEED',lay:'LAYUP',dnk:'DUNKING',str:'STRENGTH',pas:'PASSING',pd:'PERIMETER D',idf:'INTERIOR D',blk:'BLOCKING',reb:'REBOUNDING',post:'POST MOVES'},
+ CR_T=226,CR_B=436,CR_W=40,CR_COL={},CR_X={},CR_PANEL=[],CR_ORD=[];
+{let x=60;CR_GRP.forEach(([,c,ks])=>{const x0=x;x+=8;ks.forEach(k=>{CR_COL[k]=c;CR_X[k]=x;CR_ORD.push(STATS.findIndex(s=>s[0]==k));x+=CR_W+8});CR_PANEL.push([x0,CR_T-8,x-x0,CR_B-CR_T+48]);x+=24})}
+const crSeq=()=>[...(bioLocked()?[]:[4]),...CR_ORD.map(j=>6+j),7+STATS.length,6+STATS.length];
 const PNAME=['POINT GUARD','SHOOTING GUARD','SMALL FORWARD','POWER FORWARD','CENTER'];
 let SLOTS=[null,null,null],ACTIVE=-1,MM={r:0,sub:0,del:0,slot:0,cr:null,row:0,hold:0,drag:-1,t:0,pn:1};
 const mClamp=(v,a,b)=>Math.max(a,Math.min(b,v)),mIn=(x,y,r)=>x>=r[0]&&x<=r[0]+r[2]&&y>=r[1]&&y<=r[1]+r[3];
@@ -3181,7 +3187,7 @@ function openCreate(slot,pos){
  MM.posLock=true;MM.bi=1;MM.bioNew=!b;MM.bd=1; // the position never changes after the position page (editing a saved player keeps his)
  MM.floor=null;
  if(b){ // AFTER CREATION: name, position, height, weight, wingspan and build are locked - only the look (face, hair, hair colour, skin) changes, and attributes only go UP from what is saved
-  const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));MM.floor=Object.assign({},d.st);MM.row=6;S='create';return}
+  const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));MM.floor=Object.assign({},d.st);MM.row=6+CR_ORD[0];S='create';return}
  S='cbio';
 }
 const bioLocked=()=>!MM.bioNew&&!MM.rbNew&&!!SLOTS[MM.slot]; // editing a saved player
@@ -3248,7 +3254,7 @@ function renderCPos(ox){const tm=performance.now();R.setScissorTest(true);
 const mainRect=i=>i<3?[36,90+i*104,250,92]:[36,410,250,40],CAR_GO=[700,466,230,52],
  actOpts=()=>{const b=SLOTS[MM.slot];return b&&lvInfo(b.xp).lv>=LV_MAX?['play','edit','rebirth','del','back']:['play','edit','del','back']}, // REBIRTH only for a max-level player
  actRect=i=>[320,(actOpts().length>4?208:222)+i*46,320,38];
-const BIO_BTN=[56,196,358,30],AP_RECT=[40,246,126,44],SIG_BTN=[172,246,126,44],STORE_BTN=[304,246,126,44],statRect=j=>[470,82+j*30,450,28],SAVE_R=[40,440,185,46],CANCEL_R=[245,440,185,46];
+const BIO_BTN=[30,488,190,34],AP_RECT=[40,246,126,44],SIG_BTN=[172,246,126,44],STORE_BTN=[304,246,126,44],statRect=j=>[CR_X[STATS[j][0]],CR_T,CR_W,CR_B-CR_T+34],SAVE_R=[790,488,140,34],CANCEL_R=[680,488,100,34];
 function mainEnter(){ // CAREER screen: pick / create a player slot
  if(MM.r<3){MM.rbNew=0;if(SLOTS[MM.r]){MM.slot=MM.r;MM.sub=0;MM.del=0;S='slotact'}else openCPos(MM.r)}
  else S='menu';
@@ -3386,7 +3392,7 @@ function adj(row,dd,big,fresh){ // attribute rows (6..): never above the cap the
  const d=MM.cr;
  if(row>=6&&row<=5+STATS.length){const k=STATS[row-6][0],v=d.st[k];let nv=mClamp(v+dd*(big?5:1),stFloor(k),Math.max(v,capNow(k)));if(dd>0)nv=Math.min(nv,v+Math.max(0,pointsLeft(d)));d.st[k]=nv}
 }
-function setBar(x){const d=MM.cr,k=STATS[MM.drag-6][0],v=d.st[k];d.st[k]=mClamp(Math.round(SMIN+(x-640)/210*(SMAX-SMIN)),stFloor(k),Math.max(stFloor(k),Math.min(Math.max(v,capNow(k)),v+Math.max(0,pointsLeft(d)))))} // (over budget = can lower, never forced down)
+function setBar(y){const d=MM.cr,k=STATS[MM.drag-6][0],v=d.st[k];d.st[k]=mClamp(Math.round(SMIN+(CR_B-y)/(CR_B-CR_T)*(SMAX-SMIN)),stFloor(k),Math.max(stFloor(k),Math.min(Math.max(v,capNow(k)),v+Math.max(0,pointsLeft(d)))))} // (over budget = can lower, never forced down)
 // ===== BIOMETRICS page (step 2): name, height (limited by position), weight (limited by height), wingspan; a live 3D preview; and what each does to the attribute caps =====
 const bioRect=i=>[40,92+(i-1)*47,270,42],CHIP_Y=360,chipRect=i=>{const W=[40,46,58,70,46];let x=40;for(let q=0;q<i;q++)x+=W[q]+4;return[x,CHIP_Y,W[i],22]},BIO_NEXT=[40,424,270,44],BIO_BACK=[40,476,270,34],BV=[330,96,170,350],BAR_X=700,BAR_W=140;
 const bsc=new THREE.Scene(),bcam=new THREE.PerspectiveCamera(30,BV[2]/BV[3],.5,100);let bioM=null;
@@ -3406,7 +3412,7 @@ function bioAdj(i,dd,big){const d=MM.cr,hr=HRANGE[d.pos];
  bioDirty()}
 function bioSetBt(b){const d=MM.cr;if(btAllowed(d.h,d.wt)[b]){d.bt=b;d.btSet=true;bioDirty()}}
 function bioBack(){if(MM.bioNew){openLook();for(const k in P)P[k]=0}else S='career'}
-function bioNext(){const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));STATS.forEach(([k])=>{d.st[k]=Math.min(d.st[k],MM.caps[k])});MM.row=6;MM.hold=0;MM.drag=-1;startTrans('cbio','create',1)}
+function bioNext(){const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));STATS.forEach(([k])=>{d.st[k]=Math.min(d.st[k],MM.caps[k])});MM.row=6+CR_ORD[0];MM.hold=0;MM.drag=-1;startTrans('cbio','create',1)}
 function attrBack(){MM.bd=1;MM.bi=5;startTrans('create','cbio',-1)}
 // build tags: how his size compares (height within the position's range, weight for his height, wingspan for his height)
 function bioTags(d){const hr=HRANGE[d.pos],q=(d.h-hr[0])/(hr[1]-hr[0]),u=(d.wt-wExp(d.h))/40,w=(d.ws-(d.h+4))/3,T=[];
@@ -3442,7 +3448,7 @@ function drawCBio(){
   g.textAlign='right';g.font='bold 14px Georgia';g.fillStyle='#fff';g.fillText(c,872,y+14);
   g.font='bold 11px system-ui';g.fillStyle=dl>0?'#7fffa0':dl<0?'#ff7b7b':'#6a7080';g.fillText(dl>0?'\u25b2'+dl:dl<0?'\u25bc'+(-dl):'\u2013',908,y+14)});
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2191/\u2193 row  \u00b7  \u2190/\u2192 change (Shift = bigger steps)  \u00b7  Enter next  \u00b7  Esc back  \u00b7  or click',480,530)}
-function createEnter(){if(MM.row==6+STATS.length)createSave();else if(MM.row==7+STATS.length)S='career';else if(MM.row==4){if(!bioLocked())attrBack()}else MM.row++}
+function createEnter(){if(MM.row==6+STATS.length)createSave();else if(MM.row==7+STATS.length)S='career';else if(MM.row==4){if(!bioLocked())attrBack()}else{const q=crSeq();MM.row=q[(q.indexOf(MM.row)+1)%q.length]}}
 function menuStep(dt){
  if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
  const nm=S!='cpos'; // (on the name + position page letters type the name, so W/S/A/D/Space don't navigate)
@@ -3486,12 +3492,11 @@ else if(S=='cpos'){if(up)cpSet((MM.cp+4)%5);if(dn)cpSet((MM.cp+1)%5);if(ok)cpLoc
   const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);
   if(lr)openRTeam((MM.ro+lr+6)%6);if(ok||P.Escape||P.Backspace)S='rosters'}
  else if(S=='sigs')sigsKeys(up,dn,ok);
- else{
-  {const n=4+STATS.length;if(up)MM.row=(MM.row-4+n-1)%n+4;if(dn)MM.row=(MM.row-4+1)%n+4;if(MM.row==5)MM.row=up?4:6;if(MM.row==4&&bioLocked())MM.row=up?7+STATS.length:6}
+ else{ // attribute page: ←/→ move along the bars (and the buttons), ↑/↓ change the selected attribute
+  {const q=crSeq(),lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.row=q[(Math.max(0,q.indexOf(MM.row))+lr+q.length)%q.length]}
   if(P.Escape){if(bioLocked())S='career';else attrBack();return}
-  if(MM.row==5&&(P.ArrowLeft||P.ArrowRight||(nm&&(P.KeyA||P.KeyD))))MM.apS=((MM.apS|0)+(P.ArrowLeft||(nm&&P.KeyA)?2:1))%3; // APPEARANCE <-> SIGNATURES <-> STORE
   if(P.Enter)createEnter();
-  const fresh=P.ArrowLeft||P.ArrowRight||(nm&&(P.KeyA||P.KeyD)),dd=(K.ArrowRight||(nm&&K.KeyD)?1:0)-(K.ArrowLeft||(nm&&K.KeyA)?1:0),big=K.ShiftLeft||K.ShiftRight;
+  const fresh=P.ArrowUp||P.ArrowDown||P.KeyW||P.KeyS,dd=(K.ArrowUp||K.KeyW?1:0)-(K.ArrowDown||K.KeyS?1:0),big=K.ShiftLeft||K.ShiftRight;
   if(dd&&MM.row>=6&&MM.row<=5+STATS.length){if(fresh){adj(MM.row,dd,big,1);MM.hold=.35}else{MM.hold-=dt;if(MM.hold<=0){adj(MM.row,dd,big,0);MM.hold=.045}}}else MM.hold=0;
  }
 }
@@ -3540,9 +3545,9 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
   if(mIn(x,y,BIO_BACK)){MM.bi=6;if(type==0)bioBack()}}
  else if(S=='sigs')sigsPtr(x,y,type);
  else if(S=='create'){
-  if(type==1&&MM.drag>=0){setBar(x);return}
+  if(type==1&&MM.drag>=0){setBar(y);return}
   if(mIn(x,y,BIO_BTN)){if(bioLocked())return;MM.row=4;if(type==0)attrBack();return}
-  for(let j=0;j<STATS.length;j++)if(mIn(x,y,statRect(j))){MM.row=6+j;if(type==0){if(x>=636&&x<=854){MM.drag=6+j;setBar(x)}else if(x<636)adj(6+j,-1,0,1);else adj(6+j,1,0,1)}return}
+  for(let j=0;j<STATS.length;j++)if(mIn(x,y,statRect(j))){MM.row=6+j;if(type==0&&y<=CR_B){MM.drag=6+j;setBar(y)}return}
   if(mIn(x,y,SAVE_R)){MM.row=6+STATS.length;if(type==0)createSave();return}
   if(mIn(x,y,CANCEL_R)){MM.row=7+STATS.length;if(type==0)S='career'}
  }
@@ -4204,10 +4209,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.39'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.40'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.40','New attributes page',['The ATTRIBUTES page has a new look: every attribute is a vertical bar, colour-coded by group: FINISHING (blue), SHOOTING (green), PLAYMAKING (yellow), DEFENSE (red), PHYSICALS (peach).',
+  'Your OVR dial sits top centre with your build on the left and your height, weight, wingspan and points left on the right. Your name and Court Credits are top right.',
+  'Use ←/→ to pick an attribute and ↑/↓ to change it (Shift for bigger steps), or click and drag a bar. The number above each bar is its MAX (orange when a rival or the elite budget holds it lower).']],
  ['v1.39','New player builder',['Creating a player now goes through four pages in order: 1 NAME & POSITION, 2 APPEARANCE (hair, hair colour, skin, face), 3 BIOMETRICS (height, weight, wingspan, build), 4 ATTRIBUTES.',
   'The attribute page is only attributes now: APPEARANCE, SIGNATURES and STORE are no longer on it (they are moving somewhere else in a coming update).',
   'BACK on each page goes to the page before, and your choices are kept.']],
@@ -4956,42 +4964,48 @@ function drawCareer(){const sel=MM.r<3?MM.r:cSel,b=SLOTS[sel],T2=b&&b.tm!=null?T
   g.textAlign='center';g.font='italic 900 26px "Impact","Arial Black",sans-serif';g.fillStyle='#11131a';g.fillText(b?'NEXT  ▶':'CREATE  ▶',x+w/2,y+35)}
  g.textAlign='left';g.font='12px system-ui';g.fillStyle='rgba(255,255,255,.7)';g.fillText('↑/↓ choose  ·  Enter next  ·  Esc back  ·  or click',40,528)}
 const OVER_C='#ff9f43'; // trade-off orange: a cap held lower by a rival attribute or the elite budget
-function drawCreate(){
- const d=MM.cr,rem=pointsLeft(d),caps=MM.caps;
- g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText((bioLocked()?'EDIT PLAYER':MM.rbNew?'\u2605 REBIRTH '+MM.rbNew:'CREATE PLAYER')+'  ·  SLOT '+(MM.slot+1),40,48);drawPosPill(450);
- g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'ATTRIBUTE UPGRADES  ·  biometrics are locked after creation':'STEP 4  ·  ATTRIBUTES',40,76);
- g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('POINTS LEFT',920,26);g.font='bold 32px Georgia';g.fillStyle=rem>0?'#7fffa0':GOLD;g.fillText(rem,920,60);
- // the biometrics chosen on the previous page (read only here; the button goes back to change them)
- mRR(40,88,390,146,10,'rgba(255,255,255,.04)','rgba(255,255,255,.1)');
- g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('BIOMETRICS',58,108);
- g.font='bold 24px Georgia';g.fillStyle='#fff';g.fillText(d.name,58,136);
- g.font='13px system-ui';g.fillStyle='#9aa';g.fillText(fmtH(d.h)+'  ·  '+d.wt+' lb  ·  WS '+fmtH(d.ws)+'  ·  '+BODY[btEff(d)].n,58,156);
- {let tx=58;g.font='bold 9px system-ui';bioTags(d).forEach(([t,c])=>{const w=g.measureText(t).width+14;mRR(tx,166,w,20,10,'rgba(255,255,255,.06)',c);g.textAlign='center';g.fillStyle=c;g.fillText(t,tx+w/2,180);tx+=w+5})}
- {const[bx,by,bw,bh]=BIO_BTN,lk=bioLocked(),on=MM.row==4&&!lk;mRR(bx,by,bw,bh,8,on?HL:lk?'rgba(255,255,255,.03)':'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font=lk?'bold 12px system-ui':'bold 14px Georgia';g.fillStyle=lk?'#6a7080':on?'#fff':'#cfd3dc';g.fillText(lk?'\u{1F512}  BIOMETRICS LOCKED AFTER CREATION':'◀   EDIT BIOMETRICS',bx+bw/2,by+21)}
- // TRADE-OFFS (v1.25): the elite budget meter, then what holds the selected attribute down and its rivals
- {const eu=eliteUsed(d.st),full=eu>=ELITE[1],sk=MM.row>=6&&MM.row<6+STATS.length?STATS[MM.row-6][0]:null;
-  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('ELITE BUDGET',44,314);
-  mRR(130,305,190,10,5,'rgba(255,255,255,.12)');if(eu>0)mRR(130,305,Math.max(10,190*Math.min(1,eu/ELITE[1])),10,5,full?OVER_C:GOLD);
-  g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=full?OVER_C:'#cfd3dc';g.fillText(eu+' / '+ELITE[1]+' ABOVE '+ELITE[0],426,314);
-  g.textAlign='left';
-  if(sk){const ci=capInfo(d.st,sk,caps),rv=rivOf(sk),t=ci.why?stName(sk)+' CAPPED AT '+ci.c+'  ·  '+(ci.why=='ELITE'?'ELITE BUDGET USED UP':'HELD DOWN BY '+stName(ci.why)+' '+d.st[ci.why]):stName(sk)+' CAP '+ci.c+'  ·  set by your body';
-   let f=12;g.font='bold 12px system-ui';while(g.measureText(t).width>382&&f>8){f-=.5;g.font='bold '+f+'px system-ui'}g.fillStyle=ci.why?OVER_C:'#cfd3dc';g.fillText(t,44,334);
-   g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText(rv.length?'Rivals past '+RIV_T+': '+rv.map(stName).join(' · '):'No rivals: only the elite budget limits it',44,351)}
-  else{g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('White tick = body cap. Orange = held lower by a rival',44,334);g.fillText('attribute or by the elite budget (points above '+ELITE[0]+').',44,351)}}
- {const nw=archOf(d),cur=d.arch&&!MM.bioNew?d.arch:null;g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText(cur&&cur!=nw?'ARCHETYPE  '+cur+'  \u00b7  NOW PLAYS LIKE':'ARCHETYPE',44,370);g.font='bold 15px Georgia';g.fillStyle=GOLD;g.fillText(nw,44,384)} // live: what the current spread of points plays like
- mRR(40,388,390,46,8,'rgba(255,255,255,.04)');g.textAlign='left';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('OVERALL',56,416);g.font='bold 30px Georgia';g.fillStyle=ovrCol(ovr(d));g.fillText(ovr(d),132,423);
- g.textAlign='right';g.font='13px system-ui';g.fillStyle='#cfd3dc';g.fillText(fmtH(d.h)+'  ·  '+d.wt+' lb  ·  WS '+fmtH(d.ws),414,408);g.fillStyle=GOLD;g.fillText('Replaces your AI '+POS[d.pos],414,426);
- [['SAVE PLAYER',SAVE_R,6+STATS.length],['CANCEL',CANCEL_R,7+STATS.length]].forEach(([t,r,ix])=>{const on=MM.row==ix;mRR(r[0],r[1],r[2],r[3],8,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 18px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText(t,r[0]+r[2]/2,r[1]+30)});
- STATS.forEach(([k,l],j)=>{const[x,y,w,h]=statRect(j),on=MM.row==6+j,v=d.st[k],cx=640+(caps[k]-SMIN)/(SMAX-SMIN)*210,ec=capInfo(d.st,k,caps).c,ex=640+(ec-SMIN)/(SMAX-SMIN)*210,held=ec<caps[k];
-  mRR(x,y,w,h,8,on?HL:null);g.textAlign='left';g.font='bold 13px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(l,x+16,y+19);
-  g.textAlign='center';g.font='bold 18px system-ui';g.fillStyle=on?GOLD:'#6a7080';g.fillText('−',614,y+20);g.fillText('+',872,y+20);
-  mRR(640,y+9,210,10,5,'rgba(255,255,255,.12)');mRR(640,y+9,Math.max(8,(v-SMIN)/(SMAX-SMIN)*210),10,5,statCol(v));
-  if(caps[k]<SMAX){g.fillStyle='rgba(8,10,16,.55)';g.fillRect(cx,y+9,850-cx,10)} // beyond the body cap: not reachable
-  if(held){g.fillStyle='rgba(255,159,67,.3)';g.fillRect(ex,y+9,cx-ex,10);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(cx-1,y+7,2,14);g.fillStyle=OVER_C;g.fillRect(ex-1,y+6,2,16)} // held lower by a rival / the elite budget
-  else{g.fillStyle='rgba(255,255,255,.9)';g.fillRect(cx-1,y+6,2,16)}
-  g.textAlign='right';g.font='bold 16px Georgia';g.fillStyle=held&&v>=ec?OVER_C:'#fff';g.fillText(v,x+w-10,y+20)});
- g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'↑/↓ row  ·  →/+ raise an attribute (Shift = bigger steps)  ·  Esc cancel  ·  mouse: click or drag the bars':'↑/↓ row  ·  ←/→ change (Shift = bigger steps)  ·  Esc back to biometrics  ·  mouse: click or drag the bars',480,520);
-}
+function drawCreate(){ // 2K-style attribute page: one vertical bar per attribute, colour-coded by group, OVR dial top centre
+ const d=MM.cr,rem=pointsLeft(d),caps=MM.caps,ov=ovr(d),sel=MM.row>=6&&MM.row<6+STATS.length?MM.row-6:-1;
+ {const gr=g.createLinearGradient(0,0,960,540);gr.addColorStop(0,'#0d2a33');gr.addColorStop(.45,'#12141c');gr.addColorStop(1,'#3a0f16');g.fillStyle=gr;g.fillRect(0,0,960,540)}
+ // title
+ g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#3fe0ff';g.fillText('ATTRIBUTES',30,46);
+ g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'UPGRADES  ·  SLOT '+(MM.slot+1):(MM.rbNew?'★ REBIRTH '+MM.rbNew:'CREATE PLAYER')+'  ·  STEP 4',31,64);
+ // top bar: build name + position | OVR dial | biometrics + points left
+ {const gr=g.createLinearGradient(250,0,710,0);gr.addColorStop(0,'#1d4fd8');gr.addColorStop(1,'#123a9c');mRR(250,20,460,58,4,gr,'rgba(255,255,255,.35)');
+  const an=archOf(d);g.textAlign='left';let f=17;g.font='bold '+f+'px system-ui';while(g.measureText(an).width>170&&f>10){f-=.5;g.font='bold '+f+'px system-ui'}g.fillStyle='#fff';g.fillText(an,262,44);
+  g.font='bold 9px system-ui';g.fillStyle='rgba(255,255,255,.75)';g.fillText(PNAME[d.pos],262,60);g.font='9px system-ui';g.fillText(d.arch&&!MM.bioNew&&d.arch!=an?'was '+d.arch:'BUILD',262,71);
+  g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#fff';g.fillText('HT '+fmtH(d.h)+'   WT '+d.wt+'   WS '+fmtH(d.ws),698,44);
+  g.font='bold 12px system-ui';g.fillStyle=rem>0?'#7fffa0':GOLD;g.fillText(rem+' POINTS LEFT',698,64);
+  g.beginPath();g.arc(480,49,37,0,6.283);g.fillStyle='#0b0d14';g.fill();g.lineWidth=3;g.strokeStyle='rgba(255,255,255,.35)';g.stroke();
+  g.beginPath();g.arc(480,49,31,-Math.PI/2,-Math.PI/2+6.283*Math.max(.02,(ov-25)/74));g.lineWidth=6;g.strokeStyle=ovrCol(ov);g.stroke();
+  g.textAlign='center';g.font='bold 9px system-ui';g.fillStyle='#cfd3dc';g.fillText('OVR',480,38);g.font='bold 26px system-ui';g.fillStyle='#fff';g.fillText(ov,480,65)}
+ // top right: player name + CC, profile picture
+ {mRR(744,14,202,56,4,'rgba(8,10,16,.8)','rgba(255,255,255,.25)');g.drawImage(teamLogo(PF.d.logo),890,18,48,48);g.textAlign='right';
+  g.beginPath();g.arc(762,32,8,0,6.283);g.fillStyle=GOLD;g.fill();g.font='bold 7px system-ui';g.textAlign='center';g.fillStyle='#2a2006';g.fillText('CC',762,35);
+  g.textAlign='left';g.font='bold 14px system-ui';g.fillStyle='#fff';g.fillText(CC.toLocaleString('en-US'),774,37);let f=15;g.font='bold '+f+'px system-ui';while(g.measureText(d.name).width>130&&f>9){f--;g.font='bold '+f+'px system-ui'}g.fillText(d.name,756,59)}
+ // the bars
+ CR_GRP.forEach(([gn,col,ks],gi)=>{const[px,py,pw,ph]=CR_PANEL[gi];mRR(px,py,pw,ph,3,'rgba(8,10,16,.75)',col);
+  g.save();g.translate(px-5,py+ph);g.rotate(-Math.PI/2);g.textAlign='left';g.font='italic 900 13px "Impact","Arial Black",sans-serif';g.fillStyle=col;g.fillText(gn,4,0);g.restore()});
+ STATS.forEach(([k],j)=>{const[x,y,w,h]=statRect(j),col=CR_COL[k],on=sel==j,v=d.st[k],ec=capInfo(d.st,k,caps).c,held=ec<caps[k],Y=v2=>CR_B-(v2-SMIN)/(SMAX-SMIN)*(CR_B-CR_T);
+  // slanted label band
+  g.save();g.translate(x+w/2-4,CR_T-24);g.rotate(-Math.PI/3);const nm=CR_NM[k];g.font='bold 10px system-ui';const tw=g.measureText(nm).width+16;g.fillStyle=col;g.globalAlpha=on?1:.85;g.fillRect(0,-12,tw,16);g.globalAlpha=1;g.fillStyle=on?'#000':'#fff';g.textAlign='left';g.fillText(nm,8,0);g.restore();
+  g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle=held?OVER_C:'#cfd3dc';g.fillText(held?ec:caps[k],x+w/2,CR_T-14);g.font='bold 6px system-ui';g.fillText('MAX',x+w/2,CR_T-6);
+  g.fillStyle='#000';g.fillRect(x,CR_T,w,CR_B-CR_T);
+  g.globalAlpha=.3;g.fillStyle=col;g.fillRect(x+3,Y(ec),w-6,CR_B-Y(ec));g.globalAlpha=1; // room to grow, up to what the body / rivals / budget allow
+  if(held){g.fillStyle='rgba(255,159,67,.22)';g.fillRect(x+3,Y(caps[k]),w-6,Y(ec)-Y(caps[k]))}
+  g.fillStyle=col;g.fillRect(x+3,Y(v),w-6,CR_B-Y(v));
+  g.fillStyle='rgba(0,0,0,.35)';for(let yy=CR_B-3;yy>CR_T;yy-=4)g.fillRect(x+3,yy,w-6,1); // segmented look
+  g.fillStyle=held?OVER_C:'rgba(255,255,255,.85)';g.fillRect(x+2,Y(ec)-1,w-4,2);
+  mRR(x,CR_B+5,w,28,3,on?'#ffd23f':'rgba(20,22,30,.95)',on?'#fff':'rgba(255,255,255,.2)');g.font='bold 18px system-ui';g.fillStyle=on?'#000':held&&v>=ec?OVER_C:'#fff';g.fillText(v,x+w/2,CR_B+26);
+  if(on){g.strokeStyle='#ffd23f';g.lineWidth=3;g.strokeRect(x-2,CR_T-2,w+4,CR_B-CR_T+4)}});
+ // bottom: biometrics button, trade-off info, cancel / save
+ {const[bx,by,bw,bh]=BIO_BTN,lk=bioLocked(),on=MM.row==4&&!lk;mRR(bx,by,bw,bh,4,on?HL:'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle=lk?'#6a7080':on?'#fff':'#cfd3dc';g.fillText(lk?'🔒 BIOMETRICS LOCKED':'◀  EDIT BIOMETRICS',bx+bw/2,by+22)}
+ {const eu=eliteUsed(d.st),full=eu>=ELITE[1],sk=sel>=0?STATS[sel][0]:null;g.textAlign='left';g.font='bold 9px system-ui';g.fillStyle='#8a90a0';g.fillText('ELITE BUDGET',236,500);
+  mRR(310,493,150,8,4,'rgba(255,255,255,.12)');if(eu>0)mRR(310,493,Math.max(8,150*Math.min(1,eu/ELITE[1])),8,4,full?OVER_C:GOLD);g.font='bold 10px system-ui';g.fillStyle=full?OVER_C:'#cfd3dc';g.fillText(eu+' / '+ELITE[1]+' above '+ELITE[0],468,501);
+  let t='←/→ attribute  ·  ↑/↓ change (Shift = bigger)  ·  or drag a bar',c='#8a90a0';
+  if(sk){const ci=capInfo(d.st,sk,caps);t=ci.why?stName(sk)+' capped at '+ci.c+'  ·  '+(ci.why=='ELITE'?'elite budget used up':'held down by '+stName(ci.why)+' '+d.st[ci.why]):stName(sk)+' cap '+ci.c+' (set by your body)'+(rivOf(sk).length?'  ·  rivals: '+rivOf(sk).map(stName).join(', '):'');c=ci.why?OVER_C:'#cfd3dc'}
+  let f=11;g.font=f+'px system-ui';while(g.measureText(t).width>384&&f>8){f-=.5;g.font=f+'px system-ui'}g.fillStyle=c;g.fillText(t,236,520)}
+ [['CANCEL',CANCEL_R,7+STATS.length],['SAVE PLAYER',SAVE_R,6+STATS.length]].forEach(([t,r,ix],q)=>{const on=MM.row==ix;mRR(r[0],r[1],r[2],r[3],4,on?GOLD:q?'rgba(255,210,63,.18)':'rgba(255,255,255,.07)',q?GOLD:null);g.textAlign='center';g.font='bold 15px system-ui';g.fillStyle=on?'#14161d':q?GOLD:'#cfd3dc';g.fillText(t,r[0]+r[2]/2,r[1]+23)})}
 
 // ===== APPEARANCE: hair style · hair colour · skin tone for the career player, with a live 3D preview =====
 const PV=[40,84,310,380],styleRect=i=>[380+(i%4)*138,100+(i>>2)*30,126,26],hairRect=i=>[380+(i%16)*34,246+(i>>4)*30,28,26],skinRect=i=>[380+(i%12)*44,328+(i/12|0)*36,36,30],faceRect=i=>[380+i*68,416,64,26],LOOK_DONE=[380,466,540,40],mod=(a,n)=>((a%n)+n)%n;
