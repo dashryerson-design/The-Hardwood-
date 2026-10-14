@@ -750,8 +750,8 @@ function oopStep(dt){const r=B.to,k=r&&r.dunk;
 const DK_LAND={fd:1.4,keep:.85,rec:.2,rm:.7};
 function dunkStep(p,dt){
  const k=p.dunk,H=hx(p.team),D=dr(p.team),dd=k.by;k.age+=dt;
- // the dunk keeps the ANGLE he came in from (not squared up to the rim): the dunk point is 2 ft out from the rim along his approach line, clamped within 70 deg of straight on
- if(k.ax==null){const a=mClamp(Math.atan2((k.sy!=null?k.sy:p.y)-HY,-D*((k.sx!=null?k.sx:p.x)-H)),-1.22,1.22);k.ax=D*Math.cos(a);k.ay=-Math.sin(a)} // (ax, ay) = his heading at the rim
+ // the dunk keeps the ANGLE he came in from (not squared up to the rim): the dunk point is 2 ft out from the rim along his approach line, clamped within 85 deg of straight on (a baseline drive goes up on the side of the rim, not behind the board)
+ if(k.ax==null){const a=mClamp(Math.atan2((k.sy!=null?k.sy:p.y)-HY,-D*((k.sx!=null?k.sx:p.x)-H)),-1.48,1.48);k.ax=D*Math.cos(a);k.ay=-Math.sin(a)} // (ax, ay) = his heading at the rim
  const Tx=H-k.ax*20,Ty=HY-k.ay*20;
  if(k.ph>0||k.pre>0)k.g=Math.min(1,(k.g||0)+dt/(k.ph?.12:.2)); // both hands gather the ball (render() moves it into them)
  if(dd&&(k.sty==4||k.blk)&&!k.hit&&k.ph<4){const fx_=k.sx-Tx,fy_=k.sy-Ty,fl=Math.hypot(fx_,fy_)||1,gx=Tx+fx_/fl*30,gy=Ty+fy_/fl*30;dd.x+=(gx-dd.x)*Math.min(1,dt*6);dd.y+=(gy-dd.y)*Math.min(1,dt*6);dd.lock=.1;dd.fx=-k.ax;dd.fy=-k.ay}
@@ -4228,10 +4228,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.48'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.49'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.49','Baseline dunks',['Dunks from along the baseline now go up on the side of the rim they come from (up to 85 degrees off straight on, was 70), slamming it in from that side instead of drifting round towards the front.']],
  ['v1.48','Dunk from any angle',['Dunks now finish from the angle you attack from: drive in from the baseline or the wing and you go up and slam it on that line, instead of twisting round to face the rim straight on.','Rim hangs and posterizers follow the same angle.']],
  ['v1.47','Real Momentum Takeoff',['MOMENTUM TAKEOFF now really changes where you jump from: sprint (Shift) into a dunk from far out and your player keeps sprinting and leaves the floor way out, about 14 ft from the rim at Bronze, 16 ft at Silver and 18 ft at Gold, then glides in for the slam.',
   'Before, it only let you start the dunk from further away; your player still ran in close and jumped from the usual spot.',
