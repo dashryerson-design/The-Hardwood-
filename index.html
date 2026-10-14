@@ -2724,7 +2724,7 @@ function draw(){
  if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
  if(ONL_S.has(S))onlDraw();if(NET.on&&S=='play')netOverlay();
  if(S=='cdebut'){renderDebut();drawDebut()}
- if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();if(PN.on)pnDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
+ if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();profBtnDraw();if(PN.on)pnDraw();if(PF.on)profDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
   ['RESUME','CUSTOMISATION','REPLAY CAM:  '+['FAR','CLOSE','BASKET','DRONE'][RC],'MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText((on&&i==2?'◀  ':'')+t+(on&&i==2?'  ▶':''),480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · A/D or ←/→ change replay cam · K to close',480,462);g.fillText('Replay cam follows the scorer · graphics, ball trail and court live under CUSTOMISATION',480,486)}
@@ -2985,7 +2985,7 @@ function awardP(p,n,why){if(!NET.on&&p&&p.team==0&&p.build&&ACTIVE>=0&&p.build==
 let ES=null;
 const ES_BTN=i=>[36,178+i*62,250,50],ES_LBL=['MAIN MENU','RUN IT BACK','BOX SCORE'],BOX_BACK=[400,470,160,36];
 const gameScore=p=>{const s=pstat(p);return s.pts+s.reb+1.5*s.ast+2*s.stl+.01*pOvr(p)};
-function endInit(){
+function endInit(){profRecord();
  const won=sc[0]>sc[1],wt=won?0:1,me=ACTIVE>=0?myP():null;
  const fp=won&&me&&TM[0].includes(me)?me:TM[wt].reduce((a,p)=>gameScore(p)>gameScore(a)?p:a); // your created player when your team wins, else the winners' best performer
  // clear a stage: the star at a spot on the floor, everyone else steps back out of the shot, nobody moving
@@ -3441,7 +3441,7 @@ function menuStep(dt){
  if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
  const nm=!(S=='cbio'&&MM.bi==0);
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
- if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
+ if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
  else if(S=='career'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.r=MM.r==3?(lr>0?0:2):(MM.r+lr+3)%3;if(dn)MM.r=3;if(up&&MM.r==3)MM.r=0;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
  else if(S=='pnmode'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.md=(MM.md+lr+3)%3;if(ok)modeEnter();if(P.Escape||P.Backspace)modeBack()}
  else if(S=='playnow'){
@@ -3495,7 +3495,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  if(type==2){MM.drag=-1;MM.pd=-1;MM.hdr=null;return}
  const[x,y]=cpos(e);
  if(ONL_S.has(S)){onlPtr(x,y,type);return}
- if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(PN.on){pnPtr(x,y,type);return}if(!MN.gate&&mIn(x,y,PN_BTN)){if(type==0)pnOpen();return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
+ if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(PN.on){pnPtr(x,y,type);return}if(PF.on){profPtr(x,y,type);return}if(!MN.gate&&mIn(x,y,PF_BTN)){if(type==0)profOpen();return}if(!MN.gate&&mIn(x,y,PN_BTN)){if(type==0)pnOpen();return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
  else if(S=='career'){for(let i=0;i<4;i++)if(mIn(x,y,mainRect(i))){MM.r=i;if(type==0)mainEnter();return}}
  else if(S=='playnow'){
   if(type==0&&mIn(x,y,PN_BACK)){pnBack();return}
@@ -4201,10 +4201,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.30'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.31'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.31','Profile',['New PROFILE box on the main menu (left side, or press P). Click it to open your profile.',
+  'Change your USERNAME (up to 12 letters) and pick any team logo as your profile picture.',
+  'LIFETIME STATS: games, record, win %, points, rebounds, assists, steals, per-game averages, FG and 3PT, from every finished game in every mode, plus your record in 5v5, 3v3, 1v1, Career and Online.',
+  'In Career the stats are your created player\'s; everywhere else they are your whole team\'s. Stats start counting from this version and are saved in this browser.']],
  ['v1.30','Store toggles are absolute',['The animations you switch ON in the STORE are now the only ones your player ever uses. Example: switch off every layup except the EURO STEP and every layup you take is a euro step.',
   'Fixed: when none of your switched-on layups suited the play, the game quietly fell back to the overhand BANK LAYUP even if you had switched it off (in tests that was 42% of layups). The same fallback is gone for dunks and alley-oops.',
   'The alley-oop lob throw now uses one of your switched-on passes too, instead of always the overhead pass.']],
@@ -4251,6 +4255,57 @@ function pnDraw(){const L=pnList(),[bx,by,bw,bh]=PN_BOX,cur=L[PN.sel];g.save();
   while(fit()>by+bh-40&&fz>9.5)fz-=.5;
   g.font=fz+'px system-ui';for(const b of cur[2]){g.fillStyle=GOLD;g.fillText('•',x,y);g.fillStyle='#dfe3ea';y=wrapT(b,x+16,y,w-16,lh)+8}}
  g.textAlign='center';g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ pick a version  ·  Esc / Enter / N close  ·  or click',480,by+bh-14);g.restore()}
+// ===== PROFILE (main menu, left, or P): your username, a team logo as your picture, and lifetime stats from every finished game in every mode =====
+// Stats are YOUR side's: your created player in Career, otherwise your whole team (team 0 is always the local player, online too). Saved in this browser only.
+const PF_KEY='hardwood27.profile.v1',PF_K=['pts','reb','ast','stl','fgm','fga','tpm','tpa'],PF_MODES=['5v5','3v3','1v1','CAREER','ONLINE'];
+const PF={on:false,ed:false,d:null},PF_BTN=[34,372,240,58],PF_BOX=[80,52,800,440],PF_X=[770,66,92,30],PF_NAME=[100,300,230,34],PF_LOGO=i=>[104+i%3*76,368+(i/3|0)*60,52,52];
+function profLoad(){let v=null;try{v=JSON.parse(localStorage.getItem(PF_KEY)||'null')}catch(e){}v=v&&typeof v=='object'?v:{};
+ const n=o=>Math.max(0,Math.round(+o)||0),st={},md={};['gp','w','l',...PF_K].forEach(k=>st[k]=n(v.st&&v.st[k]));
+ PF_MODES.forEach(m=>{const o=v.md&&v.md[m]||{};md[m]={gp:n(o.gp),w:n(o.w),l:n(o.l)}});
+ PF.d={name:String(v.name||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',logo:v.logo>=0&&v.logo<TEAMS.length?v.logo|0:0,st,md}}
+function profSave(){try{localStorage.setItem(PF_KEY,JSON.stringify(PF.d))}catch(e){}}
+profLoad();
+function profRecord(){const me=NET.on?null:myP(),k=NET.on?'ONLINE':me?'CAREER':MODE+'v'+MODE,w=sc[0]>sc[1]?'w':'l',m=PF.d.md[k];
+ [PF.d.st,m].forEach(o=>{if(o){o.gp++;o[w]++}});(me?[me]:TM[0]).forEach(p=>{const s=pstat(p);PF_K.forEach(k=>PF.d.st[k]+=s[k]|0)});profSave()}
+function profOpen(){PF.on=true;PF.ed=false;beep(520,.06,'triangle')}
+function profClose(){PF.on=false;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
+function profLogo(i){PF.d.logo=(i+TEAMS.length)%TEAMS.length;profSave();beep(440,.05,'triangle')}
+function profEdit(on){PF.ed=on;if(!on){PF.d.name=PF.d.name.trim()||'PLAYER';profSave()}beep(on?520:440,.05,'triangle')}
+function profKeys(up,dn,ok){if(PF.ed){if(P.Enter||P.Escape)profEdit(false);return}
+ const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0)+(dn?3:0)-(up?3:0);if(lr)profLogo(PF.d.logo+lr);
+ if(ok)profEdit(true);else if(P.Escape||P.Backspace||P.KeyP)profClose()}
+function profPtr(x,y,type){if(type!=0)return;if(mIn(x,y,PF_X)||!mIn(x,y,PF_BOX)){profClose();return}
+ if(mIn(x,y,PF_NAME)){profEdit(!PF.ed);return}if(PF.ed)profEdit(false);for(let i=0;i<TEAMS.length;i++)if(mIn(x,y,PF_LOGO(i))){profLogo(i);return}}
+addEventListener('keydown',e=>{ // username entry (same rules as a created player's name)
+ if(!PF.on||!PF.ed||e.ctrlKey||e.metaKey||e.altKey)return;const d=PF.d;
+ if(e.key=='Backspace'){d.name=d.name.slice(0,-1);e.preventDefault()}
+ else if(e.key.length==1&&/[A-Za-z0-9 '.\-]/.test(e.key)&&d.name.length<12)d.name+=e.key.toUpperCase()});
+const pfPct=(m,a)=>a?(100*m/a).toFixed(1)+'%':'-',pfAvg=(v,n)=>n?(v/n).toFixed(1):'-';
+function profBtnDraw(){if(MN.gate||MN.t<T_READY-.6||PN.on)return;const[x,y,w,h]=PF_BTN,s=PF.d.st;mRR(x,y,w,h,12,PF.on?'rgba(40,32,8,.9)':'rgba(8,10,16,.78)',GOLD);
+ g.save();g.drawImage(teamLogo(PF.d.logo),x+6,y+5,48,48);g.textAlign='left';let fz=22;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif';while(g.measureText(PF.d.name).width>w-80&&fz>12){fz--;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif'}
+ g.fillStyle='#fff';g.fillText(PF.d.name,x+62,y+27);g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('PROFILE (P)  ·  '+s.gp+(s.gp==1?' game':' games')+'  ·  '+s.w+'-'+s.l,x+62,y+45);g.restore()}
+function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d,s=d.st;g.save();
+ g.fillStyle='rgba(4,5,9,.72)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.97)',GOLD);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('PROFILE',bx+20,by+40);
+ {const[x,y,w,h]=PF_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
+ // left: picture, username, logo picker
+ g.drawImage(teamLogo(d.logo),140,96,150,150);
+ {const[x,y,w,h]=PF_NAME;mRR(x,y,w,h,8,PF.ed?'rgba(255,210,63,.16)':'rgba(255,255,255,.05)',PF.ed?GOLD:'rgba(255,255,255,.25)');
+  const nm=d.name+(PF.ed&&performance.now()%1000<500?'|':'');let fz=20;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif';while(g.measureText(nm).width>w-20&&fz>12){fz--;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif'}
+  g.textAlign='center';g.fillStyle='#fff';g.fillText(nm,x+w/2,y+25);g.font='10px system-ui';g.fillStyle=PF.ed?GOLD:'#8a90a0';g.fillText(PF.ed?'type a name  ·  Enter to save':'USERNAME  ·  click or Enter to edit',x+w/2,y-6)}
+ g.font='10px system-ui';g.fillStyle='#8a90a0';g.textAlign='left';g.fillText('PICTURE  ·  ←/→ or click',104,360);
+ for(let i=0;i<TEAMS.length;i++){const[x,y,w,h]=PF_LOGO(i),on=i==d.logo;if(on)mRR(x-3,y-3,w+6,h+6,10,'rgba(255,210,63,.16)',GOLD);g.drawImage(teamLogo(i),x,y,w,h)}
+ // right: lifetime totals, then the record in each mode
+ g.textAlign='left';g.fillStyle='#fff';g.font='bold 18px Georgia';g.fillText('LIFETIME STATS',360,by+78);
+ const T=[['GAMES',s.gp],['RECORD',s.w+'-'+s.l],['WIN %',pfPct(s.w,s.gp)],['POINTS',s.pts],['REBOUNDS',s.reb],['ASSISTS',s.ast],['STEALS',s.stl],['PPG',pfAvg(s.pts,s.gp)],
+  ['RPG',pfAvg(s.reb,s.gp)],['APG',pfAvg(s.ast,s.gp)],['FG',s.fgm+'/'+s.fga+'  '+pfPct(s.fgm,s.fga)],['3PT',s.tpm+'/'+s.tpa+'  '+pfPct(s.tpm,s.tpa)]];
+ T.forEach(([k,v],i)=>{const x=360+i%4*122,y=by+92+(i/4|0)*60;mRR(x,y,114,52,8,'rgba(255,255,255,.05)',null);g.textAlign='left';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(k,x+10,y+17);
+  let fz=20;const t=String(v);g.font='bold '+fz+'px system-ui';while(g.measureText(t).width>98&&fz>10){fz--;g.font='bold '+fz+'px system-ui'}g.fillStyle='#fff';g.fillText(t,x+10,y+41)});
+ g.font='bold 18px Georgia';g.fillStyle='#fff';g.fillText('BY MODE',360,by+284);
+ g.font='10px system-ui';g.fillStyle='#8a90a0';[['MODE',360],['GAMES',500],['WON',600],['LOST',700],['WIN %',790]].forEach(([t,x])=>g.fillText(t,x,by+302));
+ PF_MODES.forEach((k,i)=>{const m=d.md[k],y=by+322+i*20;g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText(k,360,y);g.fillStyle='#dfe3ea';g.font='13px system-ui';
+  [[m.gp,500],[m.w,600],[m.l,700],[pfPct(m.w,m.gp),790]].forEach(([t,x])=>g.fillText(String(t),x,y))});
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('stats count every finished game  ·  Esc / P close  ·  or click outside',360,by+bh-14);g.restore()}
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
