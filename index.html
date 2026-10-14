@@ -3244,7 +3244,7 @@ function renderCPos(ox){const tm=performance.now();R.setScissorTest(true);
   R.setViewport(vx,vy,w,h);R.setScissor(sx,vy,ex-sx,h);R.render(cpsc,cpcam)});
  cpM.forEach(o=>o.visible=true);R.setScissorTest(false);R.setViewport(0,0,960,540)}
 // layout (shared by drawing and mouse hit-testing)
-const mainRect=i=>i<3?[36+i*300,74,288,404]:[36,488,130,34],CAR_MV=i=>[44+i*300,100,272,184],
+const mainRect=i=>i<3?[36,90+i*104,250,92]:[36,410,250,40],CAR_GO=[700,466,230,52],
  actOpts=()=>{const b=SLOTS[MM.slot];return b&&lvInfo(b.xp).lv>=LV_MAX?['play','edit','rebirth','del','back']:['play','edit','del','back']}, // REBIRTH only for a max-level player
  actRect=i=>[320,(actOpts().length>4?208:222)+i*46,320,38];
 const BIO_BTN=[56,196,358,30],AP_RECT=[40,246,126,44],SIG_BTN=[172,246,126,44],STORE_BTN=[304,246,126,44],statRect=j=>[470,82+j*30,450,28],SAVE_R=[40,440,185,46],CANCEL_R=[245,440,185,46];
@@ -3447,7 +3447,7 @@ function menuStep(dt){
  const nm=!(S=='cbio'&&MM.bi==0);
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
  if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(LB.on)lbKeys(up,dn);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyL)lbOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
- else if(S=='career'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.r=MM.r==3?(lr>0?0:2):(MM.r+lr+3)%3;if(dn)MM.r=3;if(up&&MM.r==3)MM.r=0;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
+ else if(S=='career'){if(up)MM.r=(MM.r+3)%4;if(dn)MM.r=(MM.r+1)%4;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
  else if(S=='pnmode'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.md=(MM.md+lr+3)%3;if(ok)modeEnter();if(P.Escape||P.Backspace)modeBack()}
  else if(S=='playnow'){
   const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ud=(dn?1:0)-(up?1:0);
@@ -3501,7 +3501,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  const[x,y]=cpos(e);
  if(ONL_S.has(S)){onlPtr(x,y,type);return}
  if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(PN.on){pnPtr(x,y,type);return}if(PF.on){profPtr(x,y,type);return}if(LB.on){lbPtr(x,y,type);return}if(!MN.gate&&mIn(x,y,LB_MINI)){if(type==0)lbOpen();return}if(!MN.gate&&mIn(x,y,PF_BTN)){if(type==0)profOpen();return}if(!MN.gate&&mIn(x,y,PN_BTN)){if(type==0)pnOpen();return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
- else if(S=='career'){for(let i=0;i<4;i++)if(mIn(x,y,mainRect(i))){MM.r=i;if(type==0)mainEnter();return}}
+ else if(S=='career'){if(MM.r<3&&mIn(x,y,CAR_GO)){if(type==0)mainEnter();return}for(let i=0;i<4;i++)if(mIn(x,y,mainRect(i))){MM.r=i;if(type==0&&i==3)mainEnter();return}}
  else if(S=='playnow'){
   if(type==0&&mIn(x,y,PN_BACK)){pnBack();return}
   const n=MM.ps<2?6:MM.ps>=3?5:2;for(let i=0;i<n;i++)if(mIn(x,y,MM.ps<2?pnCard(i):MM.ps>=3?pkCard(i):pnSide(i))){if(pkLock()&&i!=pkLock().pos){if(type==0)beep(200,.1,'square');return}MM.pc=i;if(type==0)pnEnter();return}}
@@ -4206,10 +4206,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.37'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.38'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.38','New Career screen',['The CAREER screen has a new look: your three slots run down the left, the selected player stands in the middle, and his name and position are shown big on the right over his team\'s logo.',
+  'Click a slot (or ↑/↓) to select it, then NEXT (or Enter) to play, edit or rebirth it. Empty slots show a green + to create a player.']],
  ['v1.37','Distance matters',['Deep threes are much harder: the PERFECT window now shrinks far faster the further you are past the arc, even when nobody is guarding you.',
   'Beyond HALF COURT the window is a tiny sliver, unless your 3PT rating is 95+: then you keep a real (but still distance-shrunk) window, 1% bigger for every point above 95.',
   'A GOOD (not perfect) release from beyond half court almost never goes in now, unless you are rated 95+ 3PT.',
@@ -4902,55 +4904,56 @@ function drawMenus(){
    g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('a brand-new build in this slot from level 1 (saved over this one)',480,466)}
  }
 }
-// ===== CAREER: three player slots side by side - a live 3D model of each saved player with his card underneath =====
-const csc=new THREE.Scene(),ccam=new THREE.PerspectiveCamera(30,272/184,.5,100);let cM=[null,null,null],cKey=['','',''];
-csc.background=new THREE.Color(0x161922);csc.add(new THREE.AmbientLight(0xffffff,.8));{const l=new THREE.DirectionalLight(0xffffff,.75);l.position.set(3,8,10);csc.add(l)}
-ccam.position.set(0,3.9,15.6);ccam.lookAt(0,3.65,0);
+// ===== CAREER (2K-style save select): slots stacked down the left, the selected player's live 3D model in the middle, his name + position big on the right over his team's logo =====
+// The backdrop is drawn once per team onto cBgC and used twice: painted on the 2D canvas, and as the 3D scene's background with a full-screen viewport,
+// so the model window (CAR_HOLE, cleared in 2D) blends in seamlessly.
+const csc=new THREE.Scene(),ccam=new THREE.PerspectiveCamera(30,960/540,.5,100),CAR_HOLE=[300,0,350,540],cBgC=document.createElement('canvas'),cBgT=new THREE.CanvasTexture(cBgC);let cM=[null,null,null],cKey=['','',''],cBgK=null,cSel=0;
+cBgC.width=960;cBgC.height=540;csc.background=cBgT;csc.add(new THREE.AmbientLight(0xffffff,.8));{const l=new THREE.DirectionalLight(0xffffff,.75);l.position.set(3,8,10);csc.add(l)}
+ccam.position.set(0,4.1,19);ccam.lookAt(0,3.5,0);
+function carBg(tm){if(cBgK===tm)return;cBgK=tm;const x=cBgC.getContext('2d'),T=tm!=null?TEAMS[tm]:null,hx2=n=>'#'+n.toString(16).padStart(6,'0'),c1=T?hx2(T.jc):'#2a3550',c2=T?hx2(T.sm):'#10131c';
+ let gr=x.createLinearGradient(0,0,960,540);gr.addColorStop(0,'#07080d');gr.addColorStop(.55,c2);gr.addColorStop(1,c1);x.fillStyle=gr;x.fillRect(0,0,960,540);
+ x.globalAlpha=.10;x.fillStyle='#fff';for(let i=-2;i<12;i++){x.beginPath();x.moveTo(i*110,540);x.lineTo(i*110+60,540);x.lineTo(i*110+330,0);x.lineTo(i*110+270,0);x.fill()} // light streaks
+ x.globalAlpha=1;gr=x.createRadialGradient(475,470,10,475,470,260);gr.addColorStop(0,'rgba(255,255,255,.28)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,200,960,340); // stage light
+ gr=x.createLinearGradient(0,0,0,540);gr.addColorStop(0,'rgba(0,0,0,.35)');gr.addColorStop(.3,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.45)');x.fillStyle=gr;x.fillRect(0,0,960,540);cBgT.needsUpdate=true}
 function careerModel(i){const b=SLOTS[i],k=b?JSON.stringify(b):'';if(k===cKey[i])return cM[i];cKey[i]=k;
  if(cM[i]){csc.remove(cM[i]);cM[i].traverse(o=>{if(o.geometry)o.geometry.dispose()});cM[i]=null}if(!b)return null;
  const tm=b.tm!=null?b.tm:TI[0],pp={team:0,tm,i:b.pos,n:b.pos+1,sk:b.sk,hs:b.hs,hc:b.hc,ht:1,bt:btOfBuild(b),fc:fcOfBuild(b)};build(pp);const m=pp.m,ht=htOf(b.h),w=1+(b.wt-215)/(W_MAX-W_MIN)*.08;
  m.scale.set(ht*w,ht,ht*w);m.aL.scale.y=m.aR.scale.y=mClamp(b.ws/(b.h+4),.88,1.14);
  const fl=new THREE.Mesh(new THREE.CircleGeometry(2.4,40),new THREE.MeshBasicMaterial({color:TEAMS[tm].sm}));fl.rotation.x=-Math.PI/2;fl.position.y=-.02;fl.scale.set(1/(ht*w),1/(ht*w),1);m.add(fl);
  csc.add(m);cM[i]=m;return m}
-function renderCareer(){const tm=performance.now();for(let i=0;i<3;i++)careerModel(i);R.setScissorTest(true);
- for(let i=0;i<3;i++){const m=cM[i];if(!m)continue;cM.forEach(o=>{if(o)o.visible=o===m});m.rotation.y=Math.sin(tm/1300+i*1.7)*.5+(MM.r==i?Math.sin(tm/500)*.05:0);
-  const[x,y,w,h]=CAR_MV(i),vy=540-y-h;R.setViewport(x,vy,w,h);R.setScissor(x,vy,w,h);R.render(csc,ccam)}
- R.setScissorTest(false);R.setViewport(0,0,960,540)}
-function drawCareer(){ccDraw();
- g.textAlign='center';g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('CAREER',480,50);
- g.font='13px system-ui';g.fillStyle='#9aa';g.fillText('Your players  \u00b7  pick a slot to play, edit or create',480,68);
- for(let i=0;i<3;i++){const[x,y,w,h]=mainRect(i),on=MM.r==i,b=SLOTS[i],[mx,my,mw,mh]=CAR_MV(i);
-  if(on){g.save();g.shadowColor=GOLD;g.shadowBlur=18;mRR(x,y,w,h,14,'rgba(255,210,63,.08)',GOLD);g.restore()}else mRR(x,y,w,h,14,'rgba(255,255,255,.04)','rgba(255,255,255,.14)');
-  g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('SLOT '+(i+1),x+12,y+19);
-  if(b&&ACTIVE==i){g.textAlign='right';g.fillStyle=GOLD;g.fillText('LAST USED',x+w-12,y+19)}
-  if(!b){ // empty slot
-   mRR(mx,my,mw,mh,10,'rgba(255,255,255,.03)','rgba(255,255,255,.12)');g.save();g.setLineDash([8,7]);g.strokeStyle=on?GOLD:'rgba(255,255,255,.25)';g.lineWidth=2;g.beginPath();g.arc(mx+mw/2,my+mh/2,42,0,6.283);g.stroke();g.restore();
-   g.textAlign='center';g.font='bold 54px system-ui';g.fillStyle=on?GOLD:'rgba(255,255,255,.35)';g.fillText('+',mx+mw/2,my+mh/2+19);
-   g.font='bold 22px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText('EMPTY SLOT',x+w/2,y+250);
-   g.font='13px system-ui';g.fillStyle='#8a90a0';['Create a player: pick a position,','size and build, then spend '+POOL+' points.','He joins the team you sign with.'].forEach((t,k)=>g.fillText(t,x+w/2,y+292+k*20));
-   g.font='bold 13px system-ui';g.fillStyle=on?GOLD:'#6a7080';g.fillText('CREATE A PLAYER  \u25b6',x+w/2,y+380);continue}
-  // model window (the 3D render shows through)
-  g.clearRect(mx,my,mw,mh);g.strokeStyle=on?GOLD:'rgba(255,255,255,.18)';g.lineWidth=1.5;g.strokeRect(mx-.5,my-.5,mw+1,mh+1);
-  const tm=b.tm!=null?b.tm:null,T2=tm!=null?TEAMS[tm]:null,ov=ovr(b),li=lvInfo(b.xp),rd=charRead(b.st,'CREATED PLAYER',b.pos),cy=y+214;
-  // name + team badge
-  if(T2)drawLogo(tm,x+w-56,cy-2,46);
-  g.textAlign='left';let fs=22;g.font='bold '+fs+'px Georgia';while(g.measureText(b.name).width>w-80&&fs>14){fs--;g.font='bold '+fs+'px Georgia'}g.fillStyle='#fff';g.fillText(b.name,x+12,cy+20);
-  g.font='bold 11px system-ui';g.fillStyle=T2?T2.hud:'#9aa';g.fillText(POS[b.pos]+'  \u00b7  '+PNAME[b.pos]+'  \u00b7  '+BODY[btOfBuild(b)].n+(T2?'':'  \u00b7  NO TEAM'),x+12,cy+38);
-  {const an=b.arch||archOf(b);g.save();g.fillStyle='rgba(8,10,16,.78)';g.fillRect(mx,my+mh-26,mw,26);g.fillStyle=GOLD;g.fillRect(mx,my+mh-26,mw,2);g.textAlign='center';let f=13;g.font='bold '+f+'px Georgia';while(g.measureText('\u25c6  '+an+'  \u25c6').width>mw-12&&f>9){f-=.5;g.font='bold '+f+'px Georgia'}g.fillStyle=GOLD;g.fillText('\u25c6  '+an+'  \u25c6',mx+mw/2,my+mh-8);g.restore()} // ARCHETYPE ribbon
-  {const pl=pointsLeft(b);if(pl>0){g.save();g.font='bold 10px system-ui';const tx='+'+pl+' POINTS TO SPEND',tw=g.measureText(tx).width+16;mRR(mx+mw-tw-6,my+6,tw,18,9,'rgba(255,210,63,.22)',GOLD);g.textAlign='center';g.fillStyle=GOLD;g.fillText(tx,mx+mw-6-tw/2,my+19);g.restore()}}
-  // OVR + level
-  g.font='bold 30px Georgia';g.fillStyle=ovrCol(ov);g.fillText(ov,x+12,cy+76);const ow=g.measureText(ov).width;g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('OVR',x+16+ow,cy+76);
-  {const bx=x+86,bw=w-98;g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('LEVEL '+li.lv+(rbOf(b)?'  \u00b7  \u2605'+rbOf(b):''),bx,cy+60);g.textAlign='right';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(li.need?li.into+' / '+li.need+' EXP':'MAX',bx+bw,cy+60);
-   mRR(bx,cy+67,bw,7,3.5,'rgba(255,255,255,.12)');mRR(bx,cy+67,li.need?Math.max(5,li.into/li.need*bw):bw,7,3.5,GOLD)}
-  // biometrics
-  [['HEIGHT',fmtH(b.h)],['WEIGHT',b.wt+' LB'],['WINGSPAN',fmtH(b.ws)]].forEach(([l,v],k)=>{const bw=(w-32)/3,bx=x+12+k*(bw+4),by=cy+88;mRR(bx,by,bw,36,6,'rgba(255,255,255,.06)');
-   g.textAlign='center';g.font='bold 8px system-ui';g.fillStyle='#8a90a0';g.fillText(l,bx+bw/2,by+12);g.font='bold 14px Georgia';g.fillStyle='#fff';g.fillText(v,bx+bw/2,by+29)});
-  g.textAlign='left';
-  // strength / weakness (character read)
-  [['\u25b2 ',rd.st,'#7fffa0',cy+146],['\u25bc ',rd.wt,'#ff7b7b',cy+164]].forEach(([a,t,c,yy])=>{let f=12;g.font='bold '+f+'px system-ui';while(g.measureText(a+t).width>w-24&&f>8){f-=.5;g.font='bold '+f+'px system-ui'}g.fillStyle=c;g.fillText(a+t,x+12,yy)});
- }
- {const[x,y,w,h]=mainRect(3),on=MM.r==3;mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText('BACK',x+w/2,y+23)}
- g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2190/\u2192 choose a slot  \u00b7  \u2193 back  \u00b7  Enter confirm  \u00b7  or click',560,509)}
+function renderCareer(){const tm=performance.now();for(let i=0;i<3;i++)careerModel(i);if(MM.r<3)cSel=MM.r;const b=SLOTS[cSel];carBg(b&&b.tm!=null?b.tm:null);
+ cM.forEach((o,i)=>{if(o)o.visible=i==cSel});const m=cM[cSel];if(m)m.rotation.y=Math.sin(tm/1600)*.35;
+ const tmap=R.toneMapping,[x,y,w,h]=CAR_HOLE;R.toneMapping=THREE.NoToneMapping; // (so the backdrop texture matches the 2D copy exactly)
+ R.setScissorTest(true);R.setViewport(0,0,960,540);R.setScissor(x,540-y-h,w,h);R.render(csc,ccam);R.setScissorTest(false);R.toneMapping=tmap}
+function drawCareer(){const sel=MM.r<3?MM.r:cSel,b=SLOTS[sel],T2=b&&b.tm!=null?TEAMS[b.tm]:null;carBg(T2?b.tm:null);
+ g.drawImage(cBgC,0,0);{const[x,y,w,h]=CAR_HOLE;g.clearRect(x,y,w,h)}ccDraw();
+ g.textAlign='left';g.fillStyle='#fff';g.font='italic 900 34px "Impact","Arial Black",sans-serif';g.fillText('CAREER',40,52);g.font='12px system-ui';g.fillStyle='rgba(255,255,255,.7)';g.fillText('MANAGE YOUR PLAYERS',42,70);
+ // slots, down the left
+ for(let i=0;i<3;i++){const[x,y,w,h]=mainRect(i),on=MM.r==i,s=SLOTS[i];
+  mRR(x,y,w,h,6,on?'rgba(246,247,250,.97)':'rgba(14,16,24,.72)',on?'#fff':'rgba(255,255,255,.22)');
+  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle=on?'#5a6070':'rgba(255,255,255,.55)';g.fillText('SLOT '+(i+1)+(s&&ACTIVE==i?'  ·  LAST USED':''),x+14,y+18);
+  if(!s){g.textAlign='center';g.font='bold 44px system-ui';g.fillStyle='#3ddc6c';g.fillText('+',x+w/2,y+58);g.font='bold 10px system-ui';g.fillStyle=on?'#5a6070':'rgba(255,255,255,.55)';g.fillText('CREATE A PLAYER',x+w/2,y+78);continue}
+  g.textAlign='center';let fs=26;g.font='italic 900 '+fs+'px "Impact","Arial Black",sans-serif';while(g.measureText(s.name).width>w-24&&fs>14){fs--;g.font='italic 900 '+fs+'px "Impact","Arial Black",sans-serif'}
+  g.fillStyle=on?'#11131a':'#e6e9f0';g.fillText(s.name,x+w/2,y+50);g.font='bold 12px system-ui';g.fillStyle=on?'#3a4050':'rgba(255,255,255,.75)';
+  g.fillText(POS[s.pos]+'  ·  LEVEL '+lvInfo(s.xp).lv+(rbOf(s)?' ★'+rbOf(s):'')+'  ·  '+ovr(s)+' OVR',x+w/2,y+74)}
+ {const[x,y,w,h]=mainRect(3),on=MM.r==3;mRR(x,y,w,h,6,on?'rgba(246,247,250,.97)':'rgba(14,16,24,.72)',on?'#fff':'rgba(255,255,255,.22)');g.textAlign='center';g.font='bold 15px system-ui';g.fillStyle=on?'#11131a':'#e6e9f0';g.fillText('◀  BACK',x+w/2,y+23)}
+ // the selected player, big on the right
+ const RX=930;g.textAlign='right';
+ if(b){if(T2){g.save();g.globalAlpha=.95;drawLogo(b.tm,628,150,250);g.restore()}
+  const ws=b.name.split(' '),first=ws[0],rest=ws.slice(1).join(' ');let fs=58;g.font='italic 900 '+fs+'px "Impact","Arial Black",sans-serif';while(g.measureText(first).width>320&&fs>26){fs-=2;g.font='italic 900 '+fs+'px "Impact","Arial Black",sans-serif'}
+  g.lineJoin='round';g.lineWidth=6;g.strokeStyle='rgba(0,0,0,.55)';g.strokeText(first,RX,116);g.fillStyle='#fff';g.fillText(first,RX,116);
+  if(rest){g.font='italic 900 28px "Impact","Arial Black",sans-serif';g.strokeText(rest,RX,148);g.fillText(rest,RX,148)}
+  g.font='italic 900 150px "Impact","Arial Black",sans-serif';g.lineWidth=10;g.strokeText(POS[b.pos],RX,340);g.fillStyle='#fff';g.fillText(POS[b.pos],RX,340);
+  g.font='bold 15px system-ui';g.lineWidth=4;g.strokeText(PNAME[b.pos],RX,366);g.fillStyle=T2?T2.hud:'#fff';g.fillText(PNAME[b.pos],RX,366);
+  const ov=ovr(b),li=lvInfo(b.xp);g.font='bold 13px system-ui';g.fillStyle='#fff';g.strokeText(ov+' OVR  ·  LEVEL '+li.lv+(rbOf(b)?'  ·  ★ REBIRTH '+rbOf(b):''),RX,390);g.fillText(ov+' OVR  ·  LEVEL '+li.lv+(rbOf(b)?'  ·  ★ REBIRTH '+rbOf(b):''),RX,390);
+  g.font='12px system-ui';const l2=fmtH(b.h)+'  ·  '+b.wt+' LB  ·  '+(b.arch||archOf(b));g.strokeText(l2,RX,410);g.fillStyle='rgba(255,255,255,.85)';g.fillText(l2,RX,410);
+  {const pl=pointsLeft(b);if(pl>0){g.font='bold 11px system-ui';g.strokeText('+'+pl+' POINTS TO SPEND',RX,430);g.fillStyle=GOLD;g.fillText('+'+pl+' POINTS TO SPEND',RX,430)}}}
+ else{g.font='italic 900 50px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText('NEW PLAYER',RX,140);g.font='14px system-ui';g.fillStyle='rgba(255,255,255,.8)';
+  ['Pick a position, size and build,','then spend '+POOL+' points.','He joins the team you sign with.'].forEach((t,k)=>g.fillText(t,RX,176+k*22));
+  g.textAlign='center';g.font='bold 120px system-ui';g.fillStyle='rgba(61,220,108,.9)';g.fillText('+',475,330)}
+ {const[x,y,w,h]=CAR_GO,dis=MM.r==3;g.save();if(!dis){g.shadowColor=GOLD;g.shadowBlur=16}const gr=g.createLinearGradient(x,y,x+w,y+h);gr.addColorStop(0,dis?'#555':'#ffb020');gr.addColorStop(1,dis?'#444':'#ff8a00');mRR(x,y,w,h,4,gr,'#fff');g.restore();
+  g.textAlign='center';g.font='italic 900 26px "Impact","Arial Black",sans-serif';g.fillStyle='#11131a';g.fillText(b?'NEXT  ▶':'CREATE  ▶',x+w/2,y+35)}
+ g.textAlign='left';g.font='12px system-ui';g.fillStyle='rgba(255,255,255,.7)';g.fillText('↑/↓ choose  ·  Enter next  ·  Esc back  ·  or click',40,528)}
 const OVER_C='#ff9f43'; // trade-off orange: a cap held lower by a rival attribute or the elite budget
 function drawCreate(){
  const d=MM.cr,rem=pointsLeft(d),caps=MM.caps;
