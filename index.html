@@ -1176,7 +1176,7 @@ function postExit(p,cpu){
   const pn=Math.max(0,Math.min(1,((p.rt&&p.rt.post>0?p.rt.post:50)-25)/75));
   p.burst=.5;p.bs=(170+75*pn)*(1+sigv(p,'dropstep'));if(sigv(p,'dropstep'))sigFx(p,'dropstep');p.rm=1.04+.16*pn;p.rec=.9;p.inv=.45;p.spin=p.sd=.5-.26*pn;p.pg=.5;p.pst=0;if(p.bm)p.bm.d=.45*p.sd/.36;
   const dd=near(p,TM[1-p.team],45); // the defender who was being backed down: a stumble backwards, he stays on his feet
-  if(dd){const dx=dd.x-p.x,dy=dd.y-p.y,l=Math.hypot(dx,dy)||1,kv=70+110*pn;dd.stun=.3+.55*pn;dd.stb=.6+.4*pn;dd.jump=0;dd.vx=dx/l*kv;dd.vy=dy/l*kv}
+  if(dd){const a0=Math.atan2(dd.y-p.y,dd.x-p.x)-p.side*1.05,kv=70+110*pn;dd.stun=.3+.55*pn;dd.stb=.6+.4*pn;dd.jump=0;dd.vx=Math.cos(a0)*kv;dd.vy=Math.sin(a0)*kv} // (rocked back AND away from the side the spin goes, opening the lane)
   if(dd||!cpu)say(dd?'POST SPIN - STUMBLE!':'POST SPIN','#ffd23f')}
 // CAREER, on offence without the ball: SPACE tells the AI teammate who has it to shoot right now - exactly the shot his own AI would take from there
 // (dunk or layup at the rim when he can, else his jump shot, its timing rolled from his rating and how open he is, like any AI shot).
@@ -1670,8 +1670,19 @@ function step(dt){
  // BODY CONTACT between opponents: nobody runs through anybody. The one driving into the contact can only move the other at bumpRate (set by
  // the STRENGTH ratio); the rest of the overlap is taken back off the driver, so a dribbler stalls on a set defender and has to go round
  // (or slowly back him off), and a strong player holds his ground when bumped. With nobody driving, the overlap is split by mass.
- for(const a of TM[0])for(const b of TM[1]){if(a.dunk||b.dunk||a.inv>0||b.inv>0)continue;let dx=a.x-b.x,dy=a.y-b.y,l=Math.hypot(dx,dy);if(l>=BODY_R)continue;
-  if(l<.01){dx=1;dy=0;l=1}const nx=dx/l,ny=dy/l,ov=BODY_R-l,ma=bodyM(a),mb=bodyM(b);
+ // EVERYONE collides (team-mates too). A player in a SPIN (post spin-out, spin dribble: inv) can't pass through either - he SLIDES round the man in his way:
+ // pushed out of him, his momentum turned along the defender's body so he keeps his speed. A dunker on his run-up shoves whoever is in his lane aside.
+ // (Left out: a dunker in the air - see dkPush - a man hanging on the rim, and anyone knocked down or ragdolled.)
+ const ALLP=TM[0].concat(TM[1]),solid=q=>!(q.kd||(q.rd&&q.rd.full)||q.hg>0||(q.dunk&&q.dunk.ph>=2));
+ for(let i=0;i<ALLP.length;i++)for(let j=i+1;j<ALLP.length;j++){let a=ALLP[i],b=ALLP[j];if(!solid(a)||!solid(b))continue;let dx=a.x-b.x,dy=a.y-b.y,l=Math.hypot(dx,dy);if(l>=BODY_R)continue;
+  if(l<.01){dx=1;dy=0;l=1}let nx=dx/l,ny=dy/l;const ov=BODY_R-l;
+  if(a.team==b.team){const ma=bodyM(a),mb=bodyM(b),ya=ov*mb/(ma+mb);a.x+=nx*ya;a.y+=ny*ya;b.x-=nx*(ov-ya);b.y-=ny*(ov-ya);continue} // team-mates: just apart
+  if(a.dunk||b.dunk){const k=a.dunk?a:b,o=k===a?b:a,s_=k===a?-1:1;o.x+=nx*s_*ov;o.y+=ny*s_*ov;continue} // the dunker's run-up: he goes through his line, the other man is moved aside
+  if(a.inv>0||b.inv>0){const sp=a.inv>0?a:b,o=sp===a?b:a,sx=sp===a?nx:-nx,sy=sp===a?ny:-ny; // SLIDE PAST: (sx,sy) points from the defender to the spinner
+   sp.x+=sx*ov*.6;sp.y+=sy*ov*.6;o.x-=sx*ov*.4;o.y-=sy*ov*.4;
+   const vn=sp.vx*sx+sp.vy*sy;if(vn<0){const s0=Math.hypot(sp.vx,sp.vy);let tx=sp.vx-vn*sx,ty=sp.vy-vn*sy;const tl=Math.hypot(tx,ty)||1;if(tl<1){tx=-sy;ty=sx}sp.vx=tx/tl*s0;sp.vy=ty/tl*s0} // momentum turned along his body, speed kept
+   continue}
+  const ma=bodyM(a),mb=bodyM(b);
   const da=Math.max(0,-(a.vx*nx+a.vy*ny)),db=Math.max(0,b.vx*nx+b.vy*ny); // how hard each is moving INTO the other
   let ya,yb;if(da>db+5){yb=Math.min(ov*ma/(ma+mb),bumpRate(a,b)*dt);ya=ov-yb}else if(db>da+5){ya=Math.min(ov*mb/(ma+mb),bumpRate(b,a)*dt);yb=ov-ya}else{ya=ov*mb/(ma+mb);yb=ov-ya}
   a.x+=nx*ya;a.y+=ny*ya;b.x-=nx*yb;b.y-=ny*yb;if(da>db+5){slither(a,nx,ny,ya);bumpFx(a,b)}else if(db>da+5){slither(b,-nx,-ny,yb);bumpFx(b,a)}}
@@ -4494,10 +4505,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.66'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.67'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.67','No more phasing',['Every player now collides with every other player - team-mates too - so nobody walks, runs or spins through anybody.',
+  'Spinning out of the post (and spin dribbles): you no longer ghost through the defender. You slide round him - pushed off his shoulder with your momentum carried along his body - and he is rocked back and AWAY from the side you spin to, opening the lane.',
+  'A dunker on his run-up moves whoever is standing in his lane aside instead of running through them.']],
  ['v1.66','Momentum Takeoff buff',['MOMENTUM TAKEOFF reaches further: up to about 15 ft from the rim at Bronze, 19 ft at Silver and 21 ft at Gold (was ~13 / 16 / 17).',
   'Fixed: it only worked if you started the dunk from beyond its full distance - start it a bit closer and you got a normal close-range take-off. Now, sprinting in, you always leave the floor as far out as the badge and the room allow.']],
  ['v1.65','Contesting dunks',['A defender who jumps to contest a DUNK now goes up toward the rim (still facing the dunker) instead of launching himself at the dunker - so the two bodies travel the same way and meet at the rim. In the air the dunker carries him back toward the rim instead of flying through him; a defender who was beaten jumps up behind him, a step back, not through his back.',
