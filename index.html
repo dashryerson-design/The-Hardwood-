@@ -52,7 +52,8 @@ const FE=(()=>{const pr=Math.min(devicePixelRatio,2),rt=new THREE.WebGLRenderTar
 let TI=[4,3],CAMM=0,camT=0,lowA=0,lowV=0,lowT=0,lowC=0,lowBx=47;const CAM_N=['COURT','COURT LOW'],camLk=new THREE.Vector3(47,0,26);
 const AL=new THREE.AmbientLight(0xffffff,.75);sc3.add(AL);const dl=new THREE.DirectionalLight(0xffffff,.55);dl.position.set(30,60,40);sc3.add(dl);
 let MODE=5; // game mode (5 / 3 / 1) - declared first: in 1v1 both players use the same basket, so hx()/dr() depend on it
-const CW=640,HY=320,RZ=100,R3=237,QL=60,hx=t=>t&&MODE!=1?52:888,dr=t=>t&&MODE!=1?-1:1,G=330,HT=[.93,.98,1.03,1.08,1.14],ST=[.55,.55,.55,.55,.55];
+let PR=0,HC=0; // PRACTICE drill (0 none · 1 shootaround · 2 1v1 defender · 3 rim protector · 4 3v3 half court) · HC = half-court rules (1v1 and the 3v3 drill: one basket, check ball up top)
+const CW=640,HY=320,RZ=100,R3=237,QL=60,hx=t=>t&&!HC?52:888,dr=t=>t&&!HC?-1:1,G=330,HT=[.93,.98,1.03,1.08,1.14],ST=[.55,.55,.55,.55,.55];
 const K={},P={},Rl={},KEY_K=K,KEY_P=P,KEY_R=Rl; // (KEY_K / KEY_P / KEY_R: the local keys, for ctrl()'s default input - online, the guest's player is driven with his own)
 // (iPad keyboards have no Esc key: the ` key in its place works as Esc)
 addEventListener('keydown',e=>{if(gateHit())return;if(e.code=='Space'||e.code.startsWith('Arrow'))e.preventDefault();const c=e.code=='Backquote'?'Escape':e.code;if(!K[c])P[c]=1;K[c]=1});
@@ -110,16 +111,22 @@ function cont(p){let c=0,cb=null,nb=null,nl=1e9;const H=hx(p.team),hxv=H-p.x,hyv
 function post(kind,h,next){ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:Math.max(1.2,...TM.flat().map(q=>q.kd?(q.kd.T||KD.T)-q.kd.t+.2:0));B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
 function finRP(){if(RP.mk){RP.clip=RP.fr.filter(f=>f.t>=RP.rel-5&&f.t<=RP.rel+2);RP.mk=0;RP.has=RP.clip.length>5?1:0}}
 const CHK={t:0},SC1=15;
-function checkBall(team){off=team;const o=TM[team][0],d=TM[1-team][0],H=hx(team),D=dr(team);
+function checkBall(team){if(PR&&PR<4)team=0;off=team;const o=team==0&&TM[0].length>1&&myP()?myP():TM[team][0],d=TM[1-team][o.k]||TM[1-team][0],H=hx(team),D=dr(team);
  TM.forEach(t=>t.forEach(calm));
  o.x=H-D*292;o.y=HY;o.fx=D;o.fy=0;d.x=H-D*246;d.y=HY;d.fx=-D;d.fy=0;
- B={x:o.x+D*7,y:o.y,z:36,vz:0,mode:'held',h:o,t:0,so:team};shot=SC1;setCtl(0);ALAST=null;CHK.t=2;ms.on=false;CALL.n=0;TRB.t=0;
+ if(TM[team].length>1){let w=0;for(const q of TM[team])if(q!==o){q.x=H-D*178;q.y=HY+(w++?1:-1)*170;q.fx=D;q.fy=0} // 3v3 half court: teammates spaced on the wings,
+  for(const q of TM[1-team]){if(q===d)continue;const m=TM[team][q.k]||o,gx=H-m.x,gy=HY-m.y,l=Math.hypot(gx,gy)||1;q.x=m.x+gx/l*46;q.y=m.y+gy/l*46;q.fx=-gx/l;q.fy=-gy/l}} // each defender between his man and the rim
+ B={x:o.x+D*7,y:o.y,z:36,vz:0,mode:'held',h:o,t:0,so:team};shot=SC1;setCtl(0);ALAST=null;CHK.t=2;ms.on=false;CALL.n=0;TRB.t=0;prFix();
  say(team==0?'CHECK BALL  \u00b7  YOUR BALL':'CHECK BALL  \u00b7  DEFEND','#ffd23f')}
-function oneDone(){if(MODE==1&&(sc[0]>=ONE_WIN||sc[1]>=ONE_WIN)){S='over';finishGame();endInit();return true}return false}
+function prFix(){if(!PR||PR>3||!TM[1][0])return;const d=TM[1][0]; // the practice opponent
+ if(PR==1){Object.assign(d,{x:60,y:12,vx:0,vy:0,stun:1e9});if(d.m)d.m.visible=false;return} // shootaround: nobody there (parked out of the way, hidden)
+ if(PR==3){d.x=hx(0)-dr(0)*30;d.y=HY;d.fx=-dr(0);d.fy=0} // the rim protector starts AT the rim
+ if(!d.prk){d.prk=1;for(const k in d.rt)if(typeof d.rt[k]=='number')d.rt[k]=PR==3&&(k=='blk'||k=='id'||k=='str')?82:70}} // a MID-LEVEL defender (70s across the board); the rim protector blocks at 82
+function oneDone(){if(MODE==1&&!PR&&(sc[0]>=ONE_WIN||sc[1]>=ONE_WIN)){S='over';finishGame();endInit();return true}return false}
 function calm(p){rdOff(p);Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});
  if(p.m){const m=p.m;m.rotation.x=m.rotation.z=0;m.position.y=0;m.sh.rotation.set(-Math.PI/2,0,0);m.sh.position.set(0,.03,0);m.body.rotation.z=0;for(const b of [m.L,m.R,m.aL,m.aR])b.rotation.y=0}} // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
 function reset(next){
- if(MODE==1){finRP();if(oneDone())return;checkBall(next);return}
+ if(HC){finRP();if(oneDone())return;checkBall(next);return}
  finRP();
  off=next;ms.on=false;
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
@@ -129,15 +136,15 @@ function reset(next){
   p.fx=-dr(off)*-1;p.fy=0;
  }));
  B={x:0,y:0,z:40,vz:0,mode:'inbound',h:OFN()[Math.min(1,OFN().length-1)],t:1.4};shot=24;setCtl(0);CALL.n=0;CALL.t=0;TRB.t=0;
- say(MODE==1?(off==0?'CHECK BALL  \u00b7  YOUR BALL':'CHECK BALL  \u00b7  DEFEND'):off==0?(CLK()&&B.h!==TM[0][ctl]?'YOUR BALL':'YOUR BALL - PRESS E TO INBOUND'):TEAMS[TI[1]].n+' BALL - DEFEND!',MODE==1?'#ffd23f':tcol(off));
+ say(HC?(off==0?'CHECK BALL  \u00b7  YOUR BALL':'CHECK BALL  \u00b7  DEFEND'):off==0?(CLK()&&B.h!==TM[0][ctl]?'YOUR BALL':'YOUR BALL - PRESS E TO INBOUND'):TEAMS[TI[1]].n+' BALL - DEFEND!',HC?'#ffd23f':tcol(off));
 }
 function live(){
- if(MODE==1){checkBall(B.next);return}
+ if(HC){checkBall(B.next);return}
  if(B.kind=='tov'&&B.live)gpBrk(B.next); // a steal / block: that team may run
  const n=B.next,h=B.live?B.h:TM[n].reduce((a,b)=>Math.hypot(a.x-B.x,a.y-B.y)<Math.hypot(b.x-B.x,b.y-B.y)?a:b),orb=B.kind=='miss'&&n==off;
  off=n;B.mode='held';B.vz=0;B.h=h;shot=orb?14:24;if(n==0)setCtl(h.k);if(orb)say('OFFENSIVE REBOUND','#ffd23f');
 }
-function start(){musStop();CHK.t=0;SFX.length=0;matchXp=0;gameXp=null;hudP=null;PSTAT=[[],[]];ccBlk=0;ALAST=null;applyRoster();applyMode();gpInit();for(const q of FULL.flat())if(q.sig)for(const id in q.sig)drawSig(id,q.sig[id],-99,-99,1); // (load every badge image now, so the first pop over a player isn't blank)
+function start(){HC=+(MODE==1||PR==4);musStop();CHK.t=0;SFX.length=0;matchXp=0;gameXp=null;hudP=null;PSTAT=[[],[]];ccBlk=0;ALAST=null;applyRoster();applyMode();gpInit();for(const q of FULL.flat())if(q.sig)for(const id in q.sig)drawSig(id,q.sig[id],-99,-99,1); // (load every badge image now, so the first pop over a player isn't blank)
  RP.has=RP.mk=0;RP.fr=[];sc=[0,0];qn=1;qc=QL;reset(0);introInit()}
 
 // ===== MATCH INTRO CUTSCENE (~31s, T skips). Two clocks: IN.rt = real time (camera, cards, timeline) · IN.t = game time (walk-on, leg animation), which runs at IN.ts speed.
@@ -182,7 +189,7 @@ function introEnd(skip){
  if(IN.pz){poseReset(IN.pz);IN.pz=null}
  TM.forEach(tm=>tm.forEach(p=>{const q=p.in;if(!q)return;p.x=q.tx;p.y=q.ty;p.vx=p.vy=0;p.fx=q.fx;p.fy=q.fy;delete p.in}));
  B.x=B.h.x;B.y=B.h.y;B.z=60;camT=0;S='play';IN.ts=1;
- say(MODE==1?(off==0?'CHECK BALL  \u00b7  YOUR BALL':'CHECK BALL  \u00b7  DEFEND'):off==0?(CLK()&&B.h!==TM[0][ctl]?'YOUR BALL':'YOUR BALL - PRESS E TO INBOUND'):TEAMS[TI[1]].n+' BALL - DEFEND!',MODE==1?'#ffd23f':tcol(off));
+ say(HC?(off==0?'CHECK BALL  \u00b7  YOUR BALL':'CHECK BALL  \u00b7  DEFEND'):off==0?(CLK()&&B.h!==TM[0][ctl]?'YOUR BALL':'YOUR BALL - PRESS E TO INBOUND'):TEAMS[TI[1]].n+' BALL - DEFEND!',HC?'#ffd23f':tcol(off));
  if(skip)introFadeEnd=performance.now()+450;
 }
 const inSeg=rt=>{let a=0;for(let k=0;k<IN_D.length;k++){if(rt<a+IN_D[k])return[k,(rt-a)/IN_D[k],rt-a];a+=IN_D[k]}return[IN_D.length-1,1,IN_D[IN_D.length-1]]};
@@ -1120,7 +1127,7 @@ function shotEV(p,x,y,cp){const d=Math.hypot(hx(p.team)-x,HY-y),r=p.rt||{},N=v=>
  if(d<130){const n=N(r.lay);return 2*Math.max(.12,Math.min(.9,.55+.3*n-(.4-.25*n)*cp))}
  if(needOpen(p,d)&&cp>=WOPEN)return .05;
  if(d<R3){const n=N(r.mid);return 2*Math.max(.08,.42+.2*n-.3*cp-.06*Math.min(1,(d-130)/107))}
- const n=N(r.tp),g=(d-R3)/reachL(n);if(d>R3+25+65*n&&Math.min(shot,MODE!=1?qc:99)>=5)return .03; // beyond his range (2.5 ft past the arc, up to ~9 ft for the best shooters): only with the clock running out
+ const n=N(r.tp),g=(d-R3)/reachL(n);if(d>R3+25+65*n&&Math.min(shot,!HC?qc:99)>=5)return .03; // beyond his range (2.5 ft past the arc, up to ~9 ft for the best shooters): only with the clock running out
  return 3*Math.max(.06,.3+.22*n-.28*cp)*(.85+.15*n)/(1+.35*g*g)} // (same fall-off with distance as the real make chance: no more heaves from half court)
 // ===== TEAM GAME PLANS =====
 // Every team runs its own game plan on offence and on defence, built around what its roster does best (and its star), plus two in-game
@@ -1197,7 +1204,7 @@ const GPW={trail:(t,v)=>sc[1-t]-sc[t]>=v,lead:(t,v)=>qn>=3&&sc[t]-sc[1-t]>=v,clo
 const GPWT={trail:a=>'when down '+a.v+'+',lead:a=>'when up '+a.v+'+ in the 2nd half',close:a=>'in a close 4th quarter',hot:a=>'when '+'PG SG SF PF C'.split(' ')[a.v]+' is hot (2 makes in a row)',paint:()=>'when getting beaten inside',cold:a=>'after '+a.v+' missed threes in a row'};
 const gScore=p=>{const r=p.rt||{};return Math.max(.65*(r.tp||50)+.35*(r.mid||50),.5*Math.max(r.lay||50,r.dnk||50)+.2*(r.lay||50)+.3*(r.post||50))}; // how dangerous a scorer is (for the stopper)
 function gpInit(){GPB.length=0;GPM[0].length=GPM[1].length=0;GPC[0]=GPC[1]=0;
- GP=[0,1].map(t=>{const pl=GP_ON&&MODE!=1?GAMEPLAN[TI[t]]:null;if(!pl)return null;const s={pl,adj:-1,at:T,brk:-99,k:{},who:{},mm:null};gpSet(t,s,-1);return s});
+ GP=[0,1].map(t=>{const pl=GP_ON&&!HC?GAMEPLAN[TI[t]]:null;if(!pl)return null;const s={pl,adj:-1,at:T,brk:-99,k:{},who:{},mm:null};gpSet(t,s,-1);return s});
  [1,0].forEach(t=>{if(GP[t])gpBan(t,'plan')})}
 // switch team t's plan to adjustment a (-1 = the base plan): merge the knobs, resolve the roles to players on the floor, set the matchups
 function gpSet(t,s,a){const pl=s.pl,A=a>=0?pl.adj[a]:null,F=TM[t],me=myP();s.adj=a;s.at=T;
@@ -1217,7 +1224,7 @@ function gpBan(t,kind){const s=GP[t];if(!s)return;const A=s.adj>=0?s.pl.adj[s.ad
  if(kind=='plan')GPB.push({t,kind,life:4.6,a:s.pl.o.n,b:s.pl.d.n});
  else if(kind=='adj'){for(let j=GPB.length-1;j>=0;j--)if(GPB[j].t==t&&GPB[j].kind!='plan')GPB.splice(j,1);GPB.push({t,kind,life:5.2,a:A.n,b:A.txt})}
  else GPB.push({t,kind,life:2.8,a:s.last||''});if(GPB.length>4)GPB.splice(0,GPB.length-4)}
-const BRKT=[-99,-99],brkOn=t=>MODE!=1&&T-BRKT[t]<5; // every team's fast-break window (5 s after a steal, block or defensive rebound), game plan or not
+const BRKT=[-99,-99],brkOn=t=>!HC&&T-BRKT[t]<5; // every team's fast-break window (5 s after a steal, block or defensive rebound), game plan or not
 function gpBrk(t){const s=GP[t];if(s)s.brk=T;BRKT[t]=T} // a stop: team t may run
 const gpLbl=(p,s)=>{p.gpl={s,t:1.1}}; // a short call-out over a player when he starts a game-plan action (SCREEN, POST UP, TRAP...)
 function gpShot(t,kind,made){if(!GP_ON)return;if(made){GPM[t].push(kind);if(GPM[t].length>8)GPM[t].shift()}if(kind=='3')GPC[t]=made?0:GPC[t]+1}
@@ -1456,6 +1463,8 @@ if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoeve
 //  - he gives space: cushion 46 units at 25 -> 36 at 100 (off-ball 60 -> 50)
 //  - he accelerates and closes slower: acceleration x4/s at 25 -> x9/s at 100, chase gain 3 -> 6
 function defAI(p,i,dt,hp){
+ if(PR==3&&p.team==1){const H=hx(off),h=hp||OFN()[0],gx=h.x-H,gy=h.y-HY,gl=Math.hypot(gx,gy)||1,tx=H+gx/gl*30,ty=HY+gy/gl*30,dx=tx-p.x,dy=ty-p.y,dl=Math.hypot(dx,dy),mv=dl>3?Math.min(118*spdM(p),dl*5):0,a=Math.min(1,dt*7);
+  p.vx+=((dx/dl||0)*mv-p.vx)*a;p.vy+=((dy/dl||0)*mv-p.vy)*a;const l=Math.hypot(h.x-p.x,h.y-p.y)||1;p.fx=(h.x-p.x)/l;p.fy=(h.y-p.y)/l;return} // RIM PROTECTOR drill
  const H=hx(off),gd=GP[p.team];let mkr=OFN()[gmk(p.team,i)]; // (his man: the team's game plan can change the matchups - the stopper takes their best scorer)
  if(p.ai&&p.ai.pu)p.ai.pu=null;if(p.gmb>0)p.gmb-=dt;
  if(gd&&gpLeak(p,dt))return; // the leaker releases on the shot
@@ -1476,15 +1485,16 @@ function defAI(p,i,dt,hp){
  if((ish||p.trap)&&!hp.dunk&&!hp.fire&&hp.inv<=0&&hp.burst<=0&&!(hp.pst>.4)&&Math.hypot(p.x-hp.x,p.y-hp.y)<36*stlR(p)&&p.cd<=0&&Math.random()<dt*reachRate(p,hp,pr_)){p.cd=AI_STL.cd*(1-sigv(p,'swipe'));p.rch=RCH_D;if(isHum(hp)&&!NET.on)sfxWoosh('X');if(sigv(p,'swipe'))sigFx(p,'swipe');p.swp=.9;if(Math.random()<(p.team==1?AI_STL.opp:AI_STL.mate)*(p.rex||1)*stlP(p)*stealMul(p,hp)){if(sigv(p,'pickpocket'))sigFx(p,'pickpocket');say('STRIPPED!',p.team?'#ff6b6b':'#4cff7a');beep(140,.15,'square');(pstat(p).stl++,awardP(p,XP_STEAL,'STEAL'));post('tov',p,p.team)}else p.gmb=pr_>0?.3:.4}
 }
 function step(dt){
+ if(S=='play'&&PR&&PR<4&&B.mode=='held'&&B.h&&B.h.team==1&&CHK.t<=0)checkBall(0); // practice: you always have the ball
  if(S=='play')for(const p of TM.flat())if(p.rd&&p.rd.full&&p.rd.off!==off)calm(p); // the ball changed hands (a rebound / steal after a missed one): everyone back up
  for(const p of TM.flat()){p.spr=0;if(p.rch>0)p.rch=Math.max(0,p.rch-dt)} // (the sprint flag is set again by ctrl() for whoever is holding Shift this step)
  T+=dt;msg.t-=dt;shake=Math.max(0,shake-dt*3);rim=Math.max(0,rim-dt);ms.show-=dt;
  if(S=='qend'){qt-=dt;if(qt<=0)nextQ();return}
  if(S!='play')return;
  if(CHK.t>0){CHK.t-=dt;if(CHK.t<=0)TM.forEach(t_=>t_.forEach(q=>q.ckT=T));if(B.h){B.x=B.h.x+B.h.fx*7;B.y=B.h.y+B.h.fy*7;B.z=36*B.h.ht}return} // 1v1 check-ball pause: everyone holds still
- RT+=dt;for(const q of TM[0].concat(TM[1]))if(q.sgp&&q.sgp.a>0)q.sgp.a-=dt;if(GP[0]||GP[1])gpTick(dt);RP.show-=dt;if(RP.show<=0&&!RP.mk)RP.has=0;if(MODE!=1)snap();else{RP.has=RP.mk=0}
+ RT+=dt;for(const q of TM[0].concat(TM[1]))if(q.sgp&&q.sgp.a>0)q.sgp.a-=dt;if(GP[0]||GP[1])gpTick(dt);RP.show-=dt;if(RP.show<=0&&!RP.mk)RP.has=0;if(!HC)snap();else{RP.has=RP.mk=0}
  const lv=B.mode=='held'||B.mode=='pass'||B.mode=='shot'||B.mode=='loose';
- if(lv){if(MODE!=1)qc-=dt;if(B.mode=='held')shot-=dt}
+ if(lv){if(!HC)qc-=dt;if(B.mode=='held')shot-=dt}
  if(qc<=0){qc=0;endQ();return}
  if(shot<=0&&B.mode=='held'){say('SHOT CLOCK VIOLATION','#ff6b6b');post('tov',null,1-off)}
  const hp=B.mode=='held'?B.h:null;
@@ -1492,7 +1502,7 @@ function step(dt){
   if(zs){let bz=1e9;for(const d of dl){const z=zs[d.k];if(!z)continue;const k=Math.hypot(H-dr(off)*z[0]-hp.x,HY+z[1]-hp.y);if(k<bz){bz=k;g=d}}} // zone: the defender whose area he is in
   if(Math.hypot(g.x-hp.x,g.y-hp.y)>55&&Math.hypot(H-g.x,HY-g.y)>hb+8){let b=null,bs=160;for(const d of dl)if(d!==g&&Math.hypot(H-d.x,HY-d.y)<hb+30){const k=Math.hypot(d.x-hp.x,d.y-hp.y);if(k<bs){bs=k;b=d}}if(b)g=b}
   DF.g=g;if(hb<230+(GP[1-hp.team]?110*gk(1-hp.team,'pack'):0)){let b=null,bs=1e9;for(const d of dl)if(d!==g){const k=Math.hypot(H-d.x,HY-d.y);if(k<bs){bs=k;b=d}}DF.h=b}}
- CH=[];if(B.mode=='loose'&&MODE!=1)for(const tm of TM)tm.slice().sort((a,b)=>Math.hypot(a.x-B.x,a.y-B.y)-Math.hypot(b.x-B.x,b.y-B.y)).slice(0,2).forEach(q=>CH.push(q));
+ CH=[];if(B.mode=='loose'&&!HC)for(const tm of TM)tm.slice().sort((a,b)=>Math.hypot(a.x-B.x,a.y-B.y)-Math.hypot(b.x-B.x,b.y-B.y)).slice(0,2).forEach(q=>CH.push(q));
  CALL.t-=dt;if(CALL.t<=0||off!=0)CALL.n=0;TRB.t-=dt;
  if(CLK())ctl=myP().k;else if(off==1||B.mode=='loose'){let bi=ctl,bd=1e9;TM[0].forEach((p,i)=>{const k=Math.hypot(p.x-B.x,p.y-B.y)-(i==ctl?30:0);if(k<bd){bd=k;bi=i}});ctl=bi}
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
@@ -1562,7 +1572,7 @@ function step(dt){
   {const pl=hx(B.so)+B.bd*12;if((B.x-pl)*B.bd>0&&Math.abs(B.y-HY)<32&&B.z>88&&B.z<135){B.x=pl;B.vx*=-.6;B.vy*=.8;B.vz*=.9;beep(210,.08,'square');rimKick(B.so,.5)}}
   if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.66;B.vx*=.88;B.vy*=.88;if(B.vz<25)B.vz=0}
   B.x=Math.max(10,Math.min(930,B.x));B.y=Math.max(10,Math.min(630,B.y));
-  if(MODE==1){if(B.age>=1)checkBall(1-B.so)} // 1v1: nobody rebounds - after 1s the other player gets it at the top of the key
+  if(HC){if(B.age>=1)checkBall(1-B.so)} // 1v1 (and half-court 3v3): nobody rebounds - after 1s the other player gets it at the top of the key
   else if(B.age>.3){let b=null,bs=1e9;for(const p of TM[0].concat(TM[1])){if(p.stun>0||p.dunk)continue;const dd=Math.hypot(p.x-B.x,p.y-B.y),re=rbEdge(p);if(dd<rbR(p)*re.r&&B.z<95*p.ht+p.z){const k=dd-p.ht*10-8*rbN(p)+Math.random()*14-re.k;if(k<bs){bs=k;b=p}}}if(b)grab(b)}
  }else if(B.mode=='post'){
   B.t-=dt;
@@ -2116,8 +2126,8 @@ function trailUpd(dt){const st=TS[TRL_S],on=B.mode=='shot'&&B.perf,bp=ballM.posi
  const tg0=cool&&(on||bst>0)?(bst>.28?9:TRL_S=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?12*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=(tg-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
  ballM.material.emissive.setHex(on?st.L:0);ballM.material.emissiveIntensity=on?.85+.2*Math.sin(T*40):1}
 
-function rimKick(i,a){const h=HP[MODE==1?0:i];if(!h)return;h.v+=2.2*a;h.va=.016*a;h.vt=0}
-function netHit(i,a,vx,vy){const h=HP[MODE==1?0:i];h.t=0;h.a=a;h.sx=Math.max(-.5,Math.min(.5,vx/220));h.sz=Math.max(-.5,Math.min(.5,vy/220))}
+function rimKick(i,a){const h=HP[HC?0:i];if(!h)return;h.v+=2.2*a;h.va=.016*a;h.vt=0}
+function netHit(i,a,vx,vy){const h=HP[HC?0:i];h.t=0;h.a=a;h.sx=Math.max(-.5,Math.min(.5,vx/220));h.sz=Math.max(-.5,Math.min(.5,vy/220))}
 function netUpd(dt){HP.forEach((h,idx)=>{h.t+=dt;const e=Math.exp(-h.t*2.8),ps=h.n.geometry.attributes.position,b=h.b,bp=ballM.position,near=Math.abs(bp.x-h.H)<1.2&&Math.abs(bp.z-32)<1.2;
  for(let i=0;i<ps.count;i++){const x=b[i*3],y=b[i*3+1],z=b[i*3+2],hh=(.65-y)/1.3,ph=h.t*15-hh*4.5;let sc=1;
   if(near)sc+=.28*Math.exp(-(((bp.y-(h.n.position.y+y))/.6)**2));
@@ -2830,9 +2840,9 @@ function hud(){
  g.font='bold 32px Georgia';g.fillStyle=tcol(0);g.fillText(sc[0],320,50);g.fillStyle=tcol(1);g.fillText(sc[1],640,50);
  g.font='11px system-ui';g.fillStyle='#9aa';{const nm=t=>MODE==1&&TM[t][0]?(TM[t][0].build?TM[t][0].build.name:TEAMS[TI[t]].pl[TM[t][0].i]):TEAMS[TI[t]].n;g.fillText(nm(0),320,24);g.fillText(nm(1),640,24)}drawLogo(TI[0],250,28,38);drawLogo(TI[1],672,28,38);
  g.fillStyle='#ffd23f';g.beginPath();if(off==0){g.moveTo(364,38);g.lineTo(376,31);g.lineTo(376,45)}else{g.moveTo(596,38);g.lineTo(584,31);g.lineTo(584,45)}g.fill();
- const m=Math.ceil(qc),s=m%60;g.fillStyle='#fff';g.font='bold 22px Georgia';g.fillText(MODE==1?'FIRST TO '+ONE_WIN:(qn>4?'OT':'Q'+qn)+'  '+Math.floor(m/60)+':'+(s<10?'0':'')+s,480,36);
+ const m=Math.ceil(qc),s=m%60;g.fillStyle='#fff';g.font='bold 22px Georgia';g.fillText(PR?'PRACTICE':MODE==1?'FIRST TO '+ONE_WIN:(qn>4?'OT':'Q'+qn)+'  '+Math.floor(m/60)+':'+(s<10?'0':'')+s,480,36);
  g.fillStyle=shot<6?'#ff6b6b':'#ffd23f';g.font='bold 16px Georgia';g.fillText(Math.max(0,Math.ceil(shot)),480,58);
- if(MODE==1&&CHK.t>0&&S=='play'){const n=Math.ceil(CHK.t),f=CHK.t-Math.floor(CHK.t);g.save();g.textAlign='center';g.globalAlpha=.85;g.font='bold 64px Georgia';g.lineWidth=7;g.strokeStyle='rgba(0,0,0,.7)';g.fillStyle='#ffd23f';g.translate(480,250);g.scale(1+.25*f,1+.25*f);g.strokeText(n,0,0);g.fillText(n,0,0);g.restore()} // 1v1 check-ball countdown
+ if(HC&&CHK.t>0&&S=='play'){const n=Math.ceil(CHK.t),f=CHK.t-Math.floor(CHK.t);g.save();g.textAlign='center';g.globalAlpha=.85;g.font='bold 64px Georgia';g.lineWidth=7;g.strokeStyle='rgba(0,0,0,.7)';g.fillStyle='#ffd23f';g.translate(480,250);g.scale(1+.25*f,1+.25*f);g.strokeText(n,0,0);g.fillText(n,0,0);g.restore()} // 1v1 check-ball countdown
  if(msg.t>0){g.globalAlpha=Math.min(1,msg.t*2);g.fillStyle=msg.c;g.font='bold 32px Georgia';g.strokeStyle='rgba(0,0,0,.7)';g.lineWidth=5;g.strokeText(msg.s,480,116);g.fillText(msg.s,480,116);g.globalAlpha=1}
 }
 function overlay(a,b,c){
@@ -2872,7 +2882,7 @@ function draw(){
   ['RESUME','CUSTOMISATION','REPLAY CAM:  '+['FAR','CLOSE','BASKET','DRONE'][RC],'MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText((on&&i==2?'◀  ':'')+t+(on&&i==2?'  ▶':''),480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · A/D or ←/→ change replay cam · K to close',480,462);g.fillText('Replay cam follows the scorer · graphics, ball trail and court live under CUSTOMISATION',480,486)}
  if(S=='replay'){g.fillStyle='#000';g.fillRect(0,0,960,46);g.fillRect(0,494,960,46);g.textAlign='left';g.fillStyle='#ff3b3b';g.font='bold 22px Georgia';g.fillText('● REPLAY  ·  '+['FAR','CLOSE','BASKET','DRONE'][RC]+' CAM  ·  #'+RP.who.n+' '+POS[RP.who.i],24,32);g.textAlign='right';g.fillStyle='#fff';g.font='15px system-ui';g.fillText('1 FAR · 2 CLOSE · 3 BASKET · 4 DRONE · T RESUME',936,525);g.textAlign='center'}
- if(S=='play'&&MODE!=1&&(RP.has||RP.mk)&&RP.show>0){g.fillStyle='rgba(10,12,18,.8)';g.beginPath();g.roundRect(360,486,240,34,17);g.fill();g.fillStyle='#ffd23f';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('PRESS T FOR REPLAY',480,508)}
+ if(S=='play'&&!HC&&(RP.has||RP.mk)&&RP.show>0){g.fillStyle='rgba(10,12,18,.8)';g.beginPath();g.roundRect(360,486,240,34,17);g.fill();g.fillStyle='#ffd23f';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('PRESS T FOR REPLAY',480,508)}
  if(S=='look')renderLook();
  if(S=='rteam')renderRTeam();
  if(S=='career'||S=='slotact'||S=='archq')renderCareer();
@@ -2890,7 +2900,7 @@ function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one fra
   if(dd){if(PM==0){if(P.Enter)S='play'}else if(PM==1){if(P.Enter)openCust('pause')}else if(PM==2)RC=(RC+dd+4)%4;else if(P.Enter)toMenu()}
   if(P.KeyK||P.Escape)S='play'}else if(P.KeyK&&S=='play'&&!NET.on)S='pause'; // (online there is no pause: K asks to leave, see onlStep)
  if(S=='replay'){for(let i=0;i<4;i++)if(P['Digit'+(i+1)]||P['Numpad'+(i+1)]){RC=i;RP.snap=1;RP.fd=null}}
- if(P.KeyT&&MODE!=1){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
+ if(P.KeyT&&!HC){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
  if(RP.want&&RP.has&&S=='play'){RP.want=0;startRep()}
  musUpd();navBlip();crowdUpd();if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S))blankGL();else render(S=='intro'?dt*IN.ts:dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
 const floorL=floor.material,floorS=new THREE.MeshStandardMaterial({map:floorL.map,roughness:.28,metalness:.08}),hemi=new THREE.HemisphereLight(0xdde8ff,0x3a2a1a,.55),spots=[7,87].map(x=>{const l=new THREE.SpotLight(0xfff1dc,1.1,160,.9,.6,1);l.position.set(x,45,32);l.target.position.set(x,0,32);sc3.add(l,l.target);l.visible=false;return l});
@@ -3129,7 +3139,7 @@ if(!b||!(n>0))return null;
 // ----- EXP SOURCES (in-game actions by YOUR created player; applied instantly): steal 23 · layup / close shot make 20 · mid-range make 24 · 3PT make 27 · dunk 24 · rebound 33 · assist 33.
 // Finishing the match (natural end: all quarters, or first to 11 in 1v1) adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1) on everything earned THIS match; leaving early keeps the EXP already earned but gets no bonus.
 const XP_STEAL=23,XP_LAY=20,XP_MID=24,XP_3PT=27,XP_DUNK=24,XP_REB=33,XP_AST=33,xpFinish=()=>MODE==1?.15:.25; // full-game bonus: +25% for 5v5 / 3v3, +15% for 1v1
-function awardP(p,n,why){if(!NET.on&&p&&p.team==0&&p.build&&ACTIVE>=0&&p.build===SLOTS[ACTIVE])addExp(n,why)}
+function awardP(p,n,why){if(!NET.on&&!PR&&p&&p.team==0&&p.build&&ACTIVE>=0&&p.build===SLOTS[ACTIVE])addExp(n,why)}
 // ===== END OF GAME SCREEN: the camera swoops in on the PLAYER OF THE GAME (posing), his card + match line on the right, menu down the left, BOX SCORE overlay =====
 let ES=null;
 const ES_BTN=i=>[36,178+i*62,250,50],ES_LBL=['MAIN MENU','RUN IT BACK','BOX SCORE'],BOX_BACK=[400,470,160,36];
@@ -3289,7 +3299,7 @@ function applyRoster(){
  FULL.forEach((tm,t)=>tm.forEach((p,i)=>{let m=p.build?sigClean(p.build.sig,p.build.st,lvInfo(p.build.xp).lv,rbOf(p.build)):SIG_AI.on?Object.assign({},aiSigOf(TI[t],i)):null;p.sig=m&&Object.keys(m).length?m:null;
   Object.assign(p,{hot:0,perfRun:0,ct0:-99,mvT:-99,mvK:'',chain:0,phT:-99,postT:0,ckT:-99,still:0,qfsT:0,trT:0,jrc:0,offb:0,csh:false,spot:false,_sfx:null})}));
 }
-function toMenu(){ms.on=false;MM.r=ACTIVE>=0?ACTIVE:0;MM.del=0;S='menu';menuEnter(false)}
+function toMenu(){PR=0;ms.on=false;MM.r=ACTIVE>=0?ACTIVE:0;MM.del=0;S='menu';menuEnter(false)}
 function playWith(slot){ACTIVE=slot;saveSlots();const b=SLOTS[slot];if(b&&b.tm!=null&&TI[0]!=b.tm)setTeams(b.tm,TI[1]==b.tm?(b.tm+1)%TEAMS.length:TI[1]); // a created player plays for the team he signed with
  newLooks();start()}
 // ===== CHARACTER READ: a player's overall STRENGTH and WEAKNESS, judged from the whole stat profile + archetype (not just his best / worst rating).
@@ -3407,26 +3417,34 @@ const pnCard=i=>[54+(i%3)*288,128+(i/3|0)*176,276,170],pnSide=i=>[130+i*370,140,
 function pnBack(){if(MM.car){if(MM.ps==4){MM.ps=1;MM.pc=MM.pb}else S='pnmode';return}
  if(MM.ps==0){S='pnmode';return}if(MM.ps==3){MM.ps=2;MM.pc=MM.side||0;return}if(MM.ps==4){MM.ps=3;MM.pc=MM.pA;return}MM.ps--;MM.pc=MM.ps==0?MM.pa:MM.pb}
 // ===== GAME MODE select (Play Now and Career PLAY): 5V5 · 3V3 (each side's best three) · 1V1 (pick the two players, first to 11) =====
-const MODES=[5,3,1],modeRect=i=>[66+i*282,140,264,300];
-function openModes(ctx){MM.mctx=ctx;MM.md=Math.max(0,MODES.indexOf(MODE));MM.car=0;S='pnmode'}
-function modeBack(){S=MM.mctx=='pn'?'menu':'onsel'}
-function modeEnter(){MODE=MODES[MM.md];
+const MODES=[5,3,1],modeN=()=>MM.prc||MM.mctx=='car'?4:3,modeRect=i=>{const n=modeN(),w=(828-(n-1)*18)/n;return[66+i*(w+18),140,w,300]};
+function openModes(ctx){PR=0;MM.prc=0;MM.mctx=ctx;MM.md=Math.max(0,MODES.indexOf(MODE));MM.car=0;S='pnmode'}
+function modeBack(){if(MM.prc){MM.prc=0;MM.md=3;return}S=MM.mctx=='pn'?'menu':'onsel'}
+function modeEnter(){if(MM.prc){prStart(MM.md);return}if(MM.mctx=='car'&&MM.md==3){MM.prc=1;MM.md=0;return} // PRACTICE -> pick a drill
+ MODE=MODES[MM.md];
  if(MM.mctx=='pn'){MM.car=0;MM.ps=0;MM.pc=TI[0];MM.pa=MM.pb=-1;S='playnow';return}
  const b=SLOTS[MM.slot];if(MODE!=1){playWith(MM.slot);return}
  MM.car=1;MM.pa=b.tm!=null?b.tm:TI[0];MM.ps=1;MM.pc=(MM.pa+1)%6;S='playnow'} // career 1v1: choose who you face
-function drawModes(){const car=MM.mctx=='car',b=car?SLOTS[MM.slot]:null;
- g.textAlign='center';g.fillStyle=GOLD;g.font='bold 44px Georgia';g.fillText(car?'CAREER  \u00b7  CHOOSE A MODE':'PLAY NOW  \u00b7  CHOOSE A MODE',480,74);
- g.font='14px system-ui';g.fillStyle='#9aa';g.fillText(car?b.name+' takes the floor  \u00b7  EXP counts in every mode':'Pick how many players a side',480,104);
+function prStart(i){const b=SLOTS[MM.slot];if(!b)return;MM.prc=0;PR=i+1;const ta=b.tm!=null?b.tm:TI[0],tb=(ta+1)%TEAMS.length;
+ if(PR<4){MODE=1;PICK=[b.pos,b.pos]}else MODE=3;HC=+(MODE==1||PR==4);setTeams(ta,tb);playWith(MM.slot);introEnd(true);checkBall(0); // (no intro: straight onto the floor)
+ say(['','SHOOTAROUND  ·  PAUSE TO LEAVE','1V1 DEFENDER  ·  YOUR BALL','RIM PROTECTOR  ·  ATTACK THE RIM','3V3 HALF COURT  ·  SCORE = SWITCH'][PR],'#ffd23f')}
+function drawModes(){const car=MM.mctx=='car',b=car?SLOTS[MM.slot]:null,pr=MM.prc;
+ g.textAlign='center';g.fillStyle=GOLD;g.font='bold 44px Georgia';g.fillText(pr?'PRACTICE  \u00b7  CHOOSE A DRILL':car?'CAREER  \u00b7  CHOOSE A MODE':'PLAY NOW  \u00b7  CHOOSE A MODE',480,74);
+ g.font='14px system-ui';g.fillStyle='#9aa';g.fillText(pr?'Work on your game  \u00b7  no score limit, no EXP  \u00b7  pause to leave':car?b.name+' takes the floor  \u00b7  EXP counts in every mode':'Pick how many players a side',480,104);
  const D=[['5V5','THE FULL GAME',['Full squads, four quarters.','Your team against theirs.'],'+25%'],['3V3','BEST THREE',['Each side fields its three','highest-rated players.'],'+25%'],['1V1','ONE ON ONE',['Pick any player from each team.','First to 11  \u00b7  check ball up top','after every possession.'],'+15%']];
+ if(car&&!pr)D.push(['PRACTICE','WORK ON YOUR GAME',['Shoot around, face a defender','or a rim protector, or run','3v3 on the half court.'],null]);
+ const PD=[['SOLO','SHOOTAROUND',['Just you and the ball.','Every shot comes back to you','at the top of the key.'],[1,0]],['1V1','LOCKED UP',['A mid-level defender guards','you properly, 1v1 rules.','You always get the ball back.'],[1,1]],
+  ['RIM','RIM PROTECTOR',['A defender sits at the rim','and contests every dunk','and layup. No reach-ins.'],[1,1]],['3V3','HALF COURT',['Three a side, one basket.','Score = switch possession,','check at the top of the key.'],[3,3]]];
+ if(pr)D.splice(0,D.length,...PD.map(([a,b_,l,n])=>[a,b_,l,null,n]));
  D.forEach(([big,sub,lines,bon],i)=>{const[x,y,w,h]=modeRect(i),on=MM.md==i;
   if(on){g.save();g.shadowColor=GOLD;g.shadowBlur=20;mRR(x,y,w,h,16,'rgba(255,210,63,.1)',GOLD);g.restore()}else mRR(x,y,w,h,16,'rgba(255,255,255,.05)','rgba(255,255,255,.14)');
-  g.textAlign='center';g.font='italic 900 64px "Impact","Arial Black",sans-serif';g.lineWidth=8;g.lineJoin='round';g.strokeStyle='#000';g.strokeText(big,x+w/2,y+86);g.fillStyle=on?GOLD:'#e6e9f0';g.fillText(big,x+w/2,y+86);
+  g.textAlign='center';g.font='italic 900 '+(big.length>5?34:big.length>3?50:64)+'px "Impact","Arial Black",sans-serif';g.lineWidth=8;g.lineJoin='round';g.strokeStyle='#000';g.strokeText(big,x+w/2,y+86);g.fillStyle=on?GOLD:'#e6e9f0';g.fillText(big,x+w/2,y+86);
   g.font='bold 12px system-ui';g.fillStyle=on?'#fff':'#9aa';g.fillText(sub,x+w/2,y+110);
   // the players on each side, as dots
-  const n=MODES[i];for(let sd=0;sd<2;sd++)for(let k=0;k<n;k++){const cx=x+w/2+(sd?1:-1)*(22+k*16),cy=y+140;g.beginPath();g.arc(cx,cy,6,0,6.283);g.fillStyle=sd?'#ff7b7b':'#7fa6ff';g.fill()}
+  const nn=pr?D[i][4]:[MODES[i]||1,MODES[i]||0];for(let sd=0;sd<2;sd++)for(let k=0;k<nn[sd];k++){const cx=x+w/2+(sd?1:-1)*(22+k*16),cy=y+140;g.beginPath();g.arc(cx,cy,6,0,6.283);g.fillStyle=sd?'#ff7b7b':'#7fa6ff';g.fill()}
   g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('VS',x+w/2,y+144);
-  g.font='13px system-ui';g.fillStyle='#cfd3dc';lines.forEach((l,k)=>g.fillText(l,x+w/2,y+184+k*20));
-  if(car){g.font='bold 11px system-ui';g.fillStyle=GOLD;g.fillText('FULL-GAME EXP BONUS  '+bon,x+w/2,y+h-20)}});
+  g.font=(modeN()>3?12:13)+'px system-ui';g.fillStyle='#cfd3dc';lines.forEach((l,k)=>g.fillText(l,x+w/2,y+184+k*20));
+  if(car){g.font='bold 11px system-ui';g.fillStyle=GOLD;g.fillText(bon?'FULL-GAME EXP BONUS  '+bon:pr?'PRACTICE  \u00b7  NO EXP':'DRILLS  \u00b7  NO EXP',x+w/2,y+h-20)}});
  mRR(PN_BACK[0],PN_BACK[1],PN_BACK[2],PN_BACK[3],8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('BACK',PN_BACK[0]+PN_BACK[2]/2,PN_BACK[1]+24);
  g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2190/\u2192 choose  \u00b7  Enter confirm  \u00b7  Esc back  \u00b7  or click',480,508)}
 // ----- 1v1 player pickers (Play Now steps 4-5, Career 1v1 step 2)
@@ -3596,7 +3614,7 @@ function menuStep(dt){
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
  if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(LB.on)lbKeys(up,dn);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyL)lbOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
  else if(S=='career'){if(up)MM.r=(MM.r+3)%4;if(dn)MM.r=(MM.r+1)%4;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
- else if(S=='pnmode'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.md=(MM.md+lr+3)%3;if(ok)modeEnter();if(P.Escape||P.Backspace)modeBack()}
+ else if(S=='pnmode'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.md=(MM.md+lr+modeN())%modeN();if(ok)modeEnter();if(P.Escape||P.Backspace)modeBack()}
  else if(S=='playnow'){
   const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ud=(dn?1:0)-(up?1:0);
   if(MM.ps<2){if(lr)MM.pc=(MM.pc+lr+6)%6;if(ud)MM.pc=(MM.pc+3)%6}else if(MM.ps>=3){if(lr&&!pkLock())MM.pc=(MM.pc+lr+5)%5}else if(lr)MM.pc=1-MM.pc;
@@ -3652,7 +3670,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  else if(S=='playnow'){
   if(type==0&&mIn(x,y,PN_BACK)){pnBack();return}
   const n=MM.ps<2?6:MM.ps>=3?5:2;for(let i=0;i<n;i++)if(mIn(x,y,MM.ps<2?pnCard(i):MM.ps>=3?pkCard(i):pnSide(i))){if(pkLock()&&i!=pkLock().pos){if(type==0)beep(200,.1,'square');return}MM.pc=i;if(type==0)pnEnter();return}}
- else if(S=='pnmode'){if(type==0&&mIn(x,y,PN_BACK)){modeBack();return}for(let i=0;i<3;i++)if(mIn(x,y,modeRect(i))){MM.md=i;if(type==0)modeEnter();return}}
+ else if(S=='pnmode'){if(type==0&&mIn(x,y,PN_BACK)){modeBack();return}for(let i=0;i<modeN();i++)if(mIn(x,y,modeRect(i))){MM.md=i;if(type==0)modeEnter();return}}
  else if(S=='slotact'){
   for(let i=0;i<actOpts().length;i++)if(mIn(x,y,actRect(i))){if(MM.sub!=i)MM.del=0;MM.sub=i;if(type==0)actEnter();return}}
  else if(S=='cust'){for(let i=0;i<4;i++)if(mIn(x,y,custRect(i))){MM.cs=i;if(type==0){if(i==3)custBack();else custChange(i,x<480?-1:1)}return}}
@@ -4350,10 +4368,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.60'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.61'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.61','Practice mode',['PRACTICE is now a 4th option when you play Career. Pick a drill: SHOOTAROUND (just you and the ball, every shot comes back to you at the top of the key), 1V1 DEFENDER (a mid-level defender guards you properly with 1v1 rules, you always get the ball back), RIM PROTECTOR (a defender sits at the rim and contests your dunks and layups, no reach-ins) or 3V3 HALF COURT (three a side on one basket with 1v1 rules: a score switches possession, check ball at the top of the key).',
+  'Practice has no score limit and gives no EXP or credits. Pause (K) and choose MAIN MENU to leave.']],
  ['v1.60','Online ragdolls',['Online games now show the full ragdoll on both screens: the host sends each ragdoll hit and the guest runs it through the same physics, so both players see the same fall at the same moment, and both see everyone get back up when the possession resets.']],
  ['v1.59','Full ragdoll',['Strength-mismatch dunks (dunker 5+ STR over the defender) now send BOTH players fully ragdoll at the heaviest contact, 0.05s before the ball goes through: no muscle, just gravity, momentum and the hit. The defender is thrown back off the slam and the dunker drops off the rim.',
   'Real joint limits keep it human: elbows and knees only bend the natural way, hips can\'t over-extend, the head can\'t go through the floor, bodies slide with floor friction and land on each other instead of through.',
