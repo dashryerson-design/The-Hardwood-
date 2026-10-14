@@ -121,7 +121,7 @@ function reset(next){
  finRP();
  off=next;ms.on=false;
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
-  Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0});if(p.m){p.m.rotation.x=p.m.rotation.z=0}
+  Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rg:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});if(p.m){p.m.rotation.x=p.m.rotation.z=0;p.m.position.y=0} // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
   if(t==off){const s=[[860,320],[950,320],[780,150],[700,490],[640,320]][i];p.x=fr(s[0]);p.y=s[1]}
   else{p.x=fr(SPOT[i][0]-40);p.y=SPOT[i][1]}
   p.fx=-dr(off)*-1;p.fy=0;
@@ -697,6 +697,12 @@ function posterHit(d,p,pz){say('POSTERIZED!  ·  '+(DKS[p.dunk.sty].pzn||p.dunk.
  else if(pz=='crumple')Object.assign(k,{A:.45,kind:'crumple',fw:-k.fw,lf:-k.lf}); // folds forward, under the dunker
  else if(pz=='spun')Object.assign(k,{spin:Math.PI,fw:-k.fw,lf:-k.lf}); // turned round first, so he goes down on his face (still along the push)
  else if(pz=='flat'){k.T=3;d.stun=3}}
+// LIGHT RAGDOLL (strength mismatch, see the contact in dunkStep): his body tilt is a damped spring (stiffness k, damping c: tips with the impulse, overshoots
+// once, settles upright) and his arms trail the motion (pose). va / vb = angular velocity (rad/s) about his own x (pitch, + = head forward) / z (roll, + = head right).
+const RG={k:45,c:7.5,max:.45,str:5};
+function ragHit(p,va,vb){const r=p.rg||(p.rg={a:0,b:0,va:0,vb:0});r.va+=va;r.vb+=vb}
+function ragStep(p,dt){const r=p.rg;if(!r)return;r.va+=(-RG.k*r.a-RG.c*r.va)*dt;r.vb+=(-RG.k*r.b-RG.c*r.vb)*dt;r.a=mClamp(r.a+r.va*dt,-RG.max,RG.max);r.b=mClamp(r.b+r.vb*dt,-RG.max,RG.max);
+ if(Math.abs(r.a)+Math.abs(r.b)<.003&&Math.abs(r.va)+Math.abs(r.vb)<.03)p.rg=null}
 function knockDown(d,p){const[vx,vy]=pushDir(d,p);
  const yaw=d.m?d.m.rotation.y:Math.atan2(d.fx,d.fy),fx=Math.sin(yaw),fy=Math.cos(yaw); // his BODY's facing as drawn right now (not where the AI wants to turn him)
  const fw=vx*fx+vy*fy,lf=vx*fy-vy*fx; // that push in his frame: fw along his facing, lf to his left (his left = (fy, -fx): the rig's +x)
@@ -797,9 +803,10 @@ function dunkStep(p,dt){
   k.ta+=dt;const rem=Math.max(k.tA-k.ta,dt);p.vz-=G*(k.gs||1)*dt;p.z+=p.vz*dt;mv((Tx-p.x)/rem,(Ty-p.y)/rem);p.fx=k.ax;p.fy=k.ay;
   const u=Math.min(1,k.ta/k.tA);k.pt=u;k.t=.22+.78*u;
   if(k.mk&&!k.lost&&!k.hit&&u>=.62){let v=null,vd=KD.r;for(const q of TM[1-p.team]){const l=Math.hypot(q.x-p.x,q.y-p.y);if(q.stun<=0&&l<vd){vd=l;v=q}}
-   if(v){k.hit=1;k.vic=v;if(pzOf(k)&&v===dd)posterHit(v,p,pzOf(k));else knockDown(v,p);if(v===dd)dd.lock=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}}
+   if(v){k.hit=1;k.vic=v;if(pzOf(k)&&v===dd)posterHit(v,p,pzOf(k));else knockDown(v,p);
+    if(((p.rt&&p.rt.str)||50)>=((v.rt&&v.rt.str)||50)+RG.str){const[vx,vy]=pushDir(v,p),yw=v.m?v.m.rotation.y:Math.atan2(v.fx,v.fy),fx=Math.sin(yw),fy=Math.cos(yw);ragHit(v,3.2*(vx*fx+vy*fy),3.2*(vy*fx-vx*fy));k.rag=1}/* much stronger: both go loose (the dunker on the way down) */if(v===dd)dd.lock=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}}
   if(k.ta>=k.tA){
-   k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(dd)dd.lock=0;
+   k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(k.rag)ragHit(p,-1.6,(Math.random()-.5)*1.2);if(dd)dd.lock=0;
    {const bx=D>0?932:8,LD=DKS[k.sty].land,cy=LD&&LD.keep>=.9?LD.keep:.8;let vx=(k.cvx||0)*cy,vy=(k.cvy||0)*cy;const rm=Math.max(0,Math.abs(bx-p.x)-14)*1.7;if(vx*D>0&&Math.abs(vx)>rm)vx=Math.sign(vx)*rm;p.vx=vx;p.vy=vy} // sprint momentum carries through the slam (capped so you don't slide out past the baseline)
    if(k.pv)SPV.slam=1;else if(k.mk&&!k.lost){const jc=jumpCont(p,k.pst?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
    if(k.lost||k.pv){} // blocked on the way up (bkHit already sent the ball loose)
@@ -2537,6 +2544,7 @@ function pose(p,dt){
   else Object.assign(q,{Lh:-.6,Rh:-.25,Lk:.8,Rk:.3,Lx:-1.4,Rx:-1.6,Le:-.3,Re:-.5,Lz:-1.3,Rz:1.3,lean:-.1,drop:.05,tw:0,r:8})} // down: limbs splayed, one knee up (getting up: the normal pose eases back in)
  else if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
+ if(p.rg){const g=p.rg;q.Lx=(q.Lx||0)-.16*g.va;q.Rx=(q.Rx||0)-.16*g.va;q.Lz=(q.Lz||0)-.14*g.vb-.4*Math.abs(g.va)*.3;q.Rz=(q.Rz||0)-.14*g.vb+.4*Math.abs(g.va)*.3} // ragdoll: arms lag the swing, a little out for balance
  const r=q.r,S=(j,v)=>{j.rotation.x=ex(j.rotation.x,v,dt,r)};
  S(m.L,q.Lh);S(m.L.k,q.Lk);S(m.R,q.Rh);S(m.R.k,q.Rk);S(m.aL,q.Lx);S(m.aL.e,q.Le);S(m.aR,q.Rx);S(m.aR.e,q.Re);S(m.aL.w,q.Lw);S(m.aR.w,q.Rw);
  m.aL.rotation.z=ex(m.aL.rotation.z,q.Lz,dt,r);m.aR.rotation.z=ex(m.aR.rotation.z,q.Rz,dt,r);
@@ -2598,8 +2606,9 @@ function render(dt){
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
   m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw;
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
+  if(p.kd&&p.rg)ragStep(p,dt); // (knocked down: the spring only swings his arms)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
-  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);m.rotation.z=ex(m.rotation.z,0,dt,10)} // stumble (stb) = a slight backward lean; any other stun = full fall
+  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=ex(p.rbx||0,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);p.rbz=ex(p.rbz||0,0,dt,10);ragStep(p,dt);m.rotation.x=p.rbx+(p.rg?p.rg.a:0);m.rotation.z=p.rbz+(p.rg?p.rg.b:0)} // stumble (stb) = a slight backward lean; any other stun = full fall
   if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
   if(p.kd&&p.z<1){m.updateMatrixWorld(true);_KB.makeEmpty();for(const o of [m.body,m.L,m.R])_KB.expandByObject(o);m.position.y-=_KB.min.y;m.sh.position.y+=_KB.min.y} // knocked down: whatever is lowest (back, backside, knees) rests ON the floor, not floating
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
@@ -4272,10 +4281,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.56'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.57'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.57','Strength matters',['When a dunker with at least 5 more STRENGTH than the defender makes contact at the rim, both players go loose: the defender is shoved along the hit and wobbles (or flops as he goes down), the dunker recoils on the way down. Their bodies swing and settle like real weight, arms trailing.',
+  'Every player is reset to normal at the start of every possession: no knockdown, wobble, rim hang or tilt carries over.']],
  ['v1.56','Back on their feet',['Fixed: a posterized player could stay tilted over or stuck on the floor after his knockdown (most often after a SHOULDER SPIN, or after watching the replay). He now gets back up properly, and everyone is reset upright at the start of every possession.']],
  ['v1.55','More posters',['With the POSTERIZER Signature, poster dunks happen far more often: any defender within 11 ft (Bronze), 14 ft (Silver) or 18 ft (Gold) of the rim can be your victim when you go up, not just a man standing right in front of it.',
   'Poster dunks now go down 63% (Bronze), 76% (Silver) or 95% (Gold) of the time.','Alley-oop finishes posterize too: with the badge, a defender near the rim gets put into the play and dunked on.']],
