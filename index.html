@@ -4221,10 +4221,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.45'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
-// ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
-// EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
+const GAME_VER='v1.46'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+// ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
+// EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.46','All patch notes',['PATCH NOTES now lists every version, not just the five most recent. Scroll with ↑/↓ or the mouse wheel.','Fixed: scrolling the mouse wheel in the STORE caused an error; it now moves through the animation menu.']],
  ['v1.45','Auto-catch',['When a pass is thrown to you, your player is steered straight onto it and turns to the ball, so you always arrive as it does. You get control back the moment you catch it.']],
  ['v1.44','Pass it!',['Career: when you call for the ball (E), your AI teammate now passes it to you almost every time, unless you are heavily guarded (HEAVY or SMOTHERED). Then he may still ignore you, but repeated calls wear him down as before.',
   'LEAD PASSES: a pass to a moving player is thrown to where he will be when it arrives, and flies there in a straight line, instead of chasing him through the air.',
@@ -4291,28 +4292,30 @@ const PATCH=[
  ['v1.22','Superman alley-oop',['The SUPERMAN dunk is now a two-foot alley-oop finish thrown from way out: the lob is caught in the layout.',
   'The LEANING TOMAHAWK takes off from two feet, about 8 ft out, further than before.']],
  ['v1.21','Right-handed finishes',['Every dunk and layup is now finished right-handed.']]];
-const PN={on:false,sel:0},PN_BTN=[764,8,146,28],PN_BOX=[80,52,800,440],PN_TAB=i=>[100,112+i*66,220,58],PN_X=[770,66,92,30],pnList=()=>PATCH.slice(0,5);
-function pnOpen(){PN.on=true;PN.sel=0;beep(520,.06,'triangle')}
+const PN={on:false,sel:0,top:0},PN_N=8,PN_BTN=[764,8,146,28],PN_BOX=[80,52,800,440],PN_TAB=i=>[100,112+i*43,220,39],PN_X=[770,66,92,30],pnList=()=>PATCH; // PN_N version tabs visible at once, PN.top = the first one shown
+const pnView=()=>{if(PN.sel<PN.top)PN.top=PN.sel;if(PN.sel>=PN.top+PN_N)PN.top=PN.sel-PN_N+1},pnScroll=d=>{PN.top=Math.max(0,Math.min(PATCH.length-PN_N,PN.top+d))};
+function pnOpen(){PN.on=true;PN.sel=0;PN.top=0;beep(520,.06,'triangle')}
 function pnClose(){PN.on=false;beep(300,.06,'triangle')}
-function pnKeys(up,dn,ok){const n=pnList().length;if(up)PN.sel=(PN.sel+n-1)%n;if(dn)PN.sel=(PN.sel+1)%n;if(P.Escape||P.Backspace||P.KeyN||ok)pnClose()}
-function pnPtr(x,y,type){if(mIn(x,y,PN_X)||!mIn(x,y,PN_BOX)){if(type==0)pnClose();return}for(let i=0;i<pnList().length;i++)if(mIn(x,y,PN_TAB(i))){if(type==0)PN.sel=i;return}}
+function pnKeys(up,dn,ok){const n=pnList().length;if(up)PN.sel=Math.max(0,PN.sel-1);if(dn)PN.sel=Math.min(n-1,PN.sel+1);if(up||dn)pnView();if(P.Escape||P.Backspace||P.KeyN||ok)pnClose()}
+function pnPtr(x,y,type){if(mIn(x,y,PN_X)||!mIn(x,y,PN_BOX)){if(type==0)pnClose();return}for(let i=0;i<Math.min(PN_N,pnList().length-PN.top);i++)if(mIn(x,y,PN_TAB(i))){if(type==0)PN.sel=PN.top+i;return}}
 function pnBtnDraw(){if(MN.gate||MN.t<T_READY-.6)return;const[x,y,w,h]=PN_BTN;mRR(x,y,w,h,15,PN.on?'rgba(40,32,8,.9)':'rgba(8,10,16,.72)',GOLD);
  g.save();g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('☰  PATCH NOTES',x+w/2,y+19);g.restore()}
 function pnDraw(){const L=pnList(),[bx,by,bw,bh]=PN_BOX,cur=L[PN.sel];g.save();
  g.fillStyle='rgba(4,5,9,.72)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.97)',GOLD);
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('PATCH NOTES',bx+20,by+40);const tw=g.measureText('PATCH NOTES').width;
- g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('the '+L.length+' most recent versions  ·  you are on '+GAME_VER,bx+34+tw,by+38);
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText(L.length+' versions  ·  you are on '+GAME_VER,bx+34+tw,by+38);
  {const[x,y,w,h]=PN_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
- L.forEach(([v,t],i)=>{const[x,y,w,h]=PN_TAB(i),on=i==PN.sel;mRR(x,y,w,h,9,on?'rgba(255,210,63,.16)':'rgba(255,255,255,.05)',on?GOLD:null);
-  g.textAlign='left';g.font='bold 20px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(v,x+14,y+26);
-  if(v==GAME_VER){g.font='bold 9px system-ui';const tw=g.measureText('CURRENT').width+12;mRR(x+w-tw-10,y+10,tw,16,8,'rgba(76,255,122,.15)','#4cff7a');g.textAlign='center';g.fillStyle='#4cff7a';g.fillText('CURRENT',x+w-10-tw/2,y+22);g.textAlign='left'}
-  let f=12;g.font='12px system-ui';while(g.measureText(t).width>w-28&&f>9){f-=.5;g.font=f+'px system-ui'}g.fillStyle=on?GOLD:'#8a90a0';g.fillText(t,x+14,y+46)});
+ L.slice(PN.top,PN.top+PN_N).forEach(([v,t],i)=>{const[x,y,w,h]=PN_TAB(i),on=PN.top+i==PN.sel;mRR(x,y,w,h,8,on?'rgba(255,210,63,.16)':'rgba(255,255,255,.05)',on?GOLD:null);
+  g.textAlign='left';g.font='bold 15px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(v,x+12,y+17);
+  if(v==GAME_VER){g.font='bold 8px system-ui';const tw=g.measureText('CURRENT').width+10;mRR(x+w-tw-8,y+6,tw,13,6.5,'rgba(76,255,122,.15)','#4cff7a');g.textAlign='center';g.fillStyle='#4cff7a';g.fillText('CURRENT',x+w-8-tw/2,y+15);g.textAlign='left'}
+  let f=11;g.font='11px system-ui';while(g.measureText(t).width>w-24&&f>8){f-=.5;g.font=f+'px system-ui'}g.fillStyle=on?GOLD:'#8a90a0';g.fillText(t,x+12,y+33)});
+ if(L.length>PN_N){const[x0,y0]=PN_TAB(0),hh=PN_N*43-4,bh=Math.max(20,hh*PN_N/L.length);mRR(x0+226,y0,4,hh,2,'rgba(255,255,255,.08)');mRR(x0+226,y0+(hh-bh)*PN.top/(L.length-PN_N),4,bh,2,GOLD)} // scroll bar
  if(cur){const x=346,w=bx+bw-x-22;let y=by+86;g.textAlign='left';g.fillStyle='#fff';g.font='bold 22px Georgia';g.fillText(cur[0]+'  ·  '+cur[1].toUpperCase(),x,y);y+=30;
   // shrink the text until every bullet fits the panel
   let fz=13.5,lh;const fit=()=>{g.font=fz+'px system-ui';lh=fz*1.42;let yy=y;for(const b of cur[2]){let line='',n=1;for(const wd of b.split(' ')){const tt=line?line+' '+wd:wd;if(g.measureText(tt).width>w-16&&line){n++;line=wd}else line=tt}yy+=n*lh+8}return yy};
   while(fit()>by+bh-40&&fz>9.5)fz-=.5;
   g.font=fz+'px system-ui';for(const b of cur[2]){g.fillStyle=GOLD;g.fillText('•',x,y);g.fillStyle='#dfe3ea';y=wrapT(b,x+16,y,w-16,lh)+8}}
- g.textAlign='center';g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ pick a version  ·  Esc / Enter / N close  ·  or click',480,by+bh-14);g.restore()}
+ g.textAlign='center';g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ or mouse wheel: scroll the versions  ·  Esc / Enter / N close  ·  or click',480,by+bh-14);g.restore()}
 // ===== PROFILE (main menu, left, or P): your username, a team logo as your picture, and lifetime stats from every finished game in every mode =====
 // Stats are YOUR side's: your created player in Career, otherwise your whole team (team 0 is always the local player, online too). Saved in this browser only.
 const PF_KEY='hardwood27.profile.v1',PF_K=['pts','reb','ast','stl','fgm','fga','tpm','tpa'],PF_MODES=['5v5','3v3','1v1','CAREER','ONLINE'];
@@ -4624,7 +4627,8 @@ function helpPtr(x,y,type){
   const mx=hpMax(),[sx,sy,sw,sh]=HL_SB;if(mx>0&&x>=sx-14&&x<=sx+sw+14&&y>=sy&&y<=sy+sh){const th=Math.max(40,sh*sh/(sh+mx));MM.hdr={sb:1,y0:y,s0:MM.hsT,k:mx/(sh-th)};const ty=sy+(sh-th)*MM.hsT/mx;if(y<ty||y>ty+th){MM.hsT=MM.hs=Math.max(0,Math.min(mx,(y-sy-th/2)/(sh-th)*mx));MM.hdr.s0=MM.hsT}return}
   if(y>=HL_TOP&&y<=HL_BOT&&x>=HL_X-20&&x<=HL_X+HL_W+20)MM.hdr={sb:0,y0:y,s0:MM.hsT}}
  else if(type==1&&MM.hdr){const d=y-MM.hdr.y0;MM.hsT=MM.hs=Math.max(0,Math.min(hpMax(),MM.hdr.sb?MM.hdr.s0+d*MM.hdr.k:MM.hdr.s0-d))}}
-document.getElementById('w').addEventListener('wheel',e=>{if(S=='store'&&MM.st){e.preventDefault();const st=MM.st,n=STORE_T[st.tab].items().length;st.sc=Math.max(0,Math.min(n-ST_N,(st.sc||0)+Math.sign(e.deltaY)));st.sel=Math.max(st.sc,Math.min(st.sc+ST_N-1,st.sel));return}
+document.getElementById('w').addEventListener('wheel',e=>{if(S=='store'&&MM.st){e.preventDefault();const st=MM.st;if(st.pg=='anim')st.sel=Math.max(0,Math.min(anList(st).length-1,st.sel+Math.sign(e.deltaY)));return}
+ if(S=='menu'&&PN.on){e.preventDefault();pnScroll(Math.sign(e.deltaY));return}
  if(S!='hpage')return;e.preventDefault();MM.hsT=Math.max(0,Math.min(hpMax(),MM.hsT+e.deltaY*(e.deltaMode==1?32:e.deltaMode==2?400:1)))},{passive:false});
 function hlBack(){mRR(RO_BACK[0],RO_BACK[1],RO_BACK[2],RO_BACK[3],8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('BACK',RO_BACK[0]+RO_BACK[2]/2,RO_BACK[1]+22)}
 function drawHelp(){
