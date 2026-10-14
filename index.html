@@ -276,13 +276,96 @@ function chase(p,dt){const dx=B.x+B.vx*.25-p.x,dy=B.y+B.vy*.25-p.y,l=Math.hypot(
 const GUARD={rng:.45,eff:.4,spd:p=>.45+.35*Math.max(0,Math.min(1,((p.rt&&p.rt.pd>0?p.rt.pd:50)-25)/75))};
 const shootNow=p=>(ms.on&&p.team==0&&p.i==ctl&&B.h===p)||p.sj>0;
 function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);o.push(p.kd?Object.assign({},p.kd):null);o.push(p.rdh||null);return o})),/* (kd: a posterized man's knockdown, so replays show it) */b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
-function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};RP.loop=RP.rt=RP.i=0;RP.l=new THREE.Vector3(47,6,32);RP.snap=1;RP.fd=null;S='replay';ms.on=false;beep(400,.1)}
+function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};
+ RP.dir=repPlan();RP.ct=null;RP.loop=0;RP.seg=-1;S='replay';ms.on=false;beep(400,.1)}
 function endRep(){TM.flat().forEach(rdOff);TM.forEach((t,a)=>t.forEach((p,b)=>Object.assign(p,RS.P[a][b],{rd:RS.RD?RS.RD[a][b]:null})));Object.assign(B,RS.B);Object.assign(ms,RS.ms);ctl=RS.ctl;S='play'}
-function repStep(dt){const c=RP.clip,len=c[c.length-1].t-c[0].t;RP.rt+=dt;if(RP.rt>len+.5){RP.rt=0;RP.i=0;RP.loop++;RP.snap=1}
- const tt=c[0].t+Math.min(RP.rt,len);while(RP.i<c.length-1&&c[RP.i+1].t<=tt)RP.i++;const f=c[RP.i];
- TM.forEach((t,a)=>t.forEach((p,b)=>{const o=f.p[a][b];SF.forEach((k,j)=>p[k]=o[j]);p.dunk=o[SF.length];p.lay=o[SF.length+1]||null;p.ps=o[SF.length+2]||null;p.kd=o[SF.length+3]?Object.assign({},o[SF.length+3]):null;
-  const h=o[SF.length+4];if(RP.i==0){if(p.rd)rdOff(p);p.rdN=h&&h.n}else if(h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,h.dx,h.dz,h.mag,h.tone,h.full)}})); // the ragdoll hits replay too
- Object.assign(B,f.b);if(f.b.ht)B.h=TM[f.b.ht[0]][f.b.ht[1]];ms.on=f.ms[0];ms.t=f.ms[1];ctl=f.ms[2]}
+// ===== CINEMATIC REPLAY: the clip is read like a story (who passed, who caught, how it was finished) and cut into shots, each with its own angle and speed.
+// repPlan -> {t0, te, segs:[{a, b, ty, sp, who, from}]} in clip time. ty = the shot (see repCam), sp = playback speed (slow motion at the big moments).
+function repPlan(){const c=RP.clip,w=RP.who,wt=w.team,wk=w.k,n=SF.length,c0=c[0].t,cl=c[c.length-1].t,rel=RP.rel;
+ let kind='shot',tAir=null,tSlam=null,tBall=null,tPost=null,tUp=null,vic=null,passer=null,tPass=null,tCatch=null,last=null,lastT=null;
+ for(const f of c){const o=f.p[wt]&&f.p[wt][wk];if(!o)continue;const dk=o[n],ly=o[n+1],near=f.t>=rel-1&&f.t<=rel+2.5;
+  if(dk&&near){kind='dunk';if(dk.ph>=3&&tAir==null)tAir=f.t;if(dk.ph>=4&&tSlam==null)tSlam=f.t;if(dk.vic)vic=dk.vic}
+  else if(ly&&near&&kind!='dunk'){kind='lay';if(tUp==null&&o[SF.indexOf('z')]>.5)tUp=f.t}
+  if(f.t>=rel-.3&&tBall==null&&f.b.mode=='shot')tBall=f.t;
+  if(f.t>=rel&&tPost==null&&f.b.mode=='post')tPost=f.t;
+  const h=f.b.mode=='held'&&f.b.ht?TM[f.b.ht[0]][f.b.ht[1]]:null; // who has it: the last pass INTO the scorer from a teammate = the assist
+  if(h&&f.t<=rel+.6){if(h===w&&last&&last!==w&&last.team==wt&&tCatch==null){passer=last;tPass=lastT;tCatch=f.t}if(h!==w)tCatch=null;if(h!==w||!passer){last=h;lastT=f.t}}}
+ if(tPass!=null&&tPass<rel-4.5)passer=null;
+ const K=kind=='dunk'?(tAir!=null?tAir:rel+.5):kind=='lay'?(tUp!=null?tUp:rel+.15):(tBall!=null?tBall-.42:rel-.42), // takeoff / the start of the jumper
+  fin=kind=='dunk'?(tSlam!=null?tSlam:tPost!=null?tPost:K+.6):kind=='lay'?(tPost!=null?tPost:K+.9):(tPost!=null?tPost:(tBall||rel)+1.1); // ball through the net
+ let t0=K-2.1;if(passer)t0=Math.min(t0,tPass-1.15);t0=Math.max(c0,t0);const te=Math.min(cl,fin+(kind=='dunk'?1.9:1.5));
+ const segs=[],add=(b,ty,sp,o)=>{const a=segs.length?segs[segs.length-1].b:t0;b=Math.min(b,te);if(b-a<.12){if(segs.length)segs[segs.length-1].b=b;return}segs.push(Object.assign({a,b,ty,sp},o))};
+ if(passer&&tPass>t0+.25){add(tPass+.12,'pass',.85,{who:passer});add(Math.min(tCatch+.4,K-.5),'catch',.55,{who:w,from:passer})} // the passer, then the catch
+ add(K-.5,'drive',1,{who:w});
+ if(kind=='dunk'){add(fin+.06,'dunkLow',.3,{who:w,vic,pre:.85,ts:K-.08});add(fin+.85,'dunkHigh',.5,{who:w,vic});add(te,'react',1,{who:w,vic})}
+ else if(kind=='lay'){add(fin+.08,'layLow',.4,{who:w,pre:.9,ts:K-.05});add(te,'react',1,{who:w})}
+ else{add((tBall||rel)+.12,'shotFront',.3,{who:w,pre:.9,ts:(tBall||rel)-.32});add(fin+.2,'flight',.62,{who:w});add(te,'react',1,{who:w})}
+ if(!segs.length)segs.push({a:t0,b:te,ty:'react',sp:1,who:w});
+ return{t0,te:segs[segs.length-1].b,segs,kind}}
+const REP_DISC=new Set(['jph','air','side','ls']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
+function repLo(a,b,u){if(!a)return a;const o=Object.assign({},a);if(b&&b.ph===a.ph&&b.sty===a.sty)for(const k of REP_LERP)if(typeof a[k]=='number'&&typeof b[k]=='number')o[k]=a[k]+(b[k]-a[k])*u;return o} // (a move's own clock, smoothed between frames)
+function repStep(dt){const c=RP.clip,D=RP.dir;RP.rdt=dt;let st=0;
+ if(RP.ct==null){RP.ct=D.t0;st=1}
+ else if(RP.ct>=D.te){RP.hold=(RP.hold||0)+dt;if(RP.hold>.7){RP.ct=D.t0;RP.hold=0;RP.loop++;st=1}} // (a beat on the last frame, then it runs again)
+ else{const sg=D.segs.find(q=>RP.ct<q.b)||D.segs[D.segs.length-1];const ts_=sg.ts!=null&&RP.ct<sg.ts?sg.pre:sg.sp;RP.sp+=(ts_-RP.sp)*Math.min(1,dt*8);RP.ct=Math.min(D.te,RP.ct+dt*RP.sp)} // speed ramps in and out of the slow motion
+ if(st){RP.sp=D.segs[0].ts!=null?D.segs[0].pre:D.segs[0].sp;RP.seg=-1;RP.hold=0}
+ const tt=RP.ct;let i=0;while(i<c.length-2&&c[i+1].t<=tt)i++;const fa=c[i],fb=c[Math.min(i+1,c.length-1)],u=fb.t>fa.t?Math.max(0,Math.min(1,(tt-fa.t)/(fb.t-fa.t))):0,n=SF.length; // between two recorded frames: smooth at any speed
+ TM.forEach((t,a)=>t.forEach((p,b)=>{const o=fa.p[a][b],q=fb.p[a][b]||o;SF.forEach((k,j)=>{const x=o[j],y=q[j];p[k]=typeof x=='number'&&typeof y=='number'&&!REP_DISC.has(k)?x+(y-x)*u:x});
+  p.dunk=repLo(o[n],q[n],u);p.lay=repLo(o[n+1]||null,q[n+1],u);p.ps=o[n+2]?repLo(o[n+2],q[n+2],u):null;p.kd=o[n+3]?repLo(o[n+3],q[n+3],u):null;
+  const h=o[n+4];if(st){if(p.rd)rdOff(p);p.rdN=h&&h.n}else if(h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,h.dx,h.dz,h.mag,h.tone,h.full)}})); // the ragdoll hits replay too
+ Object.assign(B,fa.b);B.x=fa.b.x+(fb.b.x-fa.b.x)*u;B.y=fa.b.y+(fb.b.y-fa.b.y)*u;B.z=fa.b.z+(fb.b.z-fa.b.z)*u;if(fa.b.ht)B.h=TM[fa.b.ht[0]][fa.b.ht[1]];ms.on=fa.ms[0];ms.t=fa.ms[1];ctl=fa.ms[2]}
+// ----- the camera for each shot. FRAMING RULE: everyone the shot is about (their whole bodies, plus the ball / rim when they matter) sits inside a sphere,
+// and the camera stands far enough back that the sphere fits inside the picture between the letterbox bars, whatever the angle; it never cuts anyone off.
+const _CB=new THREE.Box3(),_CB2=new THREE.Box3(),_CV=new THREE.Vector3(),_CC=new THREE.Vector3(),_CD=new THREE.Vector3(),REP_VIS=448/540;
+function cbP(p){const m=p&&p.m;if(!m||!m.visible)return;m.updateMatrixWorld(true);_CB2.makeEmpty();for(const o of [m.body,m.L,m.R])_CB2.expandByObject(o);_CB.union(_CB2)}
+function cbV(x,y,z,r){_CB.expandByPoint(_CV.set(x-r,y-r,z-r));_CB.expandByPoint(_CV.set(x+r,y+r,z+r))}
+const azOf=(x,z)=>Math.atan2(x,z),nearOpp=(p,r)=>{let b=null,bd=r;for(const q of TM[1-p.team]){const d=Math.hypot(q.x-p.x,q.y-p.y);if(d<bd&&q.m&&q.m.visible){bd=d;b=q}}return b};
+function camRoom(c,az,el){const dx=Math.cos(el)*Math.sin(az),dz=Math.cos(el)*Math.cos(az);let t=1e9;
+ if(dx>1e-6)t=Math.min(t,(REP_BX[1]-c.x)/dx);else if(dx<-1e-6)t=Math.min(t,(REP_BX[0]-c.x)/dx);if(dz>1e-6)t=Math.min(t,(REP_BX[3]-c.z)/dz);else if(dz<-1e-6)t=Math.min(t,(REP_BX[2]-c.z)/dz);return t}
+const REP_BX=[-5.8,99.8,-4.8,68.8]; // inside the chain-link fence (never shoots through it) // how far the camera can back off before leaving the arena
+function repClear(pos,subs,rim){const T_=[];for(const p of subs){const m=p.m;if(!m)continue;T_.push([p.x/10,p.z/10+3.2*p.ht,p.y/10],[p.x/10,p.z/10+5.6*p.ht,p.y/10])} // aim points: chest + head of each subject
+ let n=0;if(Math.abs(pos.x-rim[0])<4.8&&Math.abs(pos.z-rim[2])<5.5&&pos.y>2.5)return 1e9; // (rim, backboard) -> a SCORE: 0 = clear, more = more of the view blocked, 1e9 = impossible
+ for(const px of [97,-3]){if(Math.hypot(pos.x-px,pos.z-32)<1.6)return 1e9;for(const t of T_)for(let i=1;i<16;i++){const u=i/16,x=pos.x+(t[0]-pos.x)*u,y=pos.y+(t[1]-pos.y)*u,z=pos.z+(t[2]-pos.z)*u;if(y<13.2&&Math.hypot(x-px,z-32)<.8)n+=3}} // the hoop stanchions
+ for(const q of TM.flat()){if(!q.m||!q.m.visible)continue;const qx=q.x/10,qz=q.y/10,qb=q.z/10,qt=qb+6.9*q.ht;
+  const hd=Math.hypot(pos.x-qx,pos.z-qz);if(hd<2.4&&pos.y<qt+1)return 1e9;if(hd<6.5&&pos.y<qt+.5)n+=6;if(subs.includes(q))continue; // (never inside anyone, and nobody filling the lens from right in front of it)
+  for(const t of T_)for(let i=1;i<11;i++){const u=i/13,x=pos.x+(t[0]-pos.x)*u,y=pos.y+(t[1]-pos.y)*u,z=pos.z+(t[2]-pos.z)*u;if(y>qb-.2&&y<qt&&Math.hypot(x-qx,z-qz)<1.35)n++}} // (someone brushing right up against him doesn't count)
+ return n}
+const REP_TRY=[[0,0],[.35,0],[-.35,0],[.7,0],[-.7,0],[0,.25],[.35,.25],[-.35,.25],[1.05,0],[-1.05,0],[.7,.3],[-.7,.3],[1.4,.15],[-1.4,.15],[0,.5],[2,.2],[-2,.2],[Math.PI,.3],[0,.8],[.6,.8],[-.6,.8],[1.4,.8],[-1.4,.8],[Math.PI,.8]]; // (last resort: high up, over everyone)
+function repCam(){const D=RP.dir,dt=RP.rdt||1/60,ct=RP.ct==null?D.t0:RP.ct;let si=D.segs.findIndex(q=>ct<q.b);if(si<0)si=D.segs.length-1;
+ const sg=D.segs[si],u=Math.max(0,Math.min(1,(ct-sg.a)/Math.max(.01,sg.b-sg.a))),cut=si!==RP.seg,w=sg.who||RP.who,Hx=hx(RP.who.team)/10,RM=[Hx,10,32];RP.seg=si;
+ const wx=w.x/10,wz=w.y/10,bp=ballM.position,k=w.dunk,tr=azOf(RM[0]-wx,RM[2]-wz); // tr: from him towards the rim
+ _CB.makeEmpty();let ax,of,el,fov,mul=1.06,orb=0;const subs=[w];if(sg.vic&&sg.vic.m&&sg.vic.m.visible)subs.push(sg.vic);if(sg.ty=='catch'&&sg.from)subs.push(sg.from); // the angle = an AXIS (his facing, the pass line, the rim...) turned by OF to one side; the other side is the mirror shot
+ switch(sg.ty){
+  case 'pass':cbP(w);ax=azOf(w.fx,w.fy);of=.65;el=.12;fov=36;orb=.2;break; // the passer, from in front and to the side, as he lets it go
+  case 'catch':{const f=sg.from;cbP(w);if(Math.hypot(bp.x-wx,bp.z-wz)<18)cbV(bp.x,bp.y,bp.z,.5);if(f&&Math.hypot(f.x-w.x,f.y-w.y)<200)cbP(f);ax=f?azOf(w.x-f.x,w.y-f.y):azOf(w.fx,w.fy);of=Math.PI/2;el=.22;fov=44;break} // side-on to the pass: the ball arriving in his hands
+  case 'drive':{cbP(w);const o=nearOpp(w,90);if(o)cbP(o);const sp=Math.hypot(w.vx,w.vy);ax=sp>20?azOf(w.vx,w.vy):azOf(w.fx,w.fy);of=1.3;el=.07;fov=40;break} // low tracking shot, slightly ahead of him
+  case 'dunkLow':cbP(w);if(sg.vic)cbP(sg.vic);cbV(RM[0],RM[1],RM[2],.9);ax=k&&k.ax!=null?azOf(k.ax,k.ay):tr;of=1.15;el=-.2;fov=50;break; // under the rim, looking UP at him going up
+  case 'dunkHigh':cbP(w);if(sg.vic)cbP(sg.vic);cbV(RM[0],RM[1],RM[2],.9);ax=(k&&k.ax!=null?azOf(k.ax,k.ay):tr)+Math.PI;of=-.7;el=.38;fov=46;orb=.3;break; // the reverse angle from above: the slam and the aftermath
+  case 'layLow':{cbP(w);const o=nearOpp(w,90);if(o)cbP(o);cbV(RM[0],RM[1],RM[2],.9);ax=tr;of=1;el=-.12;fov=46;break}
+  case 'shotFront':{cbP(w);const o=nearOpp(w,90);if(o)cbP(o);ax=tr;of=1;el=.1;fov=34;mul=1.06+.22*(1-sm3(u));break} // in his face as he rises (a slow push-in)
+  case 'flight':cbP(w);cbV(bp.x,bp.y,bp.z,.6);cbV(RM[0],RM[1],RM[2],1);ax=tr+Math.PI;of=.3;el=.3;fov=48;break; // over his shoulder: the ball's flight to the rim
+  default:cbP(w);if(sg.vic)cbP(sg.vic);ax=azOf(47-wx,32-wz);of=.4;el=.42;fov=40;orb=.55} // reaction: a slow orbit
+ if(cut){ // pick the side: the one with room to frame him properly (alternating between cuts when both have room)
+  _CB.getCenter(_CC);const r=_CB.getSize(_CV).length()/2,need=r/Math.sin(Math.atan(Math.tan(fov*Math.PI/360)*REP_VIS))*mul,sA=camRoom(_CC,ax+of,el),sB=camRoom(_CC,ax-of,el);
+  RP.mir=sA>=need?(sB>=need&&si%2==1?1:0):sB>sA?1:0}
+ RP.az0=ax+(RP.mir?-of:of);
+ const az=RP.az0+(RP.mir?-1:1)*orb*sm3(u);RP.azS=cut?az:RP.azS+Math.atan2(Math.sin(az-RP.azS),Math.cos(az-RP.azS))*Math.min(1,dt*(orb?6:2.5)); // (follows his line smoothly within a shot)
+ // aim point (smoothed) + the distance that keeps the WHOLE subject box in shot from that point
+ _CB.getCenter(_CC);if(cut||!RP.cc)RP.cc=_CC.clone();else{RP.cc.x=ex(RP.cc.x,_CC.x,dt,7);RP.cc.y=ex(RP.cc.y,_CC.y,dt,7);RP.cc.z=ex(RP.cc.z,_CC.z,dt,7)}
+ let r=0;for(let i=0;i<8;i++){_CV.set(i&1?_CB.max.x:_CB.min.x,i&2?_CB.max.y:_CB.min.y,i&4?_CB.max.z:_CB.min.z);r=Math.max(r,_CV.distanceTo(RP.cc))}
+ let fv=fov;const half=Math.atan(Math.tan(fv*Math.PI/360)*REP_VIS),need=r/Math.sin(half)*mul;RP.cd=cut||!RP.cd?need:Math.max(need,ex(RP.cd,need,dt,2.2)); // grows at once, eases back in
+ let e=el,cd=RP.cd; // (below: no room to back off -> widen the lens instead; never under the floor -> raise it at the same distance, so the framing holds)
+ const pAt=(az,e2)=>{let c2=Math.min(RP.cd,camRoom(RP.cc,az,e2)-.5);c2=Math.max(4,c2);if(RP.cc.y+Math.sin(e2)*c2<.8)e2=Math.asin(Math.max(-1,(.8-RP.cc.y)/c2));return _CV.set(Math.cos(e2)*Math.sin(az),Math.sin(e2),Math.cos(e2)*Math.cos(az)).multiplyScalar(c2).add(RP.cc)};
+ if(cut){RP.da=RP.de=RP.daT=RP.deT=0;RP.bk=0}
+ const rimV=RM,roomOk=(az,e2)=>camRoom(RP.cc,az,e2)-.5>=need*.92,ok=roomOk(RP.azS+RP.da,e+RP.de)&&!repClear(pAt(RP.azS+RP.da,e+RP.de),subs,rimV); // (an angle only counts if it is clear AND has room to frame him)RP.bk=ok?0:RP.bk+dt;
+ if(cut&&!ok||RP.bk>.18){let best=1e18;for(const [a_,e_] of REP_TRY){const s_=RP.mir?-1:1,sc_=repClear(pAt(RP.azS+a_*s_,e+e_),subs,rimV)+(roomOk(RP.azS+a_*s_,e+e_)?0:50)+Math.abs(a_)*.5+e_;if(sc_<best){best=sc_;RP.daT=a_*s_;RP.deT=e_}if(sc_<1.6)break}RP.bk=0;if(cut){RP.da=RP.daT;RP.de=RP.deT}} // someone in the way: the nearest clear angle (a hard cut snaps to it, otherwise the camera glides round)
+ RP.da+=(RP.daT-RP.da)*Math.min(1,dt*3.5);RP.de+=(RP.deT-RP.de)*Math.min(1,dt*3.5);
+ const az2=RP.azS+RP.da;e+=RP.de;while(e<1.25&&camRoom(RP.cc,az2,e)-.5<cd)e+=.025; // (no room to back off at this height: go higher)
+ e=cut||RP.eS==null||e>RP.eS?e:ex(RP.eS,e,dt,3);RP.eS=e; // (rises at once, settles back down gently)
+ {const rm=camRoom(RP.cc,az2,e);if(cd>rm-.5){cd=Math.max(4,rm-.5);const h2=Math.asin(Math.min(.98,r*mul/cd));fv=Math.min(88,Math.max(fv,2*Math.atan(Math.tan(h2)/REP_VIS)*180/Math.PI))}}
+ if(RP.cc.y+Math.sin(e)*cd<.8)e=Math.asin(Math.max(-1,(.8-RP.cc.y)/cd));
+ _CD.set(Math.cos(e)*Math.sin(az2),Math.sin(e),Math.cos(e)*Math.cos(az2));cam.position.copy(RP.cc).addScaledVector(_CD,cd);
+ if(Math.abs(cam.fov-fv)>.01){cam.fov=fv;cam.updateProjectionMatrix()}cam.lookAt(RP.cc)}
 // ===== per-player match stats (PTS / AST / REB), shown on the ball-handler HUD =====
 let PSTAT=[[],[]],ALAST=null;
 const pstat=p=>PSTAT[p.team][p.i]||(PSTAT[p.team][p.i]={pts:0,ast:0,reb:0,stl:0,tpm:0,tpa:0,fgm:0,fga:0});
@@ -2712,33 +2795,10 @@ function render(dt){
  ballM.rotation.x+=dt*6;ballS.position.set(ballM.position.x,.04,ballM.position.z);
  flash.visible=FX.t>0;if(FX.t>0){FX.t-=dt;flash.position.set(FX.x,FX.y,FX.z);const u=1-FX.t/.4;flash.scale.setScalar(.6+u*3);flash.material.opacity=.85*(1-u)}
  netUpd(dt);
- cring.visible=cglow.visible=!!hb&&S!='intro';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,hb.y/10);cglow.position.set(hb.x/10,.07,hb.y/10);ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
- const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play'||S=='replay';arrow.visible=S=='play'||(S=='replay'&&RC==0);ring.position.set(me.x/10,.06,me.y/10);arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,me.y/10);
+ cring.visible=cglow.visible=!!hb&&S!='intro'&&S!='replay';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,hb.y/10);cglow.position.set(hb.x/10,.07,hb.y/10);ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
+ const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play';arrow.visible=S=='play';ring.position.set(me.x/10,.06,me.y/10);arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,me.y/10);
  {const m=S=='play'&&CLK()&&off==1?myMark():null;markArrow.visible=!!m;if(m)markArrow.position.set(m.x/10,m.ht*6.2+2+Math.sin(T*6)*.3+m.z/10,m.y/10)}
- if(S=='replay'){const w=RP.who,D=dr(w.team),H=hx(w.team)/10,sx=w.x/10,sz=w.y/10,sy=w.z/10,ht=w.ht,k=RC;let px,py,pz,lx,ly,lz,fov=48,rp=6,rl=8;
-  // every angle tracks the SCORER only (never the ball, a defender or the court)
-  const fl=Math.hypot(w.fx,w.fy),tx=fl>.01?w.fx/fl:D,tz=fl>.01?w.fy/fl:0;
-  if(!RP.fd)RP.fd=[tx,tz];RP.fd[0]=ex(RP.fd[0],tx,dt,4);RP.fd[1]=ex(RP.fd[1],tz,dt,4);
-  const fn=Math.hypot(RP.fd[0],RP.fd[1])||1,fdx=RP.fd[0]/fn,fdz=RP.fd[1]/fn;
-  if(k==0){ // FAR: high above and well back, wide shot, scorer centred
-   px=Math.max(8,Math.min(86,sx-D*10));py=36;pz=Math.min(100,sz+42);lx=sx;ly=sy+3*ht;lz=sz;rp=3;rl=6}
-  else if(k==1){ // CLOSE: just above head height, right behind the scorer, running with them
-   px=sx-fdx*7;py=sy+6.2*ht+.9;pz=sz-fdz*7;lx=sx+fdx*1.2;ly=sy+4.6*ht;lz=sz+fdz*1.2;fov=62;rp=12;rl=14}
-  else if(k==2){ // BASKET: tiny camera mounted on the top edge of the backboard (board top = 11.2+1.75 = 12.95), looking out at the scorer; clear of the rim/net so nothing glitches
-   px=H+D*1.2;py=13.1;pz=32;lx=sx;ly=sy+4*ht;lz=sz;fov=60;rl=12}
-  else{ // DRONE: a drone ~3 m (10 ft) up, loosely chasing the scorer like a hand-flown drone: it trails ~15 units behind him on the court-centre side, lags behind his moves and wanders slowly (no orbit).
-   // After the ball is released it swoops in to a spot in front of the hoop and turns onto the rim, so you see the shot go in from up close.
-   const hz=HY/10,ua=sm3(c01((RP.clip[0].t+RP.rt-RP.rel)/.9)); // 0 before the release -> 1 about 0.9s after it
-   if(RP.snap||RP.ds==null)RP.ds=sz<hz?1:-1;
-   const wx=Math.sin(T*.37)*3.2+Math.sin(T*.91)*1.2,wz=Math.sin(T*.29+1)*2.8+Math.sin(T*.77)*1.1,CL=(a,b,v)=>Math.max(a,Math.min(b,v));
-   const fx=sx-fdx*12+wx,fz=sz-fdz*12+RP.ds*6+wz,gx=H-D*12+wx*.3,gz=hz+RP.ds*9+wz*.3; // chase spot / hoop spot
-   px=CL(-4,98,fx+(gx-fx)*ua);pz=CL(-30,98,fz+(gz-fz)*ua);py=10.1+1.4*ua+Math.sin(T*1.7)*.35;
-   lx=sx+(H-sx)*.9*ua;ly=sy+3.6*ht+(10-(sy+3.6*ht))*.9*ua;lz=sz+(hz-sz)*.9*ua;fov=72;rp=2.4+1.6*ua;rl=3.2+1.8*ua}
-  if(cam.fov!=fov){cam.fov=fov;cam.updateProjectionMatrix()}
-  const sn=RP.snap;RP.snap=0;
-  if(sn||k==2)cam.position.set(px,py,pz);else cam.position.set(ex(cam.position.x,px,dt,rp),ex(cam.position.y,py,dt,rp),ex(cam.position.z,pz,dt,rp));
-  if(sn)RP.l.set(lx,ly,lz);else RP.l.set(ex(RP.l.x,lx,dt,rl),ex(RP.l.y,ly,dt,rl),ex(RP.l.z,lz,dt,rl));
-  cam.lookAt(RP.l)}
+ if(S=='replay')repCam(); // CINEMATIC replay camera (see repCam)
  else if(S=='over'&&ES)endCam();
  else if(S=='intro'&&IN.rt<IN.b0)introCam();
  else{let dp,dl,fv;const sk=shake*1.5;
@@ -2760,7 +2820,7 @@ function render(dt){
   if(Math.abs(cam.fov-fv)>.001){cam.fov=fv;cam.updateProjectionMatrix()}
   cam.lookAt(camLk);if(S=='intro')introBlend()}
  envUpd(dt);if(GFX=='SUPER')superPass();
- if(S=='replay'&&RC==3){R.setRenderTarget(FE.rt);R.render(sc3,cam);R.setRenderTarget(null);R.render(FE.sc,FE.cam)}else R.render(sc3,cam);
+ R.render(sc3,cam);
 }
 
 // ---------- 2D overlay ----------
@@ -2879,9 +2939,9 @@ function draw(){
  if(S=='cdebut'){renderDebut();drawDebut()}
  if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();profBtnDraw();lbMiniDraw();if(PN.on)pnDraw();if(PF.on)profDraw();if(LB.on)lbDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
-  ['RESUME','CUSTOMISATION','REPLAY CAM:  '+['FAR','CLOSE','BASKET','DRONE'][RC],'MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText((on&&i==2?'◀  ':'')+t+(on&&i==2?'  ▶':''),480,y)});
-  g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · A/D or ←/→ change replay cam · K to close',480,462);g.fillText('Replay cam follows the scorer · graphics, ball trail and court live under CUSTOMISATION',480,486)}
- if(S=='replay'){g.fillStyle='#000';g.fillRect(0,0,960,46);g.fillRect(0,494,960,46);g.textAlign='left';g.fillStyle='#ff3b3b';g.font='bold 22px Georgia';g.fillText('● REPLAY  ·  '+['FAR','CLOSE','BASKET','DRONE'][RC]+' CAM  ·  #'+RP.who.n+' '+POS[RP.who.i],24,32);g.textAlign='right';g.fillStyle='#fff';g.font='15px system-ui';g.fillText('1 FAR · 2 CLOSE · 3 BASKET · 4 DRONE · T RESUME',936,525);g.textAlign='center'}
+  ['RESUME','CUSTOMISATION','MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText(t,480,y)});
+  g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · K to close',480,462);g.fillText('Graphics, ball trail and court live under CUSTOMISATION',480,486)}
+ if(S=='replay'){g.fillStyle='#000';g.fillRect(0,0,960,46);g.fillRect(0,494,960,46);g.textAlign='left';g.fillStyle='#ff3b3b';g.font='bold 22px Georgia';g.fillText('● REPLAY  ·  #'+RP.who.n+' '+POS[RP.who.i],24,32);if((RP.sp||1)<.8){g.textAlign='right';g.fillStyle='rgba(255,255,255,'+(.55+.35*Math.sin(performance.now()/180))+')';g.font='italic bold 16px Georgia';g.fillText('SLOW MOTION',936,30)}g.textAlign='right';g.fillStyle='#fff';g.font='15px system-ui';g.fillText('T RESUME',936,525);g.textAlign='center'}
  if(S=='play'&&!HC&&(RP.has||RP.mk)&&RP.show>0){g.fillStyle='rgba(10,12,18,.8)';g.beginPath();g.roundRect(360,486,240,34,17);g.fill();g.fillStyle='#ffd23f';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('PRESS T FOR REPLAY',480,508)}
  if(S=='look')renderLook();
  if(S=='rteam')renderRTeam();
@@ -2896,13 +2956,12 @@ function loop(ts){frame(ts);requestAnimationFrame(loop)}
 function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one frame of the game (loop() drives it; online, a hidden tab drives it from a worker clock)
  if(S=='play'&&(P.Digit1||P.Numpad1)){CAMM=(CAMM+1)%CAM_N.length;camT=1;say('CAMERA:  '+CAM_N[CAMM],'#7fffa0');savePrefs()}
  menuStep(dt);onlStep(dt);if(S=='over')endStep(dt);
- if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+3)%4;if(P.ArrowDown||P.KeyS)PM=(PM+1)%4;const dd=(P.ArrowRight||P.KeyD||P.Enter?1:0)-(P.ArrowLeft||P.KeyA?1:0);
-  if(dd){if(PM==0){if(P.Enter)S='play'}else if(PM==1){if(P.Enter)openCust('pause')}else if(PM==2)RC=(RC+dd+4)%4;else if(P.Enter)toMenu()}
+ if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+2)%3;if(P.ArrowDown||P.KeyS)PM=(PM+1)%3;const dd=(P.ArrowRight||P.KeyD||P.Enter?1:0)-(P.ArrowLeft||P.KeyA?1:0);
+  if(dd){if(PM==0){if(P.Enter)S='play'}else if(PM==1){if(P.Enter)openCust('pause')}else if(P.Enter)toMenu()}
   if(P.KeyK||P.Escape)S='play'}else if(P.KeyK&&S=='play'&&!NET.on)S='pause'; // (online there is no pause: K asks to leave, see onlStep)
- if(S=='replay'){for(let i=0;i<4;i++)if(P['Digit'+(i+1)]||P['Numpad'+(i+1)]){RC=i;RP.snap=1;RP.fd=null}}
  if(P.KeyT&&!HC){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
  if(RP.want&&RP.has&&S=='play'){RP.want=0;startRep()}
- musUpd();navBlip();crowdUpd();if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S))blankGL();else render(S=='intro'?dt*IN.ts:dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
+ musUpd();navBlip();crowdUpd();if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S))blankGL();else render(S=='intro'?dt*IN.ts:S=='replay'?dt*(RP.sp||1):dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
 const floorL=floor.material,floorS=new THREE.MeshStandardMaterial({map:floorL.map,roughness:.28,metalness:.08}),hemi=new THREE.HemisphereLight(0xdde8ff,0x3a2a1a,.55),spots=[7,87].map(x=>{const l=new THREE.SpotLight(0xfff1dc,1.1,160,.9,.6,1);l.position.set(x,45,32);l.target.position.set(x,0,32);sc3.add(l,l.target);l.visible=false;return l});
 hemi.visible=false;sc3.add(hemi,dl.target);
 // ===== SUPER graphics: planar ray-style reflections (mirrored-camera pass), 4K sun shadows + two cross-lighting shadow-casting arena lights, warm floor bounce light, contact darkening =====
@@ -4368,10 +4427,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.61'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.62'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.62','Cinematic replays',['The four replay cameras are gone. In their place: ONE cinematic replay director. It reads the play (who passed, who caught it, how it was finished) and cuts it like a broadcast: the passer as he lets it go, the catch side-on, a low tracking shot of the drive, then the moment itself.',
+  'Dunks: a low angle under the rim in slow motion as he takes off, then a high reverse angle for the slam and whatever is left on the floor. Jumpers: in his face in slow motion as he rises, then over the shoulder for the ball\'s flight. Layups: a low baseline angle in slow motion. Every replay ends on a reaction shot.',
+  'Every shot is framed so the players it is about are fully in the picture, and the camera finds a clear angle when someone steps in the way. It stays inside the fence and never sits behind the hoop stanchion.']],
  ['v1.61','Practice mode',['PRACTICE is now a 4th option when you play Career. Pick a drill: SHOOTAROUND (just you and the ball, every shot comes back to you at the top of the key), 1V1 DEFENDER (a mid-level defender guards you properly with 1v1 rules, you always get the ball back), RIM PROTECTOR (a defender sits at the rim and contests your dunks and layups, no reach-ins) or 3V3 HALF COURT (three a side on one basket with 1v1 rules: a score switches possession, check ball at the top of the key).',
   'Practice has no score limit and gives no EXP or credits. Pause (K) and choose MAIN MENU to leave.']],
  ['v1.60','Online ragdolls',['Online games now show the full ragdoll on both screens: the host sends each ragdoll hit and the guest runs it through the same physics, so both players see the same fall at the same moment, and both see everyone get back up when the possession resets.']],
