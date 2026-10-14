@@ -488,7 +488,7 @@ const SIG_DEF=[
  {id:"pogo",no:49,n:"POGO STICK",cat:3,el:0,req:{blk:[56,66,76]},v:[0.3, 0.55, 0.8],f:"%",d:"The wait before your next jump after landing is cut by {}, and you leave the floor quicker."},
  {id:"check1v1",no:50,n:"CHECK-BALL KILLER",cat:4,el:0,req:{bh:[60,70,80]},v:[0.05, 0.1, 0.16],f:"+%",d:"1v1 only: your first move or shot within 2.5s of a check ball gets {} burst speed or make chance."},
  {id:"general",no:51,n:"FLOOR GENERAL",cat:2,el:1,req:{pas:[82,87,91],bh:[74,81,85]},v:[0.1, 0.2, 0.35],f:"%",d:"Teammates on the floor with you get stripped and picked off {} less, and beat the shot clock more often."},
- {id:"momentum",no:53,n:"MOMENTUM TAKEOFF",cat:1,el:0,req:{dnk:[66,75,79],spd:[66,75,79]},v:[0.25, 0.5, 0.8],f:"+%",d:"Sprinting into a dunk (Shift held) from far out: you leave the floor way out and glide in for the slam (about 14 ft from the rim at Bronze, 16 ft at Silver, 18 ft at Gold), and you can call for a lob (Q) from further out on the run (stacks with Lob City)."},
+ {id:"momentum",no:53,n:"MOMENTUM TAKEOFF",cat:1,el:0,req:{dnk:[66,75,79],spd:[66,75,79]},v:[0.25, 0.5, 0.8],f:"+%",d:"Sprinting into a dunk (Shift held) from far out: you leave the floor way out and glide in for the slam (up to about 15 ft from the rim at Bronze, 19 ft at Silver, 21 ft at Gold - and from closer in it still takes off as far out as there's room for), and you can call for a lob (Q) from further out on the run (stacks with Lob City)."},
  {id:"closer",no:52,n:"CLOSER",cat:4,el:1,req:{mid:[80,84,88],lay:[76,80,84]},v:[0.03, 0.06, 0.1],f:"+%",d:"{} make chance on every shot and layup in the last 2 minutes of the 4th (or with either side at 10 in 1v1)."}];
 const SIG_CATS=['SHOOTING','FINISHING','PLAYMAKING','DEFENCE','REBOUNDING & HUSTLE'],
  SIG_RULES={max:0,gold:0,elite:3,perCat:0}, // equip limits on top of the per-category SP budget (max = total, gold / elite = how many Gold / ELITE, perCat = per category; 0 = no limit: equip as many as your ratings unlock and your SP pays for)
@@ -830,7 +830,7 @@ function dunkMiss(p){const H=hx(p.team),D=dr(p.team),bk=Math.random()<.35;p.hot=
 // MOMENTUM TAKEOFF: sprinting into a dunk from far out, he really LEAVES THE FLOOR far out - td = take-off distance from the dunk point (Tx, 2 ft in front of the rim):
 // td[0] + td[1] x the badge value (Bronze .25 -> ~14.5 ft from the rim, Silver .5 -> ~16 ft, Gold .8 -> ~18 ft). The flight floats (gravity x gs) and goes hz higher so the
 // distance is covered in a glide. Same dunk animations, just the take-off point: never in the Store, only for a player with the badge equipped (AI included).
-const MOMT={td:[110,60],gs:.55,hz:4};
+const MOMT={tdT:[0,165,205,245],gs:.55,hz:4,min:90}; // take-off distance from the rim by tier (Bronze / Silver / Gold), and the least room it needs
 // KNOCKED DOWN (posterized): a reaction to the contact, a fall that speeds up like a real one, a little bounce, lying there, then back up (KD.T s in all).
 // Which way he goes depends on where the push comes from relative to his body: straight back (or forward when hit from behind), or to his left / right.
 const KD={r:34,T:2.2,A:1.4,push:85};
@@ -920,7 +920,7 @@ const _KB=new THREE.Box3(),_KQ=new THREE.Quaternion(),_KY=new THREE.Quaternion()
 function kdAng(k){const t=k.spin?Math.max(0,k.t-.3):k.t,A=k.A||KD.A,TT=k.T||KD.T,a=t<.14?.15*t/.14:t<.66?.15+(A-.15)*Math.pow((t-.14)/.52,2):t<.82?A-.08*Math.sin((t-.66)/.16*Math.PI):t<TT-.6?A:A*(1-sm3(Math.min(1,(t-TT+.6)/.6)));
  return a}
 function startDunk(p){
- const H=hx(p.team),d=Math.hypot(H-p.x,HY-p.y);const mo=sprintN(p)?sigv(p,'momentum'):0,td=mo?MOMT.td[0]+MOMT.td[1]*mo:0;if(d>Math.max(150*(1+mo),td+60)){if(p.team==0)say('GET CLOSER TO DUNK');return}
+ const H=hx(p.team),d=Math.hypot(H-p.x,HY-p.y);const mo=sprintN(p)?sigv(p,'momentum'):0,td=mo?MOMT.tdT[sigT(p,'momentum')]||MOMT.tdT[1]:0;if(d>Math.max(150*(1+mo),td+60)){if(p.team==0)say('GET CLOSER TO DUNK');return}
  if(p.air||p.jph||p.dunk)return;
  const pt_={x:H-dr(p.team)*30,y:HY},pz=sigv(p,'poster'),d0=nearD(pt_,TM[1-p.team],75,0),dd=d0||(pz?nearD({x:H,y:HY},TM[1-p.team],[0,110,140,180][sigT(p,'poster')]||75,0):null),blk=false,pos=!!dd, // (Posterizer: any defender within 11 / 14 / 18 ft of the rim can be the man - he is pulled into your path) // (blocks are physical now: see PHYSICAL BLOCKS)
   dn=p.rt&&p.rt.dnk>0?p.rt.dnk:50,sn=Math.max(0,Math.min(1,((p.rt&&p.rt.str>0?p.rt.str:50)-25)/75)),cc=cont(p),
@@ -928,7 +928,7 @@ function startDunk(p){
   mk=!blk&&(DKS[sty].pz&&Math.random()<.5+1.3*pz||dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),pst,sn)); // (Posterizer dunks go down 63 / 76 / 95% of the time)
  if(pst&&pz)sigFx(p,'poster');
  const spd=Math.hypot(p.vx,p.vy),al=(p.vx*(H-p.x)+p.vy*(HY-p.y))/((spd||1)*(d||1)),p1=Math.min(.95,Math.max(.05,.1+.55*(spd/170)*(.5+.5*Math.max(0,al))+.35*Math.min(1,d/130))),ft=DKS[sty].ft||(sty==2||sty==5?2:Math.random()<p1?1:2),st_=DKS[sty];
- p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,pst,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm;if(mo&&d-20>=td){Object.assign(p.dunk,{td,gs:MOMT.gs,mo});p.dunk.hzb+=MOMT.hz;sigFx(p,'momentum')} // (per-style take-off distance and jump height, see the v1.17 dunks) (long take-off: far enough out when he starts it)
+ p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,pst,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm;if(mo&&d-30>=MOMT.min){Object.assign(p.dunk,{td:Math.min(td,d-30),gs:MOMT.gs,mo});p.dunk.hzb+=MOMT.hz;sigFx(p,'momentum')} // (per-style take-off distance and jump height, see the v1.17 dunks) (long take-off: far enough out when he starts it)
  RP.rel=RT;RP.who=p;beep(180,.15,'sawtooth');
 }
 // phases: 0 run-up, 1 plant/load, 2 push (legs extend), 3 airborne rise to the dunk, 4 airborne fall + landing
@@ -4494,10 +4494,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.65'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.66'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.66','Momentum Takeoff buff',['MOMENTUM TAKEOFF reaches further: up to about 15 ft from the rim at Bronze, 19 ft at Silver and 21 ft at Gold (was ~13 / 16 / 17).',
+  'Fixed: it only worked if you started the dunk from beyond its full distance - start it a bit closer and you got a normal close-range take-off. Now, sprinting in, you always leave the floor as far out as the badge and the room allow.']],
  ['v1.65','Contesting dunks',['A defender who jumps to contest a DUNK now goes up toward the rim (still facing the dunker) instead of launching himself at the dunker - so the two bodies travel the same way and meet at the rim. In the air the dunker carries him back toward the rim instead of flying through him; a defender who was beaten jumps up behind him, a step back, not through his back.',
   'Fixed: jumpers had lost their body turn toward the rim during the shot.']],
  ['v1.64','Jump shots & new bodies',['24 JUMP SHOTS. Every player now has his own jumper - different set point (chest push to loaded above the head), release angle and height, elbow, wrist flick, release speed, guide hand, lean, leg kick, and some heave it with the shoulders and core. Quicker, higher releases have a faster shot meter and need a higher rating.',
