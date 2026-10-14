@@ -4201,10 +4201,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.31'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.32'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.32','Accounts',['New ACCOUNT section at the top of your PROFILE (press P on the main menu). CREATE ACCOUNT gives you a 6-character code made of letters and numbers. Write it down.',
+  'Your whole save (career players, profile, stats and settings) is backed up online under that code, and backed up again whenever it changes.',
+  'If this browser\'s data is ever cleared, or you play on another device, open PROFILE, choose SIGN IN WITH CODE (or press C) and type your code to get everything back.',
+  'You stay signed in on this device. Signing in with a different code replaces what is on this device with that account\'s save.']],
  ['v1.31','Profile',['New PROFILE box on the main menu (left side, or press P). Click it to open your profile.',
   'Change your USERNAME (up to 12 letters) and pick any team logo as your profile picture.',
   'LIFETIME STATS: games, record, win %, points, rebounds, assists, steals, per-game averages, FG and 3PT, from every finished game in every mode, plus your record in 5v5, 3v3, 1v1, Career and Online.',
@@ -4268,13 +4272,13 @@ profLoad();
 function profRecord(){const me=NET.on?null:myP(),k=NET.on?'ONLINE':me?'CAREER':MODE+'v'+MODE,w=sc[0]>sc[1]?'w':'l',m=PF.d.md[k];
  [PF.d.st,m].forEach(o=>{if(o){o.gp++;o[w]++}});(me?[me]:TM[0]).forEach(p=>{const s=pstat(p);PF_K.forEach(k=>PF.d.st[k]+=s[k]|0)});profSave()}
 function profOpen(){PF.on=true;PF.ed=false;beep(520,.06,'triangle')}
-function profClose(){PF.on=false;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
+function profClose(){PF.on=false;ACCT.in=null;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
 function profLogo(i){PF.d.logo=(i+TEAMS.length)%TEAMS.length;profSave();beep(440,.05,'triangle')}
 function profEdit(on){PF.ed=on;if(!on){PF.d.name=PF.d.name.trim()||'PLAYER';profSave()}beep(on?520:440,.05,'triangle')}
-function profKeys(up,dn,ok){if(PF.ed){if(P.Enter||P.Escape)profEdit(false);return}
+function profKeys(up,dn,ok){if(ACCT.in!=null){acKeysStep();return}if(PF.ed){if(P.Enter||P.Escape)profEdit(false);return}
  const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0)+(dn?3:0)-(up?3:0);if(lr)profLogo(PF.d.logo+lr);
- if(ok)profEdit(true);else if(P.Escape||P.Backspace||P.KeyP)profClose()}
-function profPtr(x,y,type){if(type!=0)return;if(mIn(x,y,PF_X)||!mIn(x,y,PF_BOX)){profClose();return}
+ if(ok)profEdit(true);else if(P.KeyC){ACCT.in='';ACCT.msg=''}else if(P.Escape||P.Backspace||P.KeyP)profClose()}
+function profPtr(x,y,type){if(type!=0)return;if(mIn(x,y,PF_X)||!mIn(x,y,PF_BOX)){profClose();return}if(acPtr(x,y))return;
  if(mIn(x,y,PF_NAME)){profEdit(!PF.ed);return}if(PF.ed)profEdit(false);for(let i=0;i<TEAMS.length;i++)if(mIn(x,y,PF_LOGO(i))){profLogo(i);return}}
 addEventListener('keydown',e=>{ // username entry (same rules as a created player's name)
  if(!PF.on||!PF.ed||e.ctrlKey||e.metaKey||e.altKey)return;const d=PF.d;
@@ -4283,10 +4287,10 @@ addEventListener('keydown',e=>{ // username entry (same rules as a created playe
 const pfPct=(m,a)=>a?(100*m/a).toFixed(1)+'%':'-',pfAvg=(v,n)=>n?(v/n).toFixed(1):'-';
 function profBtnDraw(){if(MN.gate||MN.t<T_READY-.6||PN.on)return;const[x,y,w,h]=PF_BTN,s=PF.d.st;mRR(x,y,w,h,12,PF.on?'rgba(40,32,8,.9)':'rgba(8,10,16,.78)',GOLD);
  g.save();g.drawImage(teamLogo(PF.d.logo),x+6,y+5,48,48);g.textAlign='left';let fz=22;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif';while(g.measureText(PF.d.name).width>w-80&&fz>12){fz--;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif'}
- g.fillStyle='#fff';g.fillText(PF.d.name,x+62,y+27);g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('PROFILE (P)  ·  '+s.gp+(s.gp==1?' game':' games')+'  ·  '+s.w+'-'+s.l,x+62,y+45);g.restore()}
+ g.fillStyle='#fff';g.fillText(PF.d.name,x+62,y+27);g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText((ACCT.code?'':'NOT SIGNED IN  ·  ')+'PROFILE (P)  ·  '+s.gp+(s.gp==1?' game':' games')+'  ·  '+s.w+'-'+s.l,x+62,y+45);g.restore()}
 function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d,s=d.st;g.save();
  g.fillStyle='rgba(4,5,9,.72)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.97)',GOLD);
- g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('PROFILE',bx+20,by+40);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('PROFILE',bx+20,by+40);acDraw();
  {const[x,y,w,h]=PF_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
  // left: picture, username, logo picker
  g.drawImage(teamLogo(d.logo),140,96,150,150);
@@ -4306,6 +4310,50 @@ function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d,s=d.st;g.save();
  PF_MODES.forEach((k,i)=>{const m=d.md[k],y=by+322+i*20;g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText(k,360,y);g.fillStyle='#dfe3ea';g.font='13px system-ui';
   [[m.gp,500],[m.w,600],[m.l,700],[pfPct(m.w,m.gp),790]].forEach(([t,x])=>g.fillText(String(t),x,y))});
  g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('stats count every finished game  ·  Esc / P close  ·  or click outside',360,by+bh-14);g.restore()}
+// ===== ACCOUNTS (in the PROFILE): a 6-character code backs up the whole save (players, profile, stats, settings) to public Nostr relays, so it can be restored on any device or after the browser's data is cleared.
+// The code is the only secret: it derives the Nostr key that signs the backup, so only someone with the code can read it back by key or overwrite it. Re-sent from the menu whenever the save changes.
+// shortcut: public relays may drop old events after weeks or months, so a code that hasn't synced in a long time can stop working; move the backup to a real database (e.g. Firebase) if players report lost codes.
+const AC_KEY='hardwood27.account.v1',AC_ABC='ABCDEFGHJKMNPQRSTUVWXYZ23456789',AC_D='hardwood27-save',AC_RELAYS=['wss://nos.lol','wss://relay.damus.io','wss://relay.primal.net','wss://nostr.mom','wss://relay.nostr.net'];
+const ACCT={code:null,last:'',msg:'',in:null,busy:0},AC_B1=[244,62,170,34],AC_B2=[422,62,170,34],AC_IN=[244,62,348,34],AC_B3=[592,62,166,34];try{const c=localStorage.getItem(AC_KEY);if(/^[A-Z0-9]{6}$/.test(c))ACCT.code=c}catch(e){}
+const acBytes=h=>new Uint8Array((String(h).match(/../g)||[]).map(x=>parseInt(x,16))),acHex=b=>[...b].map(x=>x.toString(16).padStart(2,'0')).join(''),acSha=async s=>new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),
+ acId=ev=>acSha(JSON.stringify([0,ev.pubkey,ev.created_at,ev.kind,ev.tags,ev.content])),acKeys=async code=>{const sk=await acSha('hardwood27 account '+code);return{sk,pk:acHex(H27P2P.schnorr.getPublicKey(sk))}};
+function acSnap(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('hardwood27.')&&k!=AC_KEY)o[k]=localStorage.getItem(k)}}catch(e){}return JSON.stringify(o)}
+// one short-lived socket per relay: send one message, hand every reply to onMsg until it returns true (or the time runs out)
+function acRelay(url,send,onMsg,ms=7000){return new Promise(res=>{let ws,t;const end=()=>{clearTimeout(t);try{ws.close()}catch(e){}res()};try{ws=new WebSocket(url)}catch(e){return res()}
+ t=setTimeout(end,ms);ws.onopen=()=>ws.send(JSON.stringify(send));ws.onerror=end;ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(onMsg(m))end()}})}
+async function acPush(){if(!ACCT.code||ACCT.busy||ACCT.in!=null)return;const snap=acSnap();if(snap==ACCT.last)return;ACCT.busy=1;let ok=0;
+ try{const{sk,pk}=await acKeys(ACCT.code),ev={pubkey:pk,created_at:Math.floor(Date.now()/1000),kind:30078,tags:[['d',AC_D]],content:snap},id=await acId(ev);
+  ev.id=acHex(id);ev.sig=acHex(await H27P2P.schnorr.signAsync(id,sk));
+  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',ev],m=>{if(m[0]=='OK'&&m[1]==ev.id){if(m[2])ok++;return true}})))}catch(e){}
+ if(ok)ACCT.last=snap;ACCT.msg=ok?'SAVED TO CLOUD':'CLOUD SAVE FAILED - RETRYING SOON';ACCT.busy=0}
+async function acPull(code){const{pk}=await acKeys(code),pkB=acBytes(pk),evs=[];
+ await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27',{kinds:[30078],authors:[pk],'#d':[AC_D],limit:1}],m=>{if(m[0]=='EVENT'&&m[2]&&m[2].pubkey==pk)evs.push(m[2]);return m[0]=='EOSE'})));
+ let best=null;for(const ev of evs.sort((a,b)=>b.created_at-a.created_at)){try{const id=await acId(ev);if(acHex(id)==ev.id&&await H27P2P.schnorr.verifyAsync(acBytes(ev.sig),id,pkB)){best=ev;break}}catch(e){}} // a relay can't forge or alter someone's save
+ return best}
+function acCreate(){const r=crypto.getRandomValues(new Uint8Array(6));ACCT.code=[...r].map(x=>AC_ABC[x%AC_ABC.length]).join('');try{localStorage.setItem(AC_KEY,ACCT.code)}catch(e){}
+ ACCT.last='';ACCT.msg='SAVING...';beep(520,.06,'triangle');acPush()}
+async function acSignIn(code){if(ACCT.busy)return;if(code==ACCT.code){ACCT.in=null;return}
+ const has=acSnap()!='{}';if(has&&!confirm('Sign in with code '+code+'?\n\nThe players, profile and stats on this device will be replaced by that account\'s save.'+(ACCT.code?'\n\n(Your current account '+ACCT.code+' stays backed up.)':'')))return;
+ ACCT.in=null;ACCT.busy=1;ACCT.msg='SIGNING IN...';let ev=null;try{ev=await acPull(code)}catch(e){}ACCT.busy=0;
+ let o=null;try{o=ev&&JSON.parse(ev.content)}catch(e){}if(!o||typeof o!='object'){ACCT.msg=ev?'THAT SAVE IS DAMAGED':'NO ACCOUNT FOUND FOR '+code;return}
+ try{Object.keys(localStorage).filter(k=>k.startsWith('hardwood27.')).forEach(k=>localStorage.removeItem(k));
+  for(const k in o)if(k.startsWith('hardwood27.')&&k!=AC_KEY&&typeof o[k]=='string')localStorage.setItem(k,o[k]);localStorage.setItem(AC_KEY,code)}catch(e){ACCT.msg='COULD NOT SAVE ON THIS DEVICE';return}
+ location.reload()}
+addEventListener('keydown',e=>{ // account code entry
+ if(!PF.on||ACCT.in==null||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.key=='Backspace'){ACCT.in=ACCT.in.slice(0,-1);e.preventDefault()}else if(/^[A-Za-z0-9]$/.test(e.key)&&ACCT.in.length<6)ACCT.in+=e.key.toUpperCase()});
+function acKeysStep(){if(P.Enter&&ACCT.in.length==6)acSignIn(ACCT.in);else if(P.Escape)ACCT.in=null}
+function acPtr(x,y){if(ACCT.busy)return mIn(x,y,AC_IN);if(ACCT.in!=null){if(mIn(x,y,AC_IN))return true;ACCT.in=null;return false}
+ if(mIn(x,y,ACCT.code?AC_B3:AC_B2)){ACCT.in='';ACCT.msg='';beep(520,.05,'triangle');return true}if(!ACCT.code&&mIn(x,y,AC_B1)){acCreate();return true}return false}
+function acDraw(){g.save();g.textAlign='left';const btn=(r,t)=>{const[x,y,w,h]=r;mRR(x,y,w,h,8,'rgba(255,210,63,.12)',GOLD);g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText(t,x+w/2,y+22);g.textAlign='left'};
+ const msg=(t,x)=>{g.font='11px system-ui';g.fillStyle=/FAIL|NO ACC|DAMAGED|COULD NOT/.test(t)?'#ff8a7a':'#8a90a0';g.fillText(t,x,84)};
+ if(ACCT.in!=null){const[x,y,w,h]=AC_IN;mRR(x,y,w,h,8,'rgba(255,210,63,.16)',GOLD);g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('CODE',x+12,y+22);
+  g.font='bold 22px ui-monospace,Menlo,monospace';g.fillStyle='#fff';g.fillText((ACCT.in+'______').slice(0,6).split('').join(' '),x+56,y+25);msg(ACCT.in.length==6?'Enter to sign in  ·  Esc cancel':'type your 6-character code',x+w+10)}
+ else if(ACCT.code){g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('ACCOUNT CODE  ·  write it down',244,72);g.font='bold 22px ui-monospace,Menlo,monospace';g.fillStyle=GOLD;g.fillText(ACCT.code,244,95);
+  msg(ACCT.busy?'...':ACCT.msg||'signed in',350);btn(AC_B3,'USE ANOTHER CODE')}
+ else{btn(AC_B1,'CREATE ACCOUNT');btn(AC_B2,'SIGN IN WITH CODE');msg(ACCT.busy?'...':ACCT.msg||'not signed in',600)}
+ g.restore()}
+setTimeout(acPush,4000);setInterval(()=>{if(S=='menu'||S=='over')acPush()},20000);
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
