@@ -687,12 +687,15 @@ const MOMT={td:[110,60],gs:.55,hz:4};
 // KNOCKED DOWN (posterized): a reaction to the contact, a fall that speeds up like a real one, a little bounce, lying there, then back up (KD.T s in all).
 // Which way he goes depends on where the push comes from relative to his body: straight back (or forward when hit from behind), or to his left / right.
 const KD={r:34,T:2.2,A:1.4,push:85};
-function knockDown(d,p){let vx=p.dunk&&p.dunk.ax!=null?p.dunk.ax:d.x-p.x,vy=p.dunk&&p.dunk.ay!=null?p.dunk.ay:d.y-p.y,l=Math.hypot(vx,vy)||1;vx/=l;vy/=l; // pushed the way the dunker is going
- const bk=-(vx*d.fx+vy*d.fy),lf=vx*d.fy-vy*d.fx; // push along his back / his left (his left = (fy, -fx): the rig's +x)
- d.kd={t:0,s:Math.abs(lf)>Math.abs(bk)*.7?(lf>0?'L':'R'):bk>=0?'B':'F'};d.stun=KD.T;d.stb=0;d.jump=0;d.lock=0;d.vx=d.avx=vx*KD.push;d.vy=d.avy=vy*KD.push}
-// his body tilt (pitch about his own x axis, roll about his own z) at time t of the knockdown
+function knockDown(d,p){const k=p.dunk,ox=k&&k.sx!=null?k.sx:p.x-p.vx*.3,oy=k&&k.sy!=null?k.sy:p.y-p.vy*.3; // pushed AWAY FROM WHERE THE DUNKER CAME FROM (where he started the dunk)
+ let vx=d.x-ox,vy=d.y-oy,l=Math.hypot(vx,vy);if(l<10&&k&&k.ax!=null){vx=k.ax;vy=k.ay;l=1}vx/=l||1;vy/=l||1;
+ const yaw=d.m?d.m.rotation.y:Math.atan2(d.fx,d.fy),fx=Math.sin(yaw),fy=Math.cos(yaw); // his BODY's facing as drawn right now (not where the AI wants to turn him)
+ const fw=vx*fx+vy*fy,lf=vx*fy-vy*fx; // that push in his frame: fw along his facing, lf to his left (his left = (fy, -fx): the rig's +x)
+ d.kd={t:0,fw,lf,yaw,s:Math.abs(lf)>Math.abs(fw)?(lf>0?'L':'R'):fw<=0?'B':'F'};/* he tips exactly along the push (kdAng); s only picks the reaction pose */d.stun=KD.T;d.stb=0;d.jump=0;d.lock=0;d.vx=d.avx=vx*KD.push;d.vy=d.avy=vy*KD.push}
+// how far he has tipped over (radians) at time t of the knockdown; he tips about ONE axis, square to the push, with his body yaw frozen at the hit
+const _KQ=new THREE.Quaternion(),_KY=new THREE.Quaternion(),_KA=new THREE.Vector3(),_KU=new THREE.Vector3(0,1,0);
 function kdAng(k){const t=k.t,A=KD.A,a=t<.14?.15*t/.14:t<.66?.15+(A-.15)*Math.pow((t-.14)/.52,2):t<.82?A-.08*Math.sin((t-.66)/.16*Math.PI):t<KD.T-.6?A:A*(1-sm3(Math.min(1,(t-KD.T+.6)/.6)));
- return k.s=='B'?[-a,0]:k.s=='F'?[a*.9,0]:[-.35*a,k.s=='L'?-a:a]}
+ return a}
 function startDunk(p){
  const H=hx(p.team),d=Math.hypot(H-p.x,HY-p.y);const mo=sprintN(p)?sigv(p,'momentum'):0,td=mo?MOMT.td[0]+MOMT.td[1]*mo:0;if(d>Math.max(150*(1+mo),td+60)){if(p.team==0)say('GET CLOSER TO DUNK');return}
  if(p.air||p.jph||p.dunk)return;
@@ -2578,7 +2581,7 @@ function render(dt){
   m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw;
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=KD.T||p.stun<=0)p.kd=null}
-  if(p.kd){const[ax,az]=kdAng(p.kd);m.rotation.x=ax;m.rotation.z=az}else{m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);m.rotation.z=ex(m.rotation.z,0,dt,10)} // stumble (stb) = a slight backward lean; any other stun = full fall
+  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw)).multiply(_KQ)} // (local push (lf, 0, fw): the head goes that way)else{m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);m.rotation.z=ex(m.rotation.z,0,dt,10)} // stumble (stb) = a slight backward lean; any other stun = full fall
   if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
  }));
@@ -4250,10 +4253,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.51'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.52'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.52','Realistic posterizer falls',['A posterized defender now falls exactly the way he is pushed: straight away from where the dunker came from. Come down the middle from half court and he goes down backwards towards the baseline, whichever way he happened to be facing; catch him from an angle and he falls along that angle.']],
  ['v1.51','Posterized!',['Posterizing is no longer a dunk you equip: ANY dunk posterizes a defender who is in contact with you under the rim when you slam it. The POSTERIZERS package is gone from the STORE.',
   'Getting dunked on looks real now: the defender reacts to the hit, then falls at a natural speed, lands, lies there for a moment and gets back up.',
   'He falls the way he was hit: straight back, or to his left or right when you catch him from the side.']],
