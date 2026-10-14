@@ -351,7 +351,7 @@ const SIG_DEF=[
  {id:"pogo",no:49,n:"POGO STICK",cat:3,el:0,req:{blk:[56,66,76]},v:[0.3, 0.55, 0.8],f:"%",d:"The wait before your next jump after landing is cut by {}, and you leave the floor quicker."},
  {id:"check1v1",no:50,n:"CHECK-BALL KILLER",cat:4,el:0,req:{bh:[60,70,80]},v:[0.05, 0.1, 0.16],f:"+%",d:"1v1 only: your first move or shot within 2.5s of a check ball gets {} burst speed or make chance."},
  {id:"general",no:51,n:"FLOOR GENERAL",cat:2,el:1,req:{pas:[82,87,91],bh:[74,81,85]},v:[0.1, 0.2, 0.35],f:"%",d:"Teammates on the floor with you get stripped and picked off {} less, and beat the shot clock more often."},
- {id:"momentum",no:53,n:"MOMENTUM TAKEOFF",cat:1,el:0,req:{dnk:[66,75,79],spd:[66,75,79]},v:[0.25, 0.5, 0.8],f:"+%",d:"Sprinting into a dunk (Shift held): you take off {} further from the rim, and you can call for a lob (Q) from further out on the run (stacks with Lob City)."},
+ {id:"momentum",no:53,n:"MOMENTUM TAKEOFF",cat:1,el:0,req:{dnk:[66,75,79],spd:[66,75,79]},v:[0.25, 0.5, 0.8],f:"+%",d:"Sprinting into a dunk (Shift held) from far out: you leave the floor way out and glide in for the slam (about 14 ft from the rim at Bronze, 16 ft at Silver, 18 ft at Gold), and you can call for a lob (Q) from further out on the run (stacks with Lob City)."},
  {id:"closer",no:52,n:"CLOSER",cat:4,el:1,req:{mid:[80,84,88],lay:[76,80,84]},v:[0.03, 0.06, 0.1],f:"+%",d:"{} make chance on every shot and layup in the last 2 minutes of the 4th (or with either side at 10 in 1v1)."}];
 const SIG_CATS=['SHOOTING','FINISHING','PLAYMAKING','DEFENCE','REBOUNDING & HUSTLE'],
  SIG_RULES={max:0,gold:0,elite:3,perCat:0}, // equip limits on top of the per-category SP budget (max = total, gold / elite = how many Gold / ELITE, perCat = per category; 0 = no limit: equip as many as your ratings unlock and your SP pays for)
@@ -658,7 +658,7 @@ function vert(p,dt){
 // (v1.17, measured on reference clips) jump height = what it takes to get the hand to the rim + 1-6 inches + the style's extra: 0.75-1.0 s in the air.
 // Take-off distance comes from cmax (the flight speed allowed, as a share of the run-up): a two-foot jump stop goes up ~5 ft out, a one-foot ~8 ft.
 function dunkPlan(k,vr,Dr){
- const sf=Math.max(0,Math.min(1,vr/165)),q=Math.min(1,.5*sf+.3*(k.dm/.85)+.2*k.js),hz=k.zE+1+3*q+2*sf+(k.hzb||0),vz=Math.sqrt(2*G*hz),tA=vz/G,tl=k.ft==1?.06:.1,tp=Math.max(.07,Math.min(.16,20*legX(crA(k.dm)).d/vz)),vh=Math.max(0,(Dr-tl*Math.max(vr,0)/2)/(tl/2+tp+tA));
+ const sf=Math.max(0,Math.min(1,vr/165)),q=Math.min(1,.5*sf+.3*(k.dm/.85)+.2*k.js),hz=k.zE+1+3*q+2*sf+(k.hzb||0),gs=k.gs||1,vz=Math.sqrt(2*G*gs*hz),tA=vz/(G*gs),tl=k.ft==1?.06:.1,tp=Math.max(.07,Math.min(.16,20*legX(crA(k.dm)).d/vz)),vh=Math.max(0,(Dr-tl*Math.max(vr,0)/2)/(tl/2+tp+tA));
  return{hz,vz,tA,tl,tp,vh,conv:vr>8?vh/vr:9}}
 // DUNK OUTCOME, decided when the dunk starts (like the block). dn = DUNKING rating.
 //  WIDE OPEN (no defender near the rim, contest under the OPEN tier): a sure make from 35 up; below 35, 60% at 25 rising towards 95%.
@@ -680,8 +680,12 @@ function dunkMiss(p){const H=hx(p.team),D=dr(p.team),bk=Math.random()<.35;p.hot=
  B.mode='loose';B.age=0;B.so=p.team;B.bd=D;B.h=null;B.x=H-D*6;B.y=HY+(Math.random()-.5)*14;B.z=RZ+4;
  B.vx=bk?D*(40+Math.random()*50):-D*(90+Math.random()*90);B.vy=(Math.random()-.5)*160;B.vz=110+Math.random()*90;
  rimKick(p.team,1.4);shake=.45;say(p.dunk&&p.dunk.alt?'ALTERED - RIMMED OUT!':'MISSED DUNK!','#ff6b6b');beep(140,.25,'square');beep(90,.2,'sawtooth')}
+// MOMENTUM TAKEOFF: sprinting into a dunk from far out, he really LEAVES THE FLOOR far out - td = take-off distance from the dunk point (Tx, 2 ft in front of the rim):
+// td[0] + td[1] x the badge value (Bronze .25 -> ~14.5 ft from the rim, Silver .5 -> ~16 ft, Gold .8 -> ~18 ft). The flight floats (gravity x gs) and goes hz higher so the
+// distance is covered in a glide. Same dunk animations, just the take-off point: never in the Store, only for a player with the badge equipped (AI included).
+const MOMT={td:[110,60],gs:.55,hz:4};
 function startDunk(p){
- const H=hx(p.team),d=Math.hypot(H-p.x,HY-p.y);const mo=sprintN(p)?sigv(p,'momentum'):0;if(d>150*(1+mo)){if(p.team==0)say('GET CLOSER TO DUNK');return}
+ const H=hx(p.team),d=Math.hypot(H-p.x,HY-p.y);const mo=sprintN(p)?sigv(p,'momentum'):0,td=mo?MOMT.td[0]+MOMT.td[1]*mo:0;if(d>Math.max(150*(1+mo),td+60)){if(p.team==0)say('GET CLOSER TO DUNK');return}
  if(p.air||p.jph||p.dunk)return;
  const pt_={x:H-dr(p.team)*30,y:HY},pz=sigv(p,'poster'),d0=nearD(pt_,TM[1-p.team],75,0),dd=d0||(pz?nearD(pt_,TM[1-p.team],75*(1+pz),0):null),blk=false,pos=!!dd, // (blocks are physical now: see PHYSICAL BLOCKS)
   dn=p.rt&&p.rt.dnk>0?p.rt.dnk:50,sn=Math.max(0,Math.min(1,((p.rt&&p.rt.str>0?p.rt.str:50)-25)/75)),cc=cont(p),
@@ -689,7 +693,7 @@ function startDunk(p){
   mk=!blk&&dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),sty==4,sn);
  if(sty==4&&pz)sigFx(p,'poster');
  const spd=Math.hypot(p.vx,p.vy),al=(p.vx*(H-p.x)+p.vy*(HY-p.y))/((spd||1)*(d||1)),p1=Math.min(.95,Math.max(.05,.1+.55*(spd/170)*(.5+.5*Math.max(0,al))+.35*Math.min(1,d/130))),ft=DKS[sty].ft||(sty==2||sty==5?2:Math.random()<p1?1:2),st_=DKS[sty];
- p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm;if(mo){p.dunk.cmax*=1+mo;p.dunk.mo=mo;sigFx(p,'momentum')} // (per-style take-off distance and jump height, see the v1.17 dunks)
+ p.dunk={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i],ft,dm:ft==1?.62:.85,cmax:ft==1?.55:.32,cmin:ft==1?.15:.1,vt:ft==1?172:128,blk,mk,by:dd,hit:0,sty,hang:false,hzb:st_.hz||0};if(st_.cm)p.dunk.cmax*=st_.cm;if(mo&&d-20>=td){Object.assign(p.dunk,{td,gs:MOMT.gs,mo});p.dunk.hzb+=MOMT.hz;sigFx(p,'momentum')} // (per-style take-off distance and jump height, see the v1.17 dunks) (long take-off: far enough out when he starts it)
  RP.rel=RT;RP.who=p;beep(180,.15,'sawtooth');
 }
 // phases: 0 run-up, 1 plant/load, 2 push (legs extend), 3 airborne rise to the dunk, 4 airborne fall + landing
@@ -751,20 +755,20 @@ function dunkStep(p,dt){
  const mv=(vx,vy)=>{p.vx=vx;p.vy=vy;p.x=Math.max(8,Math.min(932,p.x+vx*dt));p.y=Math.max(8,Math.min(632,p.y+vy*dt))};
  if(k.ph==0){
   const dx=Tx-p.x,dy=Ty-p.y,Dr=Math.hypot(dx,dy)||1,ux=dx/Dr,uy=dy/Dr,vr=p.vx*ux+p.vy*uy;p.fx=ux;p.fy=uy;
-  const pl=dunkPlan(k,Math.max(vr,60),Dr),vcap=Dr/(pl.tl/2+k.cmin*(pl.tl/2+pl.tp+pl.tA)),vt=Math.min(k.vt*spdM(p),vcap),a=Math.min(1,dt*(vt<vr?7:3.4));
+  const pl=dunkPlan(k,Math.max(vr,60),Dr),vcap=Dr/(pl.tl/2+k.cmin*(pl.tl/2+pl.tp+pl.tA)),vt=k.td?Math.max(k.vt*spdM(p),Math.hypot(p.vx,p.vy)):Math.min(k.vt*spdM(p),vcap),a=Math.min(1,dt*(vt<vr?7:3.4));
   mv(p.vx+(ux*vt-p.vx)*a,p.vy+(uy*vt-p.vy)*a);
   const nx=Tx-p.x,ny=Ty-p.y,nd=Math.hypot(nx,ny)||1,v2=(p.vx*nx+p.vy*ny)/nd,q=dunkPlan(k,v2,nd);
   {const vv=Math.max(v2,40),dT=k.cmax*vv*(q.tl/2+q.tp+q.tA)+q.tl*vv/2;k.pre=Math.max(k.pre||0,Math.min(1,1-(nd-dT)/vv/.3))} // the last ~0.3s before the plant (penultimate step): pose gathers the ball and sinks the hips
   // EVERY dunk is right-handed off the LEFT foot (the canonical pose). Over the last ~0.3 s (the penultimate step) his stride is nudged - a touch quicker or
   // slower, like a real gather step - so it is the left foot that comes down on the plant (sin(ph) > 0 = the left foot landing)
   if(k.pre>0&&k.lph!=null&&dt>0){const rate=(p.ph-k.lph)/dt;if(rate>1){const tpl=Math.max(dt,(1-k.pre)*.3),pr=p.ph+rate*tpl,e=Math.atan2(Math.sin(Math.PI/2-pr),Math.cos(Math.PI/2-pr));p.ph+=e*Math.min(1,dt/tpl)*.9}}k.lph=p.ph;
-  if((v2>20&&q.conv<=k.cmax)||nd<5||(v2<=20&&nd<14)||k.age>2.4){k.mir=0;Object.assign(k,{cvx:p.vx,cvy:p.vy,ph:1,pt:0,vr0:Math.max(v2,0),vh:q.vh,vz:q.vz,tA:q.tA,tl:q.tl,tp:q.tp});k.ex=Math.max(0,Math.min(1,(nd-40)/80));k.dm*=1-.3*k.ex;if(v2<=20)k.vh=Math.min(k.vh,30)}
+  if(k.td?nd-(q.tl*(Math.max(v2,0)+q.vh)/2+q.tp*q.vh)<=k.td||k.age>2.4:(v2>20&&q.conv<=k.cmax)||nd<5||(v2<=20&&nd<14)||k.age>2.4){k.mir=0;Object.assign(k,{cvx:p.vx,cvy:p.vy,ph:1,pt:0,vr0:Math.max(v2,0),vh:q.vh,vz:q.vz,tA:q.tA,tl:q.tl,tp:q.tp});k.ex=Math.max(0,Math.min(1,(nd-40)/80));k.dm*=1-.3*k.ex;if(v2<=20)k.vh=Math.min(k.vh,30)}
   return}
  const ex0=Tx-p.x,ey0=Ty-p.y,nd=Math.hypot(ex0,ey0)||1,ux=ex0/nd,uy=ey0/nd;
  if(k.ph==1){k.pt=Math.min(1,k.pt+dt/k.tl);const u=k.pt;mv(ux*(k.vr0+(k.vh-k.vr0)*u),uy*(k.vr0+(k.vh-k.vr0)*u));p.cr=k.dm*sm3(u);p.fx=ux;p.fy=uy;k.t=.12*u;if(u>=1){k.ph=2;k.pt=0}return}
  if(k.ph==2){k.pt=Math.min(1,k.pt+dt/k.tp);const u=k.pt;mv(ux*k.vh,uy*k.vh);p.cr=k.dm*(1-u*u);p.pu=u;p.fx=D;p.fy=0;k.t=.12+.1*u;if(u>=1){k.ph=3;k.pt=0;k.ta=0;p.cr=0;p.pu=0;p.air=1;p.vz=k.vz;p.z=.01}return}
  if(k.ph==3){
-  k.ta+=dt;const rem=Math.max(k.tA-k.ta,dt);p.vz-=G*dt;p.z+=p.vz*dt;mv((Tx-p.x)/rem,(Ty-p.y)/rem);p.fx=D;p.fy=0;
+  k.ta+=dt;const rem=Math.max(k.tA-k.ta,dt);p.vz-=G*(k.gs||1)*dt;p.z+=p.vz*dt;mv((Tx-p.x)/rem,(Ty-p.y)/rem);p.fx=D;p.fy=0;
   const u=Math.min(1,k.ta/k.tA);k.pt=u;k.t=.22+.78*u;
   if(dd&&k.sty==4&&k.mk&&!k.lost&&!k.hit&&u>=.62){k.hit=1;dd.lock=0;dd.stun=1.3;dd.stb=0;dd.jump=0;dd.avx=D*70;dd.avy=0;dd.vx=D*70;dd.vy=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+dd.x)/20;FX.z=(p.y+dd.y)/20;FX.y=7.6}
   if(k.ta>=k.tA){
@@ -4221,10 +4225,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.46'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.47'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.47','Real Momentum Takeoff',['MOMENTUM TAKEOFF now really changes where you jump from: sprint (Shift) into a dunk from far out and your player keeps sprinting and leaves the floor way out, about 14 ft from the rim at Bronze, 16 ft at Silver and 18 ft at Gold, then glides in for the slam.',
+  'Before, it only let you start the dunk from further away; your player still ran in close and jumped from the usual spot.',
+  'These long take-offs use your equipped dunks and only happen with the badge equipped (for the AI too). They are not in the Store.']],
  ['v1.46','All patch notes',['PATCH NOTES now lists every version, not just the five most recent. Scroll with ↑/↓ or the mouse wheel.','Fixed: scrolling the mouse wheel in the STORE caused an error; it now moves through the animation menu.']],
  ['v1.45','Auto-catch',['When a pass is thrown to you, your player is steered straight onto it and turns to the ball, so you always arrive as it does. You get control back the moment you catch it.']],
  ['v1.44','Pass it!',['Career: when you call for the ball (E), your AI teammate now passes it to you almost every time, unless you are heavily guarded (HEAVY or SMOTHERED). Then he may still ignore you, but repeated calls wear him down as before.',
