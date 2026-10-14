@@ -4203,10 +4203,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.35'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.36'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.36','Leaderboard tidy-up',['FG MADE is now FGM and shows your FG % next to it.','3PT MADE is now 3PM and shows your 3PT % next to it. The separate 3PT % board is gone.']],
  ['v1.35','Online leaderboard',['New LEADERBOARD: the top 5 by WINS shows on the left of the main menu. Click it (or press L) for the full board.',
   'Filter by WINS, W/L RATIO, FG MADE, 3PT MADE, 3PT % (min. 10 attempts), ONLINE WINS, TOTAL EXP and TOTAL CC.',
   'Every player with an account is on it (create one in PROFILE). Your stats are sent whenever your save backs up.',
@@ -4381,11 +4382,11 @@ function ccDraw(){const t=CC.toLocaleString('en-US');g.save();g.font='bold 15px 
 // Every signed-in account publishes a public stats card to the same Nostr relays as its backup (signed with its account key, d-tag AC_LB); the board reads every card.
 // shortcut: cards are self-reported by each player's game, so a determined cheater could post fake numbers; a server that verifies games would be needed to stop that.
 const AC_LB='hardwood27-lb',LB={on:false,sel:0,cards:[],me:null,msg:'LOADING...'},LB_MINI=[34,204,240,156],LB_BOX=[80,52,800,440],LB_X=[770,66,92,30],LB_TAB=i=>[100,104+i*44,200,38];
-const LB_STATS=[['WINS',c=>c.w],['W/L RATIO',c=>c.l?c.w/c.l:c.w,v=>v.toFixed(2)],['FG MADE',c=>c.fg],['3PT MADE',c=>c.tm],['3PT %',c=>c.ta>=10?c.tm/c.ta:-1,v=>(100*v).toFixed(1)+'%','min. 10 attempts'],
+const LB_STATS=[['WINS',c=>c.w],['W/L RATIO',c=>c.l?c.w/c.l:c.w,v=>v.toFixed(2)],['FGM',c=>c.fg,(v,c)=>v.toLocaleString('en-US')+'  ·  '+pfPct(c.fg,c.fa)],['3PM',c=>c.tm,(v,c)=>v.toLocaleString('en-US')+'  ·  '+pfPct(c.tm,c.ta)],
  ['ONLINE WINS',c=>c.ow],['TOTAL EXP',c=>c.xp],['TOTAL CC',c=>c.cc]];
-function lbCard(){const s=PF.d.st;pfLife();return{n:PF.d.name,lg:PF.d.logo,gp:s.gp,w:s.w,l:s.l,fg:s.fgm,tm:s.tpm,ta:s.tpa,ow:PF.d.md.ONLINE.w,xp:PF.d.xp,cc:PF.d.cc}}
+function lbCard(){const s=PF.d.st;pfLife();return{n:PF.d.name,lg:PF.d.logo,gp:s.gp,w:s.w,l:s.l,fg:s.fgm,tm:s.tpm,ta:s.tpa,fa:s.fga,ow:PF.d.md.ONLINE.w,xp:PF.d.xp,cc:PF.d.cc}}
 function lbClean(o){if(!o||typeof o!='object')return null;const n=k=>Math.min(1e9,Math.max(0,Math.round(+o[k])||0)),c={n:String(o.n||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',lg:o.lg>=0&&o.lg<TEAMS.length?o.lg|0:0};
- ['gp','w','l','fg','tm','ta','ow','xp','cc'].forEach(k=>c[k]=n(k));return c}
+ ['gp','w','l','fg','fa','tm','ta','ow','xp','cc'].forEach(k=>c[k]=n(k));return c}
 async function lbFetch(){const got={};try{if(ACCT.code)LB.me=(await acKeys(ACCT.code)).pk;
  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27lb',{kinds:[30078],'#d':[AC_LB],limit:2000}],m=>{const ev=m[2];if(m[0]=='EVENT'&&ev&&typeof ev.pubkey=='string'&&(!got[ev.pubkey]||ev.created_at>got[ev.pubkey].created_at))got[ev.pubkey]=ev;return m[0]=='EOSE'})))}catch(e){}
  const cards=[];for(const pk in got){let c=null;try{c=lbClean(JSON.parse(got[pk].content))}catch(e){}if(c){c.pk=pk;cards.push(c)}}
@@ -4393,7 +4394,7 @@ async function lbFetch(){const got={};try{if(ACCT.code)LB.me=(await acKeys(ACCT.
 // the ranked list for one stat (your own card always comes from this device, so it is up to date)
 function lbRank(i){const[,f]=LB_STATS[i],me=ACCT.code?Object.assign(lbCard(),{pk:LB.me||'me',mine:1}):null;
  return LB.cards.filter(c=>c.pk!==LB.me).concat(me?[me]:[]).filter(c=>c.gp>0&&f(c)>=0).sort((a,b)=>f(b)-f(a)||b.gp-a.gp)}
-const lbVal=(i,c)=>{const[,f,fm]=LB_STATS[i],v=f(c);return fm?fm(v):v.toLocaleString('en-US')};
+const lbVal=(i,c)=>{const[,f,fm]=LB_STATS[i],v=f(c);return fm?fm(v,c):v.toLocaleString('en-US')};
 function lbOpen(){LB.on=true;beep(520,.06,'triangle');lbFetch()}
 function lbClose(){LB.on=false;beep(300,.06,'triangle')}
 function lbKeys(up,dn){const n=LB_STATS.length;if(up)LB.sel=(LB.sel+n-1)%n;if(dn)LB.sel=(LB.sel+1)%n;if(P.Escape||P.Backspace||P.KeyL||P.Enter)lbClose()}
