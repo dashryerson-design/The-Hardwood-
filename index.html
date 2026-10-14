@@ -2999,7 +2999,7 @@ function endInit(){profRecord();
   if(u>-.25&&u<1.2&&r<300)u=u<.47?-.45:1.4;f=a+u;q.x=mClamp(fp.x+Math.sin(f)*r,20,920);q.y=mClamp(fp.y+Math.cos(f)*r,20,620)});
  if(IN&&IN.pz)poseReset(IN.pz);
  IN.pz={sd:-1,p:fp,kind:won?'FLEX':'FOLD',t0:0};IN.rt=0;IN.rdt=1/60;
- ccMatch(fp);ES={t:0,p:fp,won,a,sel:1,box:false};ms.on=false;B.mode='over';B.h=null; // (the ball is put away)
+ ES={t:0,p:fp,won,a,sel:1,box:false,cc:ccMatch(fp)};ms.on=false;B.mode='over';B.h=null; // (the ball is put away)
 beep(won?520:200,.25,'triangle')}
 function endLeave(){if(IN&&IN.pz){poseReset(IN.pz);IN.pz=null}ES=null}
 function endPick(i){if(!ES)return;beep(440,.06,'triangle');if(NET.on&&i<2){endLeave();netAfter(i);return} // online: LEAVE ONLINE / BACK TO LOBBY
@@ -3054,6 +3054,8 @@ function drawEnd(){const t=ES.t,c01_=v=>Math.max(0,Math.min(1,v)),ea=v=>1-Math.p
  if(gameXp){const a=ea((t-1)/.5);g.save();g.globalAlpha=a;g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('EXP EARNED',38,384);
   g.font='bold 20px Georgia';g.fillStyle='#7fffa0';g.fillText('+'+(gameXp.earned+gameXp.bonus)+' EXP',38,408);g.font='11px system-ui';g.fillStyle='#cfd3dc';g.fillText(gameXp.earned+' in the game  +  '+gameXp.bonus+' full-game bonus (+'+Math.round(xpFinish()*100)+'%)',38,426);
   if(gameXp.lv1>gameXp.lv0){let pts=0;for(let l=gameXp.lv0;l<gameXp.lv1;l++)pts+=LV_PTS(l);g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText('LEVEL UP!  LEVEL '+gameXp.lv1+'  ·  +'+pts+' ATTRIBUTE POINTS',38,448)}g.restore()}
+ if(ES.cc){const c=ES.cc;g.save();g.globalAlpha=ea((t-1.1)/.5);g.textAlign='left';g.font='bold 20px Georgia';g.fillStyle=GOLD;g.fillText('+'+c.n.toLocaleString('en-US')+' CC',38,gameXp?480:408);const w=g.measureText('+'+c.n.toLocaleString('en-US')+' CC').width;
+  g.font='11px system-ui';g.fillStyle='#cfd3dc';g.fillText('COURT CREDITS'+(c.potg?'  ·  incl. +10% PLAYER OF THE GAME':''),46+w,gameXp?480:408);g.restore()}
  g.textAlign='left';g.font='11px system-ui';g.fillStyle='rgba(200,205,215,'+(.8*ea((t-1.2)/.5))+')';g.fillText('↑/↓ choose  ·  Enter confirm  ·  or click',38,510);
  // player card + his match line (right-middle), sliding in once the camera has landed
  const ca=c01_((t-1.5)/.7);if(ca>0){const X=556,Y=62;if(!ES.rd)ES.rd=matchRead(p);inCard(p,ca,TI[p.team],'★  PLAYER OF THE GAME',t,X,Y,ES.rd);
@@ -4201,10 +4203,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.33'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.34'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.34','Credits on the results screen',['The end-of-game screen now shows the COURT CREDITS you earned that game, under the EXP, and says when it includes the +10% PLAYER OF THE GAME bonus.']],
  ['v1.33','Court Credits',['New currency: COURT CREDITS (CC). Your balance shows top right of the CAREER screen.',
   'Earned by your created player in every Career game: a win pays 500 CC, a loss 300 CC. On top of that: +20 CC for every shot you take, +30 per block, +30 per steal and +50 per assist.',
   'Named PLAYER OF THE GAME? That match pays +10%.',
@@ -4362,7 +4365,7 @@ setTimeout(acPush,4000);setInterval(()=>{if(S=='menu'||S=='over')acPush()},20000
 // Earned by your created player in Career games: win 500 / loss 300, +20 per shot taken (2PT or 3PT), +30 per block, +30 per steal, +50 per assist, then +10% if he is PLAYER OF THE GAME. Each rebirth: +3000.
 const CC_KEY='hardwood27.credits.v1';let CC=0,ccBlk=0;try{CC=Math.max(0,parseInt(localStorage.getItem(CC_KEY))||0)}catch(e){}
 function ccAdd(n){CC=Math.min(999999999,CC+Math.max(0,Math.round(n)));try{localStorage.setItem(CC_KEY,String(CC))}catch(e){}}
-function ccMatch(fp){const me=NET.on?null:myP();if(!me)return;const s=pstat(me);ccAdd(((sc[0]>sc[1]?500:300)+20*(s.fga+s.tpa)+30*ccBlk+30*s.stl+50*s.ast)*(fp===me?1.1:1))}
+function ccMatch(fp){const me=NET.on?null:myP();if(!me)return null;const s=pstat(me),n=Math.round(((sc[0]>sc[1]?500:300)+20*(s.fga+s.tpa)+30*ccBlk+30*s.stl+50*s.ast)*(fp===me?1.1:1));ccAdd(n);return{n,potg:fp===me}}
 const ccBlock=d=>{if(d&&d===myP())ccBlk++};
 function ccDraw(){const t=CC.toLocaleString('en-US');g.save();g.font='bold 15px system-ui';const w=g.measureText(t).width+58,x=946-w,y=14;mRR(x,y,w,30,15,'rgba(8,10,16,.8)',GOLD);
  g.beginPath();g.arc(x+17,y+15,10,0,6.283);g.fillStyle=GOLD;g.fill();g.fillStyle='#2a2006';g.font='bold 9px system-ui';g.textAlign='center';g.fillText('CC',x+17,y+18);
