@@ -266,12 +266,12 @@ function chase(p,dt){const dx=B.x+B.vx*.25-p.x,dy=B.y+B.vy*.25-p.y,l=Math.hypot(
 // GUARD tuning: contest reach and strength while fully in the stance, and the movement speed it allows (by perimeter defense rating)
 const GUARD={rng:.45,eff:.4,spd:p=>.45+.35*Math.max(0,Math.min(1,((p.rt&&p.rt.pd>0?p.rt.pd:50)-25)/75))};
 const shootNow=p=>(ms.on&&p.team==0&&p.i==ctl&&B.h===p)||p.sj>0;
-function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);return o})),b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
+function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);o.push(p.kd?Object.assign({},p.kd):null);return o})),/* (kd: a posterized man's knockdown, so replays show it) */b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
 function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;RS={P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};RP.loop=RP.rt=RP.i=0;RP.l=new THREE.Vector3(47,6,32);RP.snap=1;RP.fd=null;S='replay';ms.on=false;beep(400,.1)}
 function endRep(){TM.forEach((t,a)=>t.forEach((p,b)=>Object.assign(p,RS.P[a][b])));Object.assign(B,RS.B);Object.assign(ms,RS.ms);ctl=RS.ctl;S='play'}
 function repStep(dt){const c=RP.clip,len=c[c.length-1].t-c[0].t;RP.rt+=dt;if(RP.rt>len+.5){RP.rt=0;RP.i=0;RP.loop++;RP.snap=1}
  const tt=c[0].t+Math.min(RP.rt,len);while(RP.i<c.length-1&&c[RP.i+1].t<=tt)RP.i++;const f=c[RP.i];
- TM.forEach((t,a)=>t.forEach((p,b)=>{const o=f.p[a][b];SF.forEach((k,j)=>p[k]=o[j]);p.dunk=o[SF.length];p.lay=o[SF.length+1]||null;p.ps=o[SF.length+2]||null}));
+ TM.forEach((t,a)=>t.forEach((p,b)=>{const o=f.p[a][b];SF.forEach((k,j)=>p[k]=o[j]);p.dunk=o[SF.length];p.lay=o[SF.length+1]||null;p.ps=o[SF.length+2]||null;p.kd=o[SF.length+3]?Object.assign({},o[SF.length+3]):null}));
  Object.assign(B,f.b);if(f.b.ht)B.h=TM[f.b.ht[0]][f.b.ht[1]];ms.on=f.ms[0];ms.t=f.ms[1];ctl=f.ms[2]}
 // ===== per-player match stats (PTS / AST / REB), shown on the ball-handler HUD =====
 let PSTAT=[[],[]],ALAST=null;
@@ -4271,10 +4271,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.53'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.54'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.54','Posters in replays',['Replays now show the defender getting posterized: the hit, the fall (or stumble) and getting back up, exactly as it happened.']],
  ['v1.53','Posterizer dunks',['The POSTERIZER Signature now unlocks 6 exclusive poster dunks (never in the Store): KNEE-UP TOMAHAWK, CHEST-TO-CHEST HAMMER, OFF-BALANCE FLUSH, OVER THE TOP, SHOULDER SPIN and STAREDOWN HANG.',
   'With the badge equipped, when you go at a defender under the rim he is put into the play: he jumps to block it, gets crashed into in the air and dunked on.',
   'Each one ends differently for him: bodied back but still standing, pinned flat on his back, sat on his backside, crumpled to his knees, spun round onto his face, or flattened and slow to get up.']],
