@@ -330,42 +330,47 @@ function repClear(pos,subs,rim){const T_=[];for(const p of subs){const m=p.m;if(
   const hd=Math.hypot(pos.x-qx,pos.z-qz);if(hd<2.4&&pos.y<qt+1)return 1e9;if(hd<6.5&&pos.y<qt+.5)n+=6;if(subs.includes(q))continue; // (never inside anyone, and nobody filling the lens from right in front of it)
   for(const t of T_)for(let i=1;i<11;i++){const u=i/13,x=pos.x+(t[0]-pos.x)*u,y=pos.y+(t[1]-pos.y)*u,z=pos.z+(t[2]-pos.z)*u;if(y>qb-.2&&y<qt&&Math.hypot(x-qx,z-qz)<1.35)n++}} // (someone brushing right up against him doesn't count)
  return n}
-const REP_TRY=[[0,0],[.35,0],[-.35,0],[.7,0],[-.7,0],[0,.25],[.35,.25],[-.35,.25],[1.05,0],[-1.05,0],[.7,.3],[-.7,.3],[1.4,.15],[-1.4,.15],[0,.5],[2,.2],[-2,.2],[Math.PI,.3],[0,.8],[.6,.8],[-.6,.8],[1.4,.8],[-1.4,.8],[Math.PI,.8]]; // (last resort: high up, over everyone)
-function repCam(){const D=RP.dir,dt=RP.rdt||1/60,ct=RP.ct==null?D.t0:RP.ct;let si=D.segs.findIndex(q=>ct<q.b);if(si<0)si=D.segs.length-1;
- const sg=D.segs[si],u=Math.max(0,Math.min(1,(ct-sg.a)/Math.max(.01,sg.b-sg.a))),cut=si!==RP.seg,w=sg.who||RP.who,Hx=hx(RP.who.team)/10,RM=[Hx,10,32];RP.seg=si;
- const wx=w.x/10,wz=w.y/10,bp=ballM.position,k=w.dunk,tr=azOf(RM[0]-wx,RM[2]-wz); // tr: from him towards the rim
- _CB.makeEmpty();let ax,of,el,fov,mul=1.06,orb=0;const subs=[w];if(sg.vic&&sg.vic.m&&sg.vic.m.visible)subs.push(sg.vic);if(sg.ty=='catch'&&sg.from)subs.push(sg.from); // the angle = an AXIS (his facing, the pass line, the rim...) turned by OF to one side; the other side is the mirror shot
- switch(sg.ty){
-  case 'pass':cbP(w);ax=azOf(w.fx,w.fy);of=.65;el=.12;fov=36;orb=.2;break; // the passer, from in front and to the side, as he lets it go
-  case 'catch':{const f=sg.from;cbP(w);if(Math.hypot(bp.x-wx,bp.z-wz)<18)cbV(bp.x,bp.y,bp.z,.5);if(f&&Math.hypot(f.x-w.x,f.y-w.y)<200)cbP(f);ax=f?azOf(w.x-f.x,w.y-f.y):azOf(w.fx,w.fy);of=Math.PI/2;el=.22;fov=44;break} // side-on to the pass: the ball arriving in his hands
-  case 'drive':{cbP(w);const o=nearOpp(w,90);if(o)cbP(o);const sp=Math.hypot(w.vx,w.vy);ax=sp>20?azOf(w.vx,w.vy):azOf(w.fx,w.fy);of=1.3;el=.07;fov=40;break} // low tracking shot, slightly ahead of him
-  case 'dunkLow':cbP(w);if(sg.vic)cbP(sg.vic);cbV(RM[0],RM[1],RM[2],.9);ax=k&&k.ax!=null?azOf(k.ax,k.ay):tr;of=1.15;el=-.2;fov=50;break; // under the rim, looking UP at him going up
-  case 'dunkHigh':cbP(w);if(sg.vic)cbP(sg.vic);cbV(RM[0],RM[1],RM[2],.9);ax=(k&&k.ax!=null?azOf(k.ax,k.ay):tr)+Math.PI;of=-.7;el=.38;fov=46;orb=.3;break; // the reverse angle from above: the slam and the aftermath
-  case 'layLow':{cbP(w);const o=nearOpp(w,90);if(o)cbP(o);cbV(RM[0],RM[1],RM[2],.9);ax=tr;of=1;el=-.12;fov=46;break}
-  case 'shotFront':{cbP(w);const o=nearOpp(w,90);if(o)cbP(o);ax=tr;of=1;el=.1;fov=34;mul=1.06+.22*(1-sm3(u));break} // in his face as he rises (a slow push-in)
-  case 'flight':cbP(w);cbV(bp.x,bp.y,bp.z,.6);cbV(RM[0],RM[1],RM[2],1);ax=tr+Math.PI;of=.3;el=.3;fov=48;break; // over his shoulder: the ball's flight to the rim
-  default:cbP(w);if(sg.vic)cbP(sg.vic);ax=azOf(47-wx,32-wz);of=.4;el=.42;fov=40;orb=.55} // reaction: a slow orbit
- if(cut){ // pick the side: the one with room to frame him properly (alternating between cuts when both have room)
-  _CB.getCenter(_CC);const r=_CB.getSize(_CV).length()/2,need=r/Math.sin(Math.atan(Math.tan(fov*Math.PI/360)*REP_VIS))*mul,sA=camRoom(_CC,ax+of,el),sB=camRoom(_CC,ax-of,el);
-  RP.mir=sA>=need?(sB>=need&&si%2==1?1:0):sB>sA?1:0}
- RP.az0=ax+(RP.mir?-of:of);
- const az=RP.az0+(RP.mir?-1:1)*orb*sm3(u);RP.azS=cut?az:RP.azS+Math.atan2(Math.sin(az-RP.azS),Math.cos(az-RP.azS))*Math.min(1,dt*(orb?6:2.5)); // (follows his line smoothly within a shot)
- // aim point (smoothed) + the distance that keeps the WHOLE subject box in shot from that point
- _CB.getCenter(_CC);if(cut||!RP.cc)RP.cc=_CC.clone();else{RP.cc.x=ex(RP.cc.x,_CC.x,dt,7);RP.cc.y=ex(RP.cc.y,_CC.y,dt,7);RP.cc.z=ex(RP.cc.z,_CC.z,dt,7)}
+// ONE CONTINUOUS CAMERA (no cuts): it stays on one side of the play for the whole replay and GLIDES (critically damped springs, ~1 s) from one framing to the
+// next - each beat of the story (pass, catch, drive, the finish, the reaction) only nudges the angle a little, eases the height and changes who is framed.
+const smd=(o,k,tg,tm,dt)=>{const w=2/tm,x=w*dt,e=1/(1+x+.48*x*x+.235*x*x*x),c=o[k]-tg,t=(o[k+'v']+w*c)*dt;o[k+'v']=(o[k+'v']-w*t)*e;o[k]=tg+(c+t)*e}, // smooth-damp (no overshoot)
+ smdA=(o,k,tg,tm,dt)=>{tg=o[k]+Math.atan2(Math.sin(tg-o[k]),Math.cos(tg-o[k]));smd(o,k,tg,tm,dt)}, // (for angles: the short way round)
+ REP_SH={pass:[.25,.2],catch:[.15,.22],drive:[0,.16],dunkLow:[-.25,.06],layLow:[-.2,.08],dunkHigh:[.3,.3],shotFront:[-.3,.12],flight:[.35,.26],react:[.45,.22]}, // [angle nudge off the side line, height] per beat
+ REP_TRY=[[0,0],[.18,0],[-.18,0],[0,.12],[.32,.06],[-.32,.06],[0,.24],[.45,.15],[-.45,.15],[0,.38]];
+function repCam(){const D=RP.dir,dt=Math.min(.05,RP.rdt||1/60),ct=RP.ct==null?D.t0:RP.ct;let si=D.segs.findIndex(q=>ct<q.b);if(si<0)si=D.segs.length-1;
+ const sg=D.segs[si],u=Math.max(0,Math.min(1,(ct-sg.a)/Math.max(.01,sg.b-sg.a))),st=RP.seg===-1,w=sg.who||RP.who,sc_=RP.who,Hx=hx(sc_.team)/10,RM=[Hx,10,32];RP.seg=si;
+ const wx=w.x/10,wz=w.y/10,bp=ballM.position;
+ _CB.makeEmpty();const subs=[];
+ const addS=g=>{const p=g.who||RP.who;cbP(p);subs.push(p);
+  if(g.ty=='catch'&&g.from&&Math.hypot(g.from.x-p.x,g.from.y-p.y)<200){cbP(g.from);subs.push(g.from)}
+  if(g.ty=='catch'&&Math.hypot(bp.x-p.x/10,bp.z-p.y/10)<18)cbV(bp.x,bp.y,bp.z,.5);
+  if(g.vic&&g.vic.m&&g.vic.m.visible){cbP(g.vic);subs.push(g.vic)}
+  if(/dunk|lay|flight/.test(g.ty))cbV(RM[0],RM[1],RM[2],.9);if(g.ty=='flight')cbV(bp.x,bp.y,bp.z,.6)};
+ addS(sg);const nx=D.segs[si+1];if(nx&&sg.b-ct<.9*Math.max(.3,RP.sp||1))addS(nx); // (the next beat's players come into the frame a moment early, so the camera eases out instead of jumping)
+ if(st){ // the side of the play the camera keeps all replay: side-on to his line to the rim, on whichever side has more room
+  const sx=sc_.x/10,sz=sc_.y/10,ln=azOf(RM[0]-sx,RM[2]-sz);_CB.getCenter(_CC);RP.side=camRoom(_CC,ln+Math.PI/2,.2)>=camRoom(_CC,ln-Math.PI/2,.2)?1:-1;RP.ln=ln}
+ {const K_=['x','y','z'];if(st||!RP.bx)RP.bx={};for(const k of K_)for(const [m_,v_] of [['n'+k,_CB.min[k]],['x'+k,_CB.max[k]]]){if(st||RP.bx[m_]==null){RP.bx[m_]=v_;RP.bx[m_+'v']=0}else smd(RP.bx,m_,v_,.7,dt)}
+  for(const k of K_){_CB.min[k]=RP.bx['n'+k];_CB.max[k]=RP.bx['x'+k]}} // the framed area itself grows / shrinks smoothly (a player joining the shot never yanks the camera)
+ const sh=REP_SH[sg.ty]||REP_SH.react,orb=sg.ty=='react'?.35*sm3(u):0,azT=RP.ln+RP.side*(Math.PI/2-sh[0]-orb),elT=sh[1];
+ // the aim point and the angles glide; the distance is whatever keeps the whole subject box in shot from where the camera actually is
+ _CB.getCenter(_CC);if(st||!RP.c){RP.c={x:_CC.x,y:_CC.y,z:_CC.z,xv:0,yv:0,zv:0,a:azT,av:0,e:elT,ev:0,d:0,dv:0,da:0,dav:0,de:0,dev:0,h:null,hv:0,f:42,fv:0};RP.daT=RP.deT=0;RP.bk=0}
+ const C=RP.c;smd(C,'x',_CC.x,.75,dt);smd(C,'y',_CC.y,.75,dt);smd(C,'z',_CC.z,.75,dt);smdA(C,'a',azT,1.1,dt);smd(C,'e',elT,1.1,dt);
+ RP.cc=RP.cc||new THREE.Vector3();RP.cc.set(C.x,C.y,C.z);
  let r=0;for(let i=0;i<8;i++){_CV.set(i&1?_CB.max.x:_CB.min.x,i&2?_CB.max.y:_CB.min.y,i&4?_CB.max.z:_CB.min.z);r=Math.max(r,_CV.distanceTo(RP.cc))}
- let fv=fov;const half=Math.atan(Math.tan(fv*Math.PI/360)*REP_VIS),need=r/Math.sin(half)*mul;RP.cd=cut||!RP.cd?need:Math.max(need,ex(RP.cd,need,dt,2.2)); // grows at once, eases back in
- let e=el,cd=RP.cd; // (below: no room to back off -> widen the lens instead; never under the floor -> raise it at the same distance, so the framing holds)
- const pAt=(az,e2)=>{let c2=Math.min(RP.cd,camRoom(RP.cc,az,e2)-.5);c2=Math.max(4,c2);if(RP.cc.y+Math.sin(e2)*c2<.8)e2=Math.asin(Math.max(-1,(.8-RP.cc.y)/c2));return _CV.set(Math.cos(e2)*Math.sin(az),Math.sin(e2),Math.cos(e2)*Math.cos(az)).multiplyScalar(c2).add(RP.cc)};
- if(cut){RP.da=RP.de=RP.daT=RP.deT=0;RP.bk=0}
- const rimV=RM,roomOk=(az,e2)=>camRoom(RP.cc,az,e2)-.5>=need*.92,ok=roomOk(RP.azS+RP.da,e+RP.de)&&!repClear(pAt(RP.azS+RP.da,e+RP.de),subs,rimV); // (an angle only counts if it is clear AND has room to frame him)RP.bk=ok?0:RP.bk+dt;
- if(cut&&!ok||RP.bk>.18){let best=1e18;for(const [a_,e_] of REP_TRY){const s_=RP.mir?-1:1,sc_=repClear(pAt(RP.azS+a_*s_,e+e_),subs,rimV)+(roomOk(RP.azS+a_*s_,e+e_)?0:50)+Math.abs(a_)*.5+e_;if(sc_<best){best=sc_;RP.daT=a_*s_;RP.deT=e_}if(sc_<1.6)break}RP.bk=0;if(cut){RP.da=RP.daT;RP.de=RP.deT}} // someone in the way: the nearest clear angle (a hard cut snaps to it, otherwise the camera glides round)
- RP.da+=(RP.daT-RP.da)*Math.min(1,dt*3.5);RP.de+=(RP.deT-RP.de)*Math.min(1,dt*3.5);
- const az2=RP.azS+RP.da;e+=RP.de;while(e<1.25&&camRoom(RP.cc,az2,e)-.5<cd)e+=.025; // (no room to back off at this height: go higher)
- e=cut||RP.eS==null||e>RP.eS?e:ex(RP.eS,e,dt,3);RP.eS=e; // (rises at once, settles back down gently)
- {const rm=camRoom(RP.cc,az2,e);if(cd>rm-.5){cd=Math.max(4,rm-.5);const h2=Math.asin(Math.min(.98,r*mul/cd));fv=Math.min(88,Math.max(fv,2*Math.atan(Math.tan(h2)/REP_VIS)*180/Math.PI))}}
+ const fov=42,half=Math.atan(Math.tan(fov*Math.PI/360)*REP_VIS),need=r/Math.sin(half)*1.1;
+ if(st)C.d=need;else{smd(C,'d',need,need>C.d?.3:.8,dt);if(C.d<need*.97)C.d=need*.97,C.dv=Math.max(0,C.dv)} // (eases out quickly and in slowly; never more than a hair closer than the framing allows)
+ const pAt=(az,e2)=>{const c2=Math.max(4,Math.min(C.d,camRoom(RP.cc,az,e2)-.5));return _CV.set(Math.cos(e2)*Math.sin(az),Math.sin(e2),Math.cos(e2)*Math.cos(az)).multiplyScalar(c2).add(RP.cc)};
+ // someone in the way: drift (slowly, a little) to the nearest clear angle - never a jump
+ const sc0=repClear(pAt(C.a+C.da,C.e+C.de),subs,RM);RP.bk=sc0>1?RP.bk+dt:0;
+ if(RP.bk>.3){let best=1e18;for(const [a_,e_] of REP_TRY){const v=repClear(pAt(C.a+a_,C.e+e_),subs,RM)+Math.abs(a_)*2+e_*2;if(v<best){best=v;RP.daT=a_;RP.deT=e_}}RP.bk=0}
+ else if(!sc0&&RP.bk==0&&(Math.abs(RP.daT)+Math.abs(RP.deT))>0&&!repClear(pAt(C.a,C.e),subs,RM)){RP.daT=0;RP.deT=0} // (and back to the planned angle once it's clear again)
+ smd(C,'da',RP.daT,1.3,dt);smd(C,'de',RP.deT,1.3,dt);
+ let az=C.a+C.da,e=Math.min(1.25,C.e+C.de),cd=C.d,fv=fov;
+ while(e<1.25&&camRoom(RP.cc,az,e)-.5<cd)e+=.02; // no room to back off at this height: go higher...
+ if(C.h==null)C.h=e;else smd(C,'h',e,.7,dt);e=C.h; // ...gliding up / down to it, never a jump
+ {const rm=camRoom(RP.cc,az,e);if(cd>rm-.5){cd=Math.max(4,rm-.5);const h2=Math.asin(Math.min(.98,r*1.1/cd));fv=Math.min(88,Math.max(fv,2*Math.atan(Math.tan(h2)/REP_VIS)*180/Math.PI))}}
  if(RP.cc.y+Math.sin(e)*cd<.8)e=Math.asin(Math.max(-1,(.8-RP.cc.y)/cd));
- _CD.set(Math.cos(e)*Math.sin(az2),Math.sin(e),Math.cos(e)*Math.cos(az2));cam.position.copy(RP.cc).addScaledVector(_CD,cd);
- if(Math.abs(cam.fov-fv)>.01){cam.fov=fv;cam.updateProjectionMatrix()}cam.lookAt(RP.cc)}
+ _CD.set(Math.cos(e)*Math.sin(az),Math.sin(e),Math.cos(e)*Math.cos(az));cam.position.copy(RP.cc).addScaledVector(_CD,cd);
+ if(st)C.f=fv;else smd(C,'f',fv,.35,dt);if(Math.abs(cam.fov-C.f)>.01){cam.fov=C.f;cam.updateProjectionMatrix()}cam.lookAt(RP.cc)}
 // ===== per-player match stats (PTS / AST / REB), shown on the ball-handler HUD =====
 let PSTAT=[[],[]],ALAST=null;
 const pstat=p=>PSTAT[p.team][p.i]||(PSTAT[p.team][p.i]={pts:0,ast:0,reb:0,stl:0,tpm:0,tpa:0,fgm:0,fga:0});
@@ -797,7 +802,7 @@ function posterHit(d,p,pz){say('POSTERIZED!  ·  '+(DKS[p.dunk.sty].pzn||p.dunk.
 // under gravity, colliding with the floor (with friction). MUSCLE TONE: every point is pulled (spring K, damper C) towards where the animation has that joint,
 // so a player is "an animated body with physics on top": a hit drops his tone (loose, the impulse throws him about, gravity pulls), then the tone ramps back
 // to 1, the physics re-converges onto the animation and he is handed back to it. The rig is then posed FROM the points (root, torso twist, each limb + hinge).
-const RG={str:5,K:420,C:30,gv:32,it:8,h:1/120,rel:1.1,mu:.5,hipX:.35};
+const RG={dk:1.8,str:5,K:420,C:30,gv:32,it:8,h:1/120,rel:1.1,mu:.5,hipX:.35};
 const RD_E=[[0,1,1],[0,8,1],[0,9,1],[8,9,1],[1,2,1],[1,3,1],[2,3,1],[0,2,.6],[0,3,.6],[8,1,.6],[9,1,.6],[8,2,.3],[9,3,.3],[8,3,.3],[9,2,.3],
  [2,4,1],[4,6,1],[3,5,1],[5,7,1],[8,10,1],[10,12,1],[9,11,1],[11,13,1],[1,14,1],[2,14,1],[3,14,1],[0,14,1]]; // (14 = the head: rides on the chest, there so it can't go through the floor)
 const RD_MIN=[[2,6,.5],[3,7,.5],[8,12,.55],[9,13,.55]]; // an elbow / knee can't fold flat: shoulder-wrist, hip-ankle stay above this share of the limb length
@@ -814,7 +819,7 @@ function rdHit(p,dx,dz,mag,tone,full){const m=p.m;if(!m)return;let r=p.rd;
   const ax=m.aR.position.x,sy=m.aR.position.y+2.3,lx=m.R.position.x,sc=m.scale,Q=[[0,2.3],[0,sy],[-ax,sy],[ax,sy],[-ax,sy-1.1],[ax,sy-1.1],[-ax,sy-2.1],[ax,sy-2.1],[-lx,2.3],[lx,2.3],[-lx,1.1],[lx,1.1],[-lx,0],[lx,0],[0,sy+.9]].map(([x,y])=>[x*sc.x,y*sc.y]),
    d=(a,b)=>Math.hypot(Q[a][0]-Q[b][0],Q[a][1]-Q[b][1]); // rest lengths, from the rig's own proportions (body type x height)
   r.L=RD_E.map(([a,b])=>d(a,b));r.Lm=RD_MIN.map(([a,b,f])=>f*d(a,b));r.lt=d(8,10);r.s=sc.y}
- r.t=0;r.t0=Math.min(r.t0,tone);if(full){r.full=1;r.off=off}
+ r.t=0;r.t0=Math.min(r.t0,tone);if(full){r.full=1;r.off=off;r.rgk=full==2?.1:1;if(!r.rig){r.rig=[];const x=r.x;for(let a=0;a<15;a++)for(let b=a+1;b<15;b++)r.rig.push([a,b,Math.hypot(x[b*3]-x[a*3],x[b*3+1]-x[a*3+1],x[b*3+2]-x[a*3+2])])}} // SEIZED UP: every joint locks in the pose he was caught in (every point tied to every other) - he goes over as one stiff body (full=2, the dunker: only a light hold on that pose, so he folds naturally as he lands)
  for(let i=0;i<15;i++){const w=RD_W[i]*mag*RG.h;r.o[i*3]-=dx*w;r.o[i*3+1]-=.12*w;r.o[i*3+2]-=dz*w}} // impulse = a change of velocity (Verlet: velocity is x - o)
 function rdTone(r){const H=.14;if(r.full)return 0; // FULL ragdoll: no muscle at all, until the possession resets
  return r.t<H?r.t0:r.t0+(1-r.t0)*sm3(Math.min(1,(r.t-H)/RG.rel))}
@@ -825,7 +830,7 @@ function rdStep(p,dt){const r=p.rd,m=p.m;if(!r||!m||dt<=0)return;m.updateMatrixW
  for(let s=0;s<n;s++){const f=(s+1)/n;
   for(let i=0;i<45;i++){const tg=r.go[i]+(r.g[i]-r.go[i])*f,tv=(r.g[i]-r.go[i])/dt,v=(x[i]-o[i])/h,a=K*(tg-x[i])+C*(tv-v)-(i%3==1?gv:0),nx=x[i]+v*h*.995+a*h*h;o[i]=x[i];x[i]=nx}
   for(let it=0;it<RG.it;it++){
-   RD_E.forEach(([a,b,k],e)=>rdLen(x,a,b,r.L[e],r.full?1:k,0));RD_MIN.forEach(([a,b],e)=>rdLen(x,a,b,r.Lm[e],1,1));rdJoints(x,r);if(r.full)rdBump(p,x,r);
+   RD_E.forEach(([a,b,k],e)=>rdLen(x,a,b,r.L[e],r.full?1:k,0));RD_MIN.forEach(([a,b],e)=>rdLen(x,a,b,r.Lm[e],1,1));rdJoints(x,r);if(r.rig)for(const [a,b,L] of r.rig)rdLen(x,a,b,L,r.rgk,0);if(r.full)rdBump(p,x,r);
    for(let i=0;i<15;i++){const y=RD_RAD[i]*r.s;if(x[i*3+1]<y){x[i*3+1]=y;if(o[i*3+1]<y)o[i*3+1]=y}}} // the floor: nothing sinks into it
   for(let i=0;i<15;i++){if(x[i*3+1]>RD_RAD[i]*r.s+.02)continue;const vx=x[i*3]-o[i*3],vz=x[i*3+2]-o[i*3+2],v=Math.hypot(vx,vz),c=v>1e-7?Math.max(0,v-RG.mu*RG.gv*h*h)/v:0;o[i*3]=x[i*3]-vx*c;o[i*3+2]=x[i*3+2]-vz*c}} // sliding friction (mu x g) on whatever touches the floor
  let dev=0;for(let i=0;i<45;i++)dev=Math.max(dev,Math.abs(x[i]-r.g[i]));
@@ -960,7 +965,7 @@ function dunkStep(p,dt){
    if(v){k.hit=1;k.vic=v;if(((p.rt&&p.rt.str)||50)>=((v.rt&&v.rt.str)||50)+RG.str){k.rgv=v;v.stun=Math.max(v.stun,1)}/* much stronger: he's caught, and both go full ragdoll at the slam (below) */
     else{if(pzOf(k)&&v===dd)posterHit(v,p,pzOf(k));else knockDown(v,p);shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}if(v===dd)dd.lock=0}}
   if(k.rgv&&!k.rgd&&k.ta>=k.tA-.05){k.rgd=1;const v=k.rgv,[vx,vy]=pushDir(v,p),df=((p.rt&&p.rt.str)||50)-((v.rt&&v.rt.str)||50),sd=(Math.random()-.5)*.5; // FULL RAGDOLL at the heaviest contact (~0.05 s before the ball goes through)
-   v.kd=null;v.stun=Math.max(v.stun,99);rdHit(v,vx,vy,Math.min(16,8+.4*(df-RG.str)),0,1);rdHit(p,-k.ax+sd*k.ay,-k.ay-sd*k.ax,4,0,1);
+   v.kd=null;v.stun=Math.max(v.stun,99);rdHit(v,vx,vy,RG.dk*Math.min(16,8+.4*(df-RG.str)),0,1); // (the dunker just finishes his dunk, straight through him)
    shake=1;beep(80,.3,'square');FX.t=.45;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}
   if(k.ta>=k.tA){
    k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(dd)dd.lock=0;
@@ -4427,10 +4432,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.62'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.63'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.63','Smooth replays & seized-up posters',['Replays are now ONE continuous camera: no cuts. It stays on one side of the play the whole time and glides (eased in and out, about a second) between framings as the play moves from the passer to the catch to the finish, only nudging its angle and height. Slow motion still kicks in at the big moment. If someone steps in the way it drifts slowly round them instead of jumping.',
+  'Strength posters (dunker 5+ STR over the defender): the defender no longer goes floppy. Every joint seizes up in the position he was caught in and he topples over stiff, as one rigid body. The dunker no longer ragdolls at all: he finishes his dunk as normal, straight through him.']],
  ['v1.62','Cinematic replays',['The four replay cameras are gone. In their place: ONE cinematic replay director. It reads the play (who passed, who caught it, how it was finished) and cuts it like a broadcast: the passer as he lets it go, the catch side-on, a low tracking shot of the drive, then the moment itself.',
   'Dunks: a low angle under the rim in slow motion as he takes off, then a high reverse angle for the slam and whatever is left on the floor. Jumpers: in his face in slow motion as he rises, then over the shoulder for the ball\'s flight. Layups: a low baseline angle in slow motion. Every replay ends on a reaction shot.',
   'Every shot is framed so the players it is about are fully in the picture, and the camera finds a clear angle when someone steps in the way. It stays inside the fence and never sits behind the hoop stanchion.']],
