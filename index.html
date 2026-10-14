@@ -705,7 +705,7 @@ const MVD=.48,SPRINT=160; // SPRINT = top speed while Shift is held (the normal 
  // dribble-move burst size (1 = the old, far too long glide)
 function move(p,k,nofo){
  const cmb=p.quick>0&&k!='X';if(p.mcd>0&&!cmb)return;p.mcd=.6;p.chain=T-(p.mvT==null?-99:p.mvT)<.9?Math.min(3,(p.chain||0)+1):0;p.mvT=T;p.mvK=k;
- const a=Math.atan2(p.fy,p.fx);let n,an=a,du=.3,sp=430,fo=.55,rm=.8,hes=0;
+ const a=Math.atan2(p.fy,p.fx),fast=sprintN(p);let n,an=a,du=.3,sp=430,fo=.55,rm=.8,hes=0;
  // BALL HANDLE rating (bn 0-1 for 25-100): fd = move duration (x1.25 at 25 -> x0.75 at 100, ~x1.0 at 60: faster animations), fx = distance covered (x0.80 -> x1.30), am = ankle-break multiplier (x0.03 at 25 -> x0.68 at 100, quadratic)
  const bn=Math.max(0,Math.min(1,((p.rt&&p.rt.bh>0?p.rt.bh:50)-25)/75)),fd=1.25-.5*bn,fx=.8+.5*bn,am=.03+.65*bn*bn;
  if(k=='Z'){p.side*=-1;an=a+p.side*.95;n='CROSSOVER'}
@@ -724,7 +724,45 @@ function move(p,k,nofo){
  fo*=am;if(d&&d.swp>0)fo*=1.5;{const an='ZVB'.includes(k)?sigv(p,'ankle'):0;if(an)fo=Math.min(.95,fo+an)} // ankle-breaker chance now comes from the BALL HANDLE rating (was a flat 30-55%, 75% on combos)
  if(!nofo&&d&&Math.random()<fo){d.stun=.85;d.stb=0;say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.i==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
+ if(fast&&!nofo&&d&&k!='V'&&!(d.stun>0)&&!(d.lock>0)&&inFront(d,p))bbTry(p,d); // BLOW-BY or CUT-OFF
 }
+// ===== BLOW-BYS (v1.68): sprinting into a dribble move (crossover, between the legs, behind the back, spin or hesitation) at a defender in front of you can set off a
+// paired two-man animation: the handler BLOWS BY (slips past, the defender is left turning) or the defender CUTS HIM OFF (bumps him back in front and kills his momentum).
+// trigger chance = .3 + .4 x BALL HANDLE + .08 x SPEED (each 0-1 for 25-100) · cut-off share = .2 + .6 x defender PERIMETER D - .35 x BALL HANDLE - .06 x SPEED (5% - 85%)
+// A set: n = name, d = seconds, a / f = the handler's / defender's upper-body pose (q, e = 0->1->0 envelope, u = 0-1 progress, s = +1 when the other man is on his +x side,
+// N / F = his near / far arm; the legs keep their run / slide cycle), ya / yf = extra body yaw (x e x s). Blow-bys: the handler bursts past (bs speed, sk = how wide round him),
+// the defender bites (bt sideways the wrong way, bk backwards). Cut-offs: the handler is knocked back (kb, kx = sideways share) and stopped dead, the defender slides into his path.
+const bbQ=(q,o,w)=>{for(const k in o)q[k]=(q[k]||0)+(o[k]-(q[k]||0))*w};
+const BBY=[
+ {n:'SHOULDER DIP',d:.6,bs:215,sk:.5,bt:40,bk:30,ya:.4,yf:1.1,a:(q,e,u,s,N)=>bbQ(q,{lean:.6,drop:.25,roll:-.3*s,tw:.4*s,[N+'x']:-.5},e),f:(q,e,u,s,N)=>bbQ(q,{lean:-.1,[N+'x']:-1.7,[N+'z']:.9*s,[N+'e']:-.1,Lg:-.3,Rg:.3},e)},
+ {n:'RIP THROUGH',d:.55,bs:225,sk:.4,bt:20,bk:55,ya:0,yf:.6,a:(q,e,u,s,N)=>bbQ(q,{lean:.7,drop:.32,tw:.6*s*(1-2*u),[N+'x']:-.4},e),f:(q,e)=>bbQ(q,{lean:-.35,Lx:-2.5,Rx:-2.5,Le:-.2,Re:-.2},e)},
+ {n:'SWIM MOVE',d:.6,bs:205,sk:.55,bt:70,bk:10,ya:.3,yf:-.5,a:(q,e,u,s,N)=>bbQ(q,{lean:.45,roll:.15*s,[N+'x']:-2.7,[N+'e']:-.4},e),f:(q,e,u,s,N,F)=>bbQ(q,{lean:.45,drop:.2,roll:.35*s,[F+'x']:-1.3,[F+'z']:-.9*s},e)},
+ {n:'BURST',d:.65,bs:240,sk:.35,bt:15,bk:70,ya:0,yf:1.6,a:(q,e,u,s,N)=>bbQ(q,{lean:.75,drop:.2,[N+'x']:-.3-1.1*Math.max(0,Math.sin(u*18)),[N+'e']:-1.4},e),f:(q,e)=>bbQ(q,{lean:-.2,Lx:-.4,Rx:-.4,Lz:-.7,Rz:.7},e)},
+ {n:'TURNSTILE',d:.7,bs:210,sk:.6,bt:30,bk:20,ya:.6,yf:2.6,a:(q,e,u,s,N)=>bbQ(q,{lean:.4,roll:-.2*s,tw:.7*s,[N+'x']:-.9,[N+'z']:.6*s},e),f:(q,e)=>bbQ(q,{lean:-.15,drop:.1,Lx:-.9,Rx:-.9,Lz:-1.1,Rz:1.1},e)},
+ {n:'GHOST STEP',d:.6,bs:220,sk:.45,bt:0,bk:15,ya:.2,yf:.4,a:(q,e,u,s)=>{const w=Math.sin(u*6.28);bbQ(q,{lean:.5,tw:.5*s*w,roll:-.3*s*w},e)},f:(q,e)=>bbQ(q,{lean:-.25,drop:.3,Lx:-1.6,Rx:-1.6,Lg:-.4,Rg:.4},e)}];
+const BBS=[
+ {n:'CHEST UP',d:.55,kb:130,kx:0,ya:-.2,yf:0,a:(q,e,u,s,N)=>bbQ(q,{lean:-.4,drop:.15,tw:-.2*s,roll:.1*s,[N+'x']:-1,[N+'e']:-1.5},e),f:(q,e)=>bbQ(q,{lean:-.12,drop:.1,Lx:-2.8,Rx:-2.8,Le:-.1,Re:-.1,Lz:-.15,Rz:.15},e)},
+ {n:'HIP CHECK',d:.6,kb:110,kx:.6,ya:-.4,yf:.7,a:(q,e,u,s,N)=>bbQ(q,{lean:-.2,roll:.35*s,tw:-.4*s,[N+'z']:.9*s},e),f:(q,e,u,s,N)=>bbQ(q,{drop:.25,roll:-.3*s,tw:.5*s,[N+'x']:-.8,[N+'e']:-1.2,[N+'z']:.4*s},e)},
+ {n:'ARM BAR',d:.5,kb:120,kx:.2,ya:0,yf:.2,a:(q,e,u,s,N)=>bbQ(q,{lean:-.3,[N+'x']:-1.2,[N+'e']:-1.2},e),f:(q,e,u,s,N,F)=>bbQ(q,{lean:.3,drop:.28,[N+'x']:-1.5,[N+'e']:-1.4,[F+'x']:-1},e)},
+ {n:'BEAT TO THE SPOT',d:.6,kb:90,kx:0,ya:0,yf:0,a:(q,e,u,s,N)=>bbQ(q,{lean:-.45,drop:.3,[N+'x']:-.6,[N+'z']:.5*s},e),f:(q,e)=>bbQ(q,{lean:.15,drop:.35,Lx:-1.1,Rx:-1.1,Lz:-1.1,Rz:1.1},e)}];
+const yawTo=(p,x,y)=>{const a=Math.atan2(x-p.x,y-p.y)-Math.atan2(p.fx,p.fy);return Math.sin(a)<0?-1:1}; // which side (+1 = his +x side) a point is on, in his own facing
+function bbTry(a,d){const n=r=>Math.max(0,Math.min(1,((r>0?r:50)-25)/75)),bh=n(a.rt&&a.rt.bh),sp=n(a.rt&&a.rt.spd),pd=n(d.rt&&d.rt.pd);
+ if(a.bb||d.bb||Math.random()>=.3+.4*bh+.08*sp)return;
+ const stop=Math.random()<Math.max(.05,Math.min(.85,.2+.6*pd-.35*bh-.06*sp)),S=stop?BBS:BBY,k=Math.floor(Math.random()*S.length),st=S[k];
+ let hx_=hx(a.team)-a.x,hy_=HY-a.y;const hl=Math.hypot(hx_,hy_)||1;hx_/=hl;hy_/=hl;const px=-hy_,py=hx_,g=(d.x-a.x)*px+(d.y-a.y)*py<0?1:-1; // g: he goes round the side away from the defender
+ a.bb={k,st:stop?1:0,r:0,t:0,d:st.d,s:yawTo(a,d.x,d.y)};
+ if(stop){const kx=-hx_*(1-st.kx)-px*g*st.kx,ky=-hy_*(1-st.kx)-py*g*st.kx,kl=Math.hypot(kx,ky)||1; // knocked back off his line (and sideways, away from where he was going)
+  a.bb.lk=1;a.bb.vx=kx/kl*st.kb;a.bb.vy=ky/kl*st.kb;a.burst=0;a.rec=0;a.quick=0;a.pause=0;
+  d.bb={k,st:1,r:1,t:0,d:st.d*.8,s:yawTo(d,a.x,a.y),lk:1,o:a,hx:hx_,hy:hy_};say(st.n+' - CUT OFF!','#4cc9ff');shake=.15;beep(110,.12,'square',.04)}
+ else{const bx=hx_+px*g*st.sk,by=hy_+py*g*st.sk,bl=Math.hypot(bx,by);a.bx=bx/bl;a.by=by/bl;a.burst=st.d*.7;a.bs=st.bs*(.9+.2*bh);a.inv=Math.max(a.inv,st.d*.6);a.pause=0;
+  d.bb={k,st:0,r:1,t:0,d:st.d,s:yawTo(d,a.x+a.bx*60,a.y+a.by*60),lk:1,vx:-px*g*st.bt-hx_*st.bk,vy:-py*g*st.bt-hy_*st.bk};say(st.n+' - BLOW-BY!','#ffd23f');shake=.12}}
+// locked half of a pair, each step: a knocked-back handler loses all his momentum by the end; a cut-off defender slides to just in front of him; a beaten defender drifts on his bite
+function bbStep(p,b){
+ if(b.o){const o=b.o,tx=o.x+b.hx*34-p.x,ty=o.y+b.hy*34-p.y,l=Math.hypot(tx,ty)||1,v=Math.min(220,l*8);p.vx=tx/l*v;p.vy=ty/l*v}
+ else{const w=(1-Math.min(1,b.t/b.d))**(b.r?1:2);p.vx=b.vx*w;p.vy=b.vy*w}}
+function bbPose(p,q){const b=p.bb,st=(b.st?BBS:BBY)[b.k];if(!st)return;const u=Math.min(1,b.t/b.d),e=Math.sin(u*Math.PI),N=b.s>0?'R':'L',F=b.s>0?'L':'R';
+ (b.r?st.f:st.a)(q,e,u,b.s,N,F);q.r=Math.max(q.r,18)}
+const bbYaw=p=>{const b=p.bb,st=b&&(b.st?BBS:BBY)[b.k];return st?Math.sin(Math.min(1,b.t/b.d)*Math.PI)*b.s*(b.r?st.yf:st.ya):0};
 const legX=a=>{const k=a+Math.asin(Math.min(.97,1.2*Math.sin(a)/1.1));return{k,d:2.3-1.2*Math.cos(a)-1.1*Math.cos(k-a)}},crA=c=>Math.min(1,1.15*c);
 const pushT=p=>Math.max(.07,Math.min(.16,20*legX(crA(p.jdm)).d/p.jvz));
 // Physical leap: crouch (load) -> explosive leg extension (push, hips accelerate up) -> ballistic flight under gravity G.
@@ -1655,6 +1693,7 @@ function step(dt){
   if(p.hg>0){p.hg-=dt;p.vx=p.vy=0;const k_=Math.min(1,dt*10);if(p.hgx!=null){p.x+=(p.hgx-p.x)*k_;p.y+=(p.hgy-p.y)*k_}p.z+=(p.lz-p.z)*Math.min(1,dt*14);p.fx=p.hfx;p.fy=p.hfy||0;if(p.hg<=0){p.hg=0;p.hgx=null;p.air=1;p.vz=0;p.avx=p.avy=0;p.gs=1;p.lnd=.45}return}
   if(p.bm&&!(B.mode=='held'&&B.h===p))p.bm=null;
   if(p.rd&&p.rd.full&&!p.dunk&&!(p.hg>0)){p.stun=Math.max(p.stun,99);p.vx=p.vy=p.avx=p.avy=0} // (full ragdoll: out of the play until the possession resets)
+  if(p.bb){const b=p.bb;b.t+=dt;if(b.t>=b.d||p.stun>0||p.lock>0)p.bb=null;else if(b.lk){bbStep(p,b);return}}
   if(p.lock>0){p.lock-=dt;p.vx=p.vy=0;p.avx=p.avy=0;return}
   if(p.stun>0){p.stun-=dt;if(p.stun<=0)p.stb=0;p.vx*=.8;p.vy*=.8;if(p.z>0||p.air){p.vz=(p.vz||0)-G*dt;p.z=Math.max(0,p.z+p.vz*dt);if(!p.z){p.vz=0;p.air=0;p.avx*=.3;p.avy*=.3}}return} // (hit in the air: he still comes down)
   if((t==0&&i==ctl&&!AUTO||NET.host&&t==1)&&B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt); // a pass is on its way to you: you're steered onto it (control comes back on the catch)
@@ -2782,7 +2821,8 @@ function pose(p,dt){
   if(t<.14)Object.assign(q,{Lh:-.25,Rh:-.25,Lk:.35,Rk:.35,Lx:-2.3,Rx:-2.3,Le:-.4,Re:-.4,Lz:-.7,Rz:.7,lean:-.3,drop:.05,tw:0,r:28}); // the hit: arms jolt up, head snaps back
   else if(t<.82)Object.assign(q,{Lh:-.9,Rh:-.6,Lk:1,Rk:.7,Lx:sd>0?-.4:-2.4,Rx:sd<0?-.4:-2.4,Le:-.5,Re:-.5,Lz:sd>0?-1.5:-1,Rz:sd<0?1.5:1,lean:-.35,drop:.1,tw:0,r:12}); // going down: legs fold, the arm on the falling side reaches for the floor
   else Object.assign(q,{Lh:-.6,Rh:-.25,Lk:.8,Rk:.3,Lx:-1.4,Rx:-1.6,Le:-.3,Re:-.5,Lz:-1.3,Rz:1.3,lean:-.1,drop:.05,tw:0,r:8})} // down: limbs splayed, one knee up (getting up: the normal pose eases back in)
- else if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
+ else if(p.bb&&!d&&!air&&!shoot&&!p.lay)bbPose(p,q); // BLOW-BY / CUT-OFF pair
+ if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
  const r=q.r,S=(j,v)=>{j.rotation.x=ex(j.rotation.x,v,dt,r)};
  S(m.L,q.Lh);S(m.L.k,q.Lk);S(m.R,q.Rh);S(m.R.k,q.Rk);S(m.aL,q.Lx);S(m.aL.e,q.Le);S(m.aR,q.Rx);S(m.aR.e,q.Re);S(m.aL.w,q.Lw);S(m.aR.w,q.Rw);
@@ -2843,7 +2883,7 @@ function render(dt){
   let da=tgt-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.sqd=sqz?da:0;p.sq=1-Math.min(1,Math.abs(da));p.ang+=da*(1-Math.exp(-(sqz?9:12)*dt));
   const sp3=p.dunk&&p.dunk.sty==3?sm3(Math.max(0,Math.min(1,(p.dunk.t-p.dunk.f0)/((1-p.dunk.f0)*.8))))*2*Math.PI:0;
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
-  m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw;
+  m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw+bbYaw(p);
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
   if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=ex(p.rbx||0,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);p.rbz=ex(p.rbz||0,0,dt,10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
@@ -4327,7 +4367,7 @@ function netHostIn(pr){const I=pr.in,R=NET.rin;if(!I)return;R.K={};NET_HELD.forE
 function netCtrl(p,dt){const sm=ms,sc_=CAMM;ms=MS2;CAMM=0;MS2.show=0;try{ctrl(p,dt,NET.rin)}finally{MS2=ms;ms=sm;CAMM=sc_;if(MS2.show===1)NET.m2n++;MS2.show=0;if(!MS2.on)NET.prt=0}}
 function netSnap(){const R=v=>typeof v=='number'?Math.round(v*100)/100:v,o2=o=>{try{return o&&JSON.parse(JSON.stringify(o,(k,v)=>k=='by'||k=='dd'||(v&&typeof v=='object'&&v.m&&v.team!=null)?undefined:R(v)))}catch(e){return null}};
  if(SST2.t!==NET.sstT){NET.sstT=SST2.t;NET.ssn++}
- return{t:Math.round(performance.now()),p:TM.map(tm=>tm.map(p=>{const o=SF.map(k=>R(p[k]));o.push(o2(p.dunk),o2(p.lay),R(p.grd||0),R(p.st||0),p.bm?{k:p.bm.k,t:R(p.bm.t),d:R(p.bm.d)}:null,p.ps?{ty:p.ps.ty,k:p.ps.k,t:R(p.ps.t),wu:p.ps.wu,d:p.ps.d,go:p.ps.go,fa:p.ps.fa==null?null:R(p.ps.fa)}:null,o2(p.rdh),p.rd?1:0);return o})), // (+ the last ragdoll hit and whether he is ragdolled now)
+ return{t:Math.round(performance.now()),p:TM.map(tm=>tm.map(p=>{const o=SF.map(k=>R(p[k]));o.push(o2(p.dunk),o2(p.lay),R(p.grd||0),R(p.st||0),p.bm?{k:p.bm.k,t:R(p.bm.t),d:R(p.bm.d)}:null,p.ps?{ty:p.ps.ty,k:p.ps.k,t:R(p.ps.t),wu:p.ps.wu,d:p.ps.d,go:p.ps.go,fa:p.ps.fa==null?null:R(p.ps.fa)}:null,o2(p.rdh),p.rd?1:0,p.bb?{k:p.bb.k,st:p.bb.st,r:p.bb.r,t:R(p.bb.t),d:p.bb.d,s:p.bb.s}:null);return o})), // (+ the last ragdoll hit and whether he is ragdolled now)
   b:{x:R(B.x),y:R(B.y),z:R(B.z),mode:B.mode,perf:B.perf?1:0,ht:B.h?[B.h.team,B.h.k]:null},o:off,sc:sc.slice(),ck:R(CHK.t),sh:R(shot),m:[msg.s,msg.c,NET.mid],
   m2:[MS2.on?1:0,MS2.res,R(MS2.pw||0),R(MS2.last||0),NET.m2n],ss:NET.ssn?{typ:SST2.typ,q:SST2.q,rel:SST2.rel&&{q:SST2.rel.q,ms:R(SST2.rel.ms)},c:R(SST2.c),ft:SST2.ft,n:NET.ssn}:null,
   ps:TM.map(tm=>{const s=pstat(tm[0]);return[s.pts,s.ast,s.reb,s.stl,s.tpm,s.tpa,s.fgm,s.fga,s.dfa||0,s.dfm||0]}),ov:S=='over'?1:0}}
@@ -4350,7 +4390,7 @@ function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen;
  for(let lt=0;lt<2;lt++){const p=TM[lt][0],oa=a.p[1-lt][0],ob=b.p[1-lt][0];if(!p||!oa||!ob)continue;
   SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side')v=-v;p[k]=v});
   const n=SF.length;p.dunk=ob[n];p.lay=ob[n+1]||null;p.grd=ob[n+2]||0;if(ob[n+3])p.st=ob[n+3];p.bm=ob[n+4]?Object.assign({},ob[n+4]):null;p.ps=ob[n+5]&&PASS_T[ob[n+5].ty]?Object.assign({},ob[n+5]):null;
-  {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,-h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}} // RAGDOLL: the host's hit (mirrored) is run through the same physics here; when the host lets him up, so does the guest
+  {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,-h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}p.bb=ob[n+8]?Object.assign({},ob[n+8],{s:-ob[n+8].s}):null} // RAGDOLL: the host's hit (mirrored) is run through the same physics here; when the host lets him up, so does the guest
  B.x=940-L(a.b.x,b.b.x);B.y=L(a.b.y,b.b.y);B.z=L(a.b.z,b.b.z);B.mode=b.b.mode;B.perf=!!b.b.perf;B.h=b.b.ht?TM[1-b.b.ht[0]][b.b.ht[1]]||null:null;
  off=1-b.o;CHK.t=b.ck;shot=b.sh;
  const ns=[b.sc[1],b.sc[0]];if(sn.sc&&(ns[0]>sn.sc[0]||ns[1]>sn.sc[1]))crowdRoar();sc=ns;sn.sc=ns;
@@ -4505,10 +4545,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.67'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.68'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.68','Blow-bys and cut-offs',['Sprint into a dribble move (crossover, between the legs, behind the back, spin or hesitation) with a defender in front of you and a two-player animation can kick in: you BLOW BY him, or he CUTS YOU OFF.',
+  '6 blow-bys (Shoulder Dip, Rip Through, Swim Move, Burst, Turnstile, Ghost Step): you slip past and the defender bites, turns or gets frozen.',
+  '4 cut-offs (Chest Up, Hip Check, Arm Bar, Beat to the Spot): the defender bumps you back in front of him and your momentum is gone.',
+  'BALL HANDLE makes these happen more often and makes blow-bys more likely; SPEED helps a little. A defender\'s PERIMETER D makes cut-offs more likely.']],
  ['v1.67','No more phasing',['Every player now collides with every other player - team-mates too - so nobody walks, runs or spins through anybody.',
   'Spinning out of the post (and spin dribbles): you no longer ghost through the defender. You slide round him - pushed off his shoulder with your momentum carried along his body - and he is rocked back and AWAY from the side you spin to, opening the lane.',
   'A dunker on his run-up moves whoever is standing in his lane aside instead of running through them.']],
@@ -4992,16 +5036,16 @@ function hlSigItems(){const out=[{t:'HOW SIGNATURES WORK',tag:'START HERE',d:'Si
  return out}
 const HL_ATTR=[
  {t:'HOW RATINGS WORK',tag:'START HERE',d:'Every player has 14 ratings from 25 to 100. Most of them scale smoothly: a 60 is a bit better than a 50, and a 90 is a lot better than a 60, so every point counts.\n• Ratings also unlock Signatures (see the SIGNATURES page): each Signature tier needs certain ratings.\n• Created players have rating caps set by their position, height, weight and wingspan. Taller players can go higher in dunking, blocking and rebounding but lower in speed and handles; heavier players get more strength and post play; longer arms help blocking, steals and rebounding but cost a little shooting.\n• There is no stamina: players never tire.'},
- {t:'BALL HANDLE',tag:'BH',d:'How sharp your dribble moves are.\n• Crossovers, hesitations, spins, step-backs, between-the-legs and behind-the-back all play faster and cover more ground as it goes up (75% of the normal time at 100, 125% at 25).\n• Your chance to break a defender\'s ankles with a move climbs steeply: a crossover drops a close defender about 2% of the time at 25, 10% at 60, 21% at 80 and 37% at 100. A broken defender stumbles for almost a second.\n• You\'re always a little slower with the ball than without it; a better ball handler loses less speed (16% slower at 25, 8% at 100).\n• It does not stop steals by itself: Signatures like Tight Handles do that.\n• Euro step layups use it, and the AI gives the ball to its best ball handler / passer.'},
+ {t:'BALL HANDLE',tag:'BH',d:'How sharp your dribble moves are.\n• Crossovers, hesitations, spins, step-backs, between-the-legs and behind-the-back all play faster and cover more ground as it goes up (75% of the normal time at 100, 125% at 25).\n• Your chance to break a defender\'s ankles with a move climbs steeply: a crossover drops a close defender about 2% of the time at 25, 10% at 60, 21% at 80 and 37% at 100. A broken defender stumbles for almost a second.\n• You\'re always a little slower with the ball than without it; a better ball handler loses less speed (16% slower at 25, 8% at 100).\n• It does not stop steals by itself: Signatures like Tight Handles do that.\n• Sprinting into a move at a defender in front of you can set off a BLOW-BY (you slip past) or a CUT-OFF (he bumps you back): a higher rating sets them off more often and wins more of them.\n• Euro step layups use it, and the AI gives the ball to its best ball handler / passer.'},
  {t:'STEALING',tag:'STL',d:'How well you take the ball off people.\n• Your steal swipe (E) reaches further (about 70% of the normal reach at 25, 130% at 100) and works more often (about 5 times as likely at 100 as at 25).\n• Swiping during a dribble move rarely works, and a ball protected by a spin, behind-the-back or a post-up can\'t be stolen.\n• Also makes you better at picking off passes thrown near you.'},
  {t:'MID-RANGE',tag:'MID',d:'Jump shots from 13 ft out to the three-point line.\n• Sets the size of the green (perfect) window on your shot meter: the higher the rating, the bigger the window.\n• Decides how much a defender\'s contest shrinks that window: at 100 a hand in your face only takes away a quarter of it, at 25 it takes almost all of it.\n• Below 60, a contested mid-range jumper only goes in with a perfect release.\n• Inside 13 ft (close shots) ratings don\'t matter: everyone gets the same window.\n• Floaters use it.'},
  {t:'3PT',tag:'3PT',d:'Shots from beyond the arc.\n• Same as Mid-Range but for threes: a bigger perfect window and contests hurt less.\n• It also sets your range: the further you go past the line, the faster your window shrinks, and great shooters keep a usable window several feet deeper.\n• Below 60, a contested three only goes in with a perfect release.\n• AI shooters with high ratings pop out for threes off screens and space the floor.'},
- {t:'SPEED',tag:'SPD',d:'How fast you run, with or without the ball.\n• At 70 you move at the normal speed. 25 is about 23% slower, 90 about 10% faster, and above 90 it rises quickly (99 is roughly 55% faster).\n• Also speeds up chasing loose balls, your run-up to dunks and layups, and fast breaks.\n• Dribble-move bursts only get part of the bonus, so very fast players don\'t glide.'},
+ {t:'SPEED',tag:'SPD',d:'How fast you run, with or without the ball.\n• At 70 you move at the normal speed. 25 is about 23% slower, 90 about 10% faster, and above 90 it rises quickly (99 is roughly 55% faster).\n• Also speeds up chasing loose balls, your run-up to dunks and layups, and fast breaks.\n• Dribble-move bursts only get part of the bonus, so very fast players don\'t glide.\n• Helps a little in sprinting blow-bys.'},
  {t:'LAYUP / CLOSE SHOT',tag:'LAY',d:'Finishing at the rim with layups.\n• Make chance when open goes from about 60% at 25 to 95% at 100, and a contest costs far less at high ratings (40% at 25, 15% at 100).\n• Your layup meter window is bigger with a higher rating and shrinks less when you\'re contested.\n• Unlocks fancier finishes: finger roll 55, floater 65, scoop 70, euro step 75, reverse 82, over-the-shoulder reverse 92. Overhand and power layups are always available.\n• Better finishers shield the ball away from a shot-blocker in the air.'},
  {t:'DUNKING',tag:'DNK',d:'Throwing it down.\n• Open dunks are a sure thing from 35 up.\n• A dunk with a defender at the rim needs at least 50 to score, and the chance climbs from 55% at 50 to 92% at 100.\n• The higher it is, the more often you posterize a defender standing at the rim (15% at 25, 95% at 100), and that defender is stunned.\n• AI players only dunk with 62 or more. You can try a dunk (F) at any rating.\n• Helps your vertical when you jump to block.'},
  {t:'STRENGTH',tag:'STR',d:'Who wins when bodies collide.\n• Stronger players push weaker ones back on contact: drives stall against a strong defender, and a strong driver bullies through a weak one. Weight adds to this.\n• Post-up backdowns (hold G) push the defender back faster.\n• Adds to your chance of finishing a poster dunk and helps power layups.'},
  {t:'PASSING',tag:'PAS',d:'How good your passes are.\n• Passes travel faster (about 80% speed at 25, 130% at 100), so there\'s less time to intercept them.\n• A teammate who shoots within about 4 seconds of your pass gets a boost to his make chance (almost nothing at 25, about +6% at 100).\n• Good AI passers look to pass more.'},
- {t:'PERIMETER DEFENSE',tag:'PD',d:'Guarding the ball away from the basket.\n• Your contests on jump shots from mid-range and three reach further and hurt the shooter more.\n• Holding G (guard stance) slows you down less: you keep 45% of your speed at 25 and 80% at 100.\n• AI defenders with high ratings react faster to the ball handler and stay tighter on him.'},
+ {t:'PERIMETER DEFENSE',tag:'PD',d:'Guarding the ball away from the basket.\n• Your contests on jump shots from mid-range and three reach further and hurt the shooter more.\n• Holding G (guard stance) slows you down less: you keep 45% of your speed at 25 and 80% at 100.\n• AI defenders with high ratings react faster to the ball handler and stay tighter on him.\n• When a sprinting ball handler tries to blow by you with a move, a higher rating means you CUT HIM OFF more often: you bump him back in front of you and take away his momentum.'},
  {t:'INTERIOR DEFENSE',tag:'IDF',d:'Defending near the basket.\n• Your contests on layups, close shots and dunks reach further and are stronger.\n• Being close enough to contest a dunk means a dunker with low dunking can\'t score over you.\n• It doesn\'t change blocks: that\'s Blocking (and getting your hand to the ball).'},
  {t:'BLOCKING',tag:'BLK',d:'Sending shots back.\n• Layups and dunks are only blocked if your hand actually touches the ball. Blocking (with Dunking) sets how high you jump, and blocking alone sets how accurately your hand goes for the ball: up to about 1.3 ft off at 25, just a few inches at 100. Good blockers also correct their aim as they rise, then slap at the ball with the forearm and wrist when their hand gets there.\n• Jump shots: a defender in the air close to the shooter blocks about 12% at 25, 40% at 60 and 65% at 100.\n• AI shot-blockers with high ratings go up more often and time their jumps better.'},
  {t:'REBOUNDING',tag:'REB',d:'Grabbing missed shots.\n• Bigger reach for the ball, especially while you\'re in the air.\n• Wins more battles when several players go for the same board (height helps too).'},
