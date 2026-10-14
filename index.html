@@ -3178,10 +3178,10 @@ function openCreate(slot,pos){
  MM.slot=slot;MM.row=0;MM.hold=0;MM.drag=-1;
  const old=SLOTS[slot],b=MM.rbNew?null:old,ps=pos==null?0:pos; // REBIRTH: a brand-new build in an occupied slot (the old one stays until the new one is saved)
  MM.cr=b?JSON.parse(JSON.stringify(b)):{rb:MM.rbNew||0,name:MM.rbNew&&old?old.name:'PLAYER '+(slot+1),sk:'#c68642',hs:0,hc:'#17110c',pos:ps,h:DEF_H[ps],wt:DEF_W[ps],ws:DEF_H[ps]+4,bt:2,btSet:false,st:Object.fromEntries(STATS.map(([k])=>[k,SMIN]))};
- MM.posLock=true;MM.bi=0;MM.bioNew=!b;MM.bd=1; // the position never changes after the position page (editing a saved player keeps his)
+ MM.posLock=true;MM.bi=1;MM.bioNew=!b;MM.bd=1; // the position never changes after the position page (editing a saved player keeps his)
  MM.floor=null;
  if(b){ // AFTER CREATION: name, position, height, weight, wingspan and build are locked - only the look (face, hair, hair colour, skin) changes, and attributes only go UP from what is saved
-  const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));MM.floor=Object.assign({},d.st);MM.row=5;S='create';return}
+  const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));MM.floor=Object.assign({},d.st);MM.row=6;S='create';return}
  S='cbio';
 }
 const bioLocked=()=>!MM.bioNew&&!MM.rbNew&&!!SLOTS[MM.slot]; // editing a saved player
@@ -3193,7 +3193,7 @@ const POSD=[
  'The versatile wing. The Small Forward does a bit of everything: scoring from outside and in transition, finishing at the rim, cutting backdoor, and guarding several positions.',
  'A strong forward who works between the perimeter and the paint. The Power Forward sets screens, rebounds, scores from the elbows and the block, and can stretch the floor in some builds.',
  'Usually the tallest player on the court, responsible for scooping up rebounds and dominating the interior: protecting the rim on defence, and scoring with dunks, close shots and post moves on offence.'];
-const cpRect=i=>[40,112+i*70,220,62],CP_LOCK=[700,472,220,44],CP_BACK=[40,480,120,34],CP_VW=[[300,112,172,232],[488,112,172,232]],CP_DUR=.6;
+const cpRect=i=>[40,112+i*70,220,62],CP_NAME=[300,58,360,34],CP_LOCK=[700,472,220,44],CP_BACK=[40,480,120,34],CP_VW=[[300,112,172,232],[488,112,172,232]],CP_DUR=.6;
 const cpsc=new THREE.Scene(),cpcam=new THREE.PerspectiveCamera(30,172/232,.5,100);let cpM=[],cpRef=[];
 cpsc.background=new THREE.Color(0x1b1e29);cpsc.add(new THREE.AmbientLight(0xffffff,.85));{const l=new THREE.DirectionalLight(0xffffff,.7);l.position.set(3,8,10);cpsc.add(l)}
 cpcam.position.set(0,4.9,16.5);cpcam.lookAt(0,4.15,0);
@@ -3203,18 +3203,19 @@ function cpBuild(){ // the two highest-rated players at the chosen position (any
  cpRef.forEach(r=>{r.read=charRead(TEAMS[r.ti].rt[r.i],TEAMS[r.ti].ar[r.i],r.i)});
  cpM=cpRef.map(r=>{const t=TEAMS[r.ti],l=TLK[r.ti][r.i],pp={team:0,tm:r.ti,i:r.i,n:r.i+1,sk:l.sk,hs:l.hs,hc:l.hc,ht:t.ht[r.i],wd:1};build(pp);
   const fl=new THREE.Mesh(new THREE.CircleGeometry(2.2,32),new THREE.MeshBasicMaterial({color:t.sm}));fl.rotation.x=-Math.PI/2;fl.position.y=-.02;fl.scale.set(1/pp.ht,1/pp.ht,1);pp.m.add(fl);cpsc.add(pp.m);return pp.m})}
-function openCPos(slot,rb){MM.slot=slot;MM.rbNew=rb||0;MM.cp=MM.cp|0;S='cpos';cpBuild()}
+function openCPos(slot,rb){MM.slot=slot;MM.rbNew=rb||0;MM.cp=MM.cp|0;MM.cr=null;MM.nm=MM.rbNew&&SLOTS[slot]?SLOTS[slot].name:'PLAYER '+(slot+1);S='cpos';cpBuild()}
 function cpSet(i){if(i!=MM.cp){MM.cp=i;cpBuild();beep(420+i*40,.05,'triangle',.03)}}
-function cpLock(){ // lock the position in, then slide to the attribute page
- openCreate(MM.slot,MM.cp);startTrans('cpos','cbio',1)}
+function cpLock(){ // lock the name + position in, then on to APPEARANCE (a look already picked survives coming back here)
+ const lk=MM.cr&&{sk:MM.cr.sk,hs:MM.cr.hs,hc:MM.cr.hc,fc:MM.cr.fc};openCreate(MM.slot,MM.cp);if(lk)Object.assign(MM.cr,lk);MM.cr.name=MM.nm.trim()||'PLAYER '+(MM.slot+1);openLook();beep(560,.1,'triangle',.04)}
 const cpEase=()=>{const u=Math.max(0,Math.min(1,MM.ct/CP_DUR));return u*u*(3-2*u)};
 function startTrans(from,to,dir){S='ctrans';MM.tf=from;MM.tt=to;MM.td=dir;MM.ct=0;if(dir<0||performance.now()-SEL.t>150)beep(dir>0?560:440,.1,'triangle',.04)} // dir 1 = forward (page slides left), -1 = back
 const pageOff=pg=>S=='ctrans'?(MM.tf==pg?-MM.td*960*cpEase():MM.tt==pg?MM.td*960*(1-cpEase()):null):(S==pg?0:null); // where a page's left edge is right now (null = not on screen)
 function wrapT(t,x,y,w,lh){let line='';for(const wd of t.split(' ')){const tt=line?line+' '+wd:wd;if(g.measureText(tt).width>w&&line){g.fillText(line,x,y);y+=lh;line=wd}else line=tt}g.fillText(line,x,y);return y+lh}
 function drawCPos(){
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText('CREATE PLAYER  \u00b7  SLOT '+(MM.slot+1),40,48);
- g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('STEP 1  \u00b7  POSITION',920,40);
- g.textAlign='left';g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('Choose the position your player will play. They replace your AI teammate there.',40,78);
+ g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('STEP 1  \u00b7  NAME & POSITION',920,40);
+ g.textAlign='left';g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('Name your player and pick a position.',40,80);
+ {const[x,y,w,h]=CP_NAME;mRR(x,y,w,h,8,HL,GOLD);g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('NAME',x+12,y+21);g.textAlign='center';g.font='bold 19px Georgia';g.fillStyle='#fff';g.fillText(MM.nm+(Math.floor(T*2)%2?'_':''),x+w/2,y+23);g.textAlign='right';g.font='9px system-ui';g.fillStyle='#6a7080';g.fillText('type (12 letters)',x+w-10,y+21)}
  POS.forEach((ps,i)=>{const[x,y,w,h]=cpRect(i),on=MM.cp==i;mRR(x,y,w,h,12,on?HL:'rgba(255,255,255,.05)',on?GOLD:'rgba(255,255,255,.12)');
   g.textAlign='left';g.font='bold 30px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(ps,x+20,y+41);g.font='bold 11px system-ui';g.fillStyle=on?GOLD:'#8a90a0';g.fillText(PNAME[i],x+78,y+37);
   if(on){g.fillStyle=GOLD;g.font='bold 16px system-ui';g.textAlign='right';g.fillText('\u25b6',x+w-16,y+37)}});
@@ -3387,7 +3388,7 @@ function adj(row,dd,big,fresh){ // attribute rows (6..): never above the cap the
 }
 function setBar(x){const d=MM.cr,k=STATS[MM.drag-6][0],v=d.st[k];d.st[k]=mClamp(Math.round(SMIN+(x-640)/210*(SMAX-SMIN)),stFloor(k),Math.max(stFloor(k),Math.min(Math.max(v,capNow(k)),v+Math.max(0,pointsLeft(d)))))} // (over budget = can lower, never forced down)
 // ===== BIOMETRICS page (step 2): name, height (limited by position), weight (limited by height), wingspan; a live 3D preview; and what each does to the attribute caps =====
-const bioRect=i=>[40,92+i*47,270,42],CHIP_Y=360,chipRect=i=>{const W=[40,46,58,70,46];let x=40;for(let q=0;q<i;q++)x+=W[q]+4;return[x,CHIP_Y,W[i],22]},BIO_NEXT=[40,424,270,44],BIO_BACK=[40,476,270,34],BV=[330,96,170,350],BAR_X=700,BAR_W=140;
+const bioRect=i=>[40,92+(i-1)*47,270,42],CHIP_Y=360,chipRect=i=>{const W=[40,46,58,70,46];let x=40;for(let q=0;q<i;q++)x+=W[q]+4;return[x,CHIP_Y,W[i],22]},BIO_NEXT=[40,424,270,44],BIO_BACK=[40,476,270,34],BV=[330,96,170,350],BAR_X=700,BAR_W=140;
 const bsc=new THREE.Scene(),bcam=new THREE.PerspectiveCamera(30,BV[2]/BV[3],.5,100);let bioM=null;
 bsc.background=new THREE.Color(0x1b1e29);bsc.add(new THREE.AmbientLight(0xffffff,.85));{const l=new THREE.DirectionalLight(0xffffff,.7);l.position.set(3,8,10);bsc.add(l)}
 bcam.position.set(0,4.9,18.8);bcam.lookAt(0,4.5,0);
@@ -3404,8 +3405,8 @@ function bioAdj(i,dd,big){const d=MM.cr,hr=HRANGE[d.pos];
  else if(i==4){const al=btAllowed(d.h,d.wt);let b=btEff(d);do b+=dd;while(b>=0&&b<5&&!al[b]);if(b>=0&&b<5)bioSetBt(b)}
  bioDirty()}
 function bioSetBt(b){const d=MM.cr;if(btAllowed(d.h,d.wt)[b]){d.bt=b;d.btSet=true;bioDirty()}}
-function bioBack(){if(MM.bioNew){MM.bd=1;startTrans('cbio','cpos',-1)}else S='career'}
-function bioNext(){const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));STATS.forEach(([k])=>{d.st[k]=Math.min(d.st[k],MM.caps[k])});MM.row=5;MM.hold=0;MM.drag=-1;startTrans('cbio','create',1)}
+function bioBack(){if(MM.bioNew){openLook();for(const k in P)P[k]=0}else S='career'}
+function bioNext(){const d=MM.cr;MM.caps=statCaps(d.h,d.wt,d.ws,btEff(d));STATS.forEach(([k])=>{d.st[k]=Math.min(d.st[k],MM.caps[k])});MM.row=6;MM.hold=0;MM.drag=-1;startTrans('cbio','create',1)}
 function attrBack(){MM.bd=1;MM.bi=5;startTrans('create','cbio',-1)}
 // build tags: how his size compares (height within the position's range, weight for his height, wingspan for his height)
 function bioTags(d){const hr=HRANGE[d.pos],q=(d.h-hr[0])/(hr[1]-hr[0]),u=(d.wt-wExp(d.h))/40,w=(d.ws-(d.h+4))/3,T=[];
@@ -3416,9 +3417,9 @@ function drawPosPill(lx){const d=MM.cr,t=POS[d.pos]+'  \u00b7  '+PNAME[d.pos];g.
 function drawCBio(){
  const d=MM.cr,base=statCaps(DEF_H[d.pos],DEF_W[d.pos],DEF_H[d.pos]+4,btAuto(DEF_H[d.pos],DEF_W[d.pos])),caps=statCaps(d.h,d.wt,d.ws,btEff(d));
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText('CREATE PLAYER  \u00b7  SLOT '+(MM.slot+1),40,48);drawPosPill();
- g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('STEP 2  \u00b7  BIOMETRICS',40,76);
+ g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('STEP 3  \u00b7  BIOMETRICS',40,76);
  const hr=HRANGE[d.pos],wr=wRange(d.h),vals=[d.name+(MM.bi==0&&Math.floor(T*2)%2?'_':''),fmtH(d.h),d.wt+' lb',fmtH(d.ws),BODY[btEff(d)].n],hints=['type a name (12 letters)',fmtH(hr[0])+' - '+fmtH(hr[1]),wr[0]+' - '+wr[1]+' lb',fmtH(Math.max(67,d.h-3))+' - '+fmtH(Math.min(98,d.h+10)),'only builds that fit your weight'];
- ['NAME','HEIGHT','WEIGHT','WINGSPAN','BUILD'].forEach((l,i)=>{const[x,y,w,h]=bioRect(i),on=MM.bi==i;
+ ['NAME','HEIGHT','WEIGHT','WINGSPAN','BUILD'].forEach((l,i)=>{if(!i)return;const[x,y,w,h]=bioRect(i),on=MM.bi==i;
   mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?GOLD:null);g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText(l,x+14,y+15);
   g.textAlign='right';g.font='9px system-ui';g.fillStyle='#6a7080';g.fillText(hints[i],x+w-12,y+15);
   g.textAlign='center';g.font='bold 19px Georgia';g.fillStyle='#fff';g.fillText(vals[i],x+w/2,y+35);
@@ -3441,10 +3442,10 @@ function drawCBio(){
   g.textAlign='right';g.font='bold 14px Georgia';g.fillStyle='#fff';g.fillText(c,872,y+14);
   g.font='bold 11px system-ui';g.fillStyle=dl>0?'#7fffa0':dl<0?'#ff7b7b':'#6a7080';g.fillText(dl>0?'\u25b2'+dl:dl<0?'\u25bc'+(-dl):'\u2013',908,y+14)});
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2191/\u2193 row  \u00b7  \u2190/\u2192 change (Shift = bigger steps)  \u00b7  Enter next  \u00b7  Esc back  \u00b7  or click',480,530)}
-function createEnter(){if(MM.row==6+STATS.length)createSave();else if(MM.row==7+STATS.length)S='career';else if(MM.row==5){if(MM.apS==2)openStore();else if(MM.apS)openSigs();else openLook()}else if(MM.row==4){if(!bioLocked())attrBack()}else MM.row++}
+function createEnter(){if(MM.row==6+STATS.length)createSave();else if(MM.row==7+STATS.length)S='career';else if(MM.row==4){if(!bioLocked())attrBack()}else MM.row++}
 function menuStep(dt){
  if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
- const nm=!(S=='cbio'&&MM.bi==0);
+ const nm=S!='cpos'; // (on the name + position page letters type the name, so W/S/A/D/Space don't navigate)
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
  if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(LB.on)lbKeys(up,dn);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyL)lbOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
  else if(S=='career'){if(up)MM.r=(MM.r+3)%4;if(dn)MM.r=(MM.r+1)%4;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
@@ -3473,10 +3474,10 @@ function menuStep(dt){
   const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);MM.ro=MM.ro|0;
   if(lr)MM.ro=(MM.ro+lr+6)%6;if(up||dn)MM.ro=(MM.ro+3)%6;
   if(ok)openRTeam(MM.ro);if(P.Escape||P.Backspace)S='menu'}
-else if(S=='cpos'){if(up)cpSet((MM.cp+4)%5);if(dn)cpSet((MM.cp+1)%5);if(ok)cpLock();if(P.Escape||P.Backspace)S='career'}
+else if(S=='cpos'){if(up)cpSet((MM.cp+4)%5);if(dn)cpSet((MM.cp+1)%5);if(ok)cpLock();if(P.Escape)S='career'}
  else if(S=='ctrans'){MM.ct+=dt;if(MM.ct>=CP_DUR){S=MM.tt;for(const k in P)P[k]=0}}
  else if(S=='cbio'){
-  if(up)MM.bi=(MM.bi+6)%7;if(dn)MM.bi=(MM.bi+1)%7;
+  if(up)MM.bi=MM.bi<=1?6:MM.bi-1;if(dn)MM.bi=MM.bi>=6?1:MM.bi+1;
   if(P.Escape){bioBack();return}
   if(ok){if(MM.bi==5)bioNext();else if(MM.bi==6)bioBack();else MM.bi++}
   const fresh=P.ArrowLeft||P.ArrowRight||(nm&&(P.KeyA||P.KeyD)),dd=(K.ArrowRight||(nm&&K.KeyD)?1:0)-(K.ArrowLeft||(nm&&K.KeyA)?1:0),big=K.ShiftLeft||K.ShiftRight;
@@ -3486,7 +3487,7 @@ else if(S=='cpos'){if(up)cpSet((MM.cp+4)%5);if(dn)cpSet((MM.cp+1)%5);if(ok)cpLoc
   if(lr)openRTeam((MM.ro+lr+6)%6);if(ok||P.Escape||P.Backspace)S='rosters'}
  else if(S=='sigs')sigsKeys(up,dn,ok);
  else{
-  {const n=4+STATS.length;if(up)MM.row=(MM.row-4+n-1)%n+4;if(dn)MM.row=(MM.row-4+1)%n+4;if(MM.row==4&&bioLocked())MM.row=up?7+STATS.length:5}
+  {const n=4+STATS.length;if(up)MM.row=(MM.row-4+n-1)%n+4;if(dn)MM.row=(MM.row-4+1)%n+4;if(MM.row==5)MM.row=up?4:6;if(MM.row==4&&bioLocked())MM.row=up?7+STATS.length:6}
   if(P.Escape){if(bioLocked())S='career';else attrBack();return}
   if(MM.row==5&&(P.ArrowLeft||P.ArrowRight||(nm&&(P.KeyA||P.KeyD))))MM.apS=((MM.apS|0)+(P.ArrowLeft||(nm&&P.KeyA)?2:1))%3; // APPEARANCE <-> SIGNATURES <-> STORE
   if(P.Enter)createEnter();
@@ -3534,16 +3535,13 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
   if(mIn(x,y,RT_NEXT))openRTeam((MM.ro+1)%6)}
  else if(S=='cbio'){
   if(type==0)for(let q=0;q<5;q++)if(mIn(x,y,chipRect(q))){MM.bi=4;bioSetBt(q);return}
-  for(let i=0;i<5;i++)if(mIn(x,y,bioRect(i))){MM.bi=i;if(type==0&&i>=1){const[rx,,rw]=bioRect(i);if(x<rx+rw*.3)bioAdj(i,-1,0);else if(x>rx+rw*.7)bioAdj(i,1,0)}return}
+  for(let i=1;i<5;i++)if(mIn(x,y,bioRect(i))){MM.bi=i;if(type==0&&i>=1){const[rx,,rw]=bioRect(i);if(x<rx+rw*.3)bioAdj(i,-1,0);else if(x>rx+rw*.7)bioAdj(i,1,0)}return}
   if(mIn(x,y,BIO_NEXT)){MM.bi=5;if(type==0)bioNext();return}
   if(mIn(x,y,BIO_BACK)){MM.bi=6;if(type==0)bioBack()}}
  else if(S=='sigs')sigsPtr(x,y,type);
  else if(S=='create'){
   if(type==1&&MM.drag>=0){setBar(x);return}
   if(mIn(x,y,BIO_BTN)){if(bioLocked())return;MM.row=4;if(type==0)attrBack();return}
-  if(mIn(x,y,AP_RECT)){MM.row=5;MM.apS=0;if(type==0)openLook();return}
-  if(mIn(x,y,SIG_BTN)){MM.row=5;MM.apS=1;if(type==0)openSigs();return}
-  if(mIn(x,y,STORE_BTN)){MM.row=5;MM.apS=2;if(type==0)openStore();return}
   for(let j=0;j<STATS.length;j++)if(mIn(x,y,statRect(j))){MM.row=6+j;if(type==0){if(x>=636&&x<=854){MM.drag=6+j;setBar(x)}else if(x<636)adj(6+j,-1,0,1);else adj(6+j,1,0,1)}return}
   if(mIn(x,y,SAVE_R)){MM.row=6+STATS.length;if(type==0)createSave();return}
   if(mIn(x,y,CANCEL_R)){MM.row=7+STATS.length;if(type==0)S='career'}
@@ -3557,9 +3555,9 @@ addEventListener('keydown',e=>{if(e.repeat)return;const ed=(S=='create'||S=='loo
  if(!ed||(e.code!='Digit1'&&e.code!='Numpad1')){ADM.n=0;return}const now=performance.now();ADM.n=now-ADM.t<1500?ADM.n+1:1;ADM.t=now;if(ADM.n<5)return;ADM.n=0;
  let xp=0;for(let l=1;l<LV_MAX;l++)xp+=expNeed(l);MM.cr.xp=Math.max(MM.cr.xp|0,xp);SLOTS[MM.slot].xp=MM.cr.xp;saveSlots();beep(660,.15,'triangle',.05);beep(880,.25,'triangle',.05)});
 addEventListener('keydown',e=>{ // name entry
- if(S!='cbio'||MM.bi!=0||!MM.cr||e.ctrlKey||e.metaKey||e.altKey)return;const d=MM.cr;
- if(e.key=='Backspace'){d.name=d.name.slice(0,-1);e.preventDefault()}
- else if(e.key.length==1&&/[A-Za-z0-9 '.\-]/.test(e.key)&&d.name.length<12)d.name+=e.key.toUpperCase();
+ if(S!='cpos'||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.key=='Backspace'){MM.nm=MM.nm.slice(0,-1);e.preventDefault()}
+ else if(e.key.length==1&&/[A-Za-z0-9 '.\-]/.test(e.key)&&MM.nm.length<12)MM.nm+=e.key.toUpperCase();
 });
 // drawing
 
@@ -4206,10 +4204,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.38'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.39'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.39','New player builder',['Creating a player now goes through four pages in order: 1 NAME & POSITION, 2 APPEARANCE (hair, hair colour, skin, face), 3 BIOMETRICS (height, weight, wingspan, build), 4 ATTRIBUTES.',
+  'The attribute page is only attributes now: APPEARANCE, SIGNATURES and STORE are no longer on it (they are moving somewhere else in a coming update).',
+  'BACK on each page goes to the page before, and your choices are kept.']],
  ['v1.38','New Career screen',['The CAREER screen has a new look: your three slots run down the left, the selected player stands in the middle, and his name and position are shown big on the right over his team\'s logo.',
   'Click a slot (or ↑/↓) to select it, then NEXT (or Enter) to play, edit or rebirth it. Empty slots show a green + to create a player.']],
  ['v1.37','Distance matters',['Deep threes are much harder: the PERFECT window now shrinks far faster the further you are past the arc, even when nobody is guarding you.',
@@ -4958,7 +4959,7 @@ const OVER_C='#ff9f43'; // trade-off orange: a cap held lower by a rival attribu
 function drawCreate(){
  const d=MM.cr,rem=pointsLeft(d),caps=MM.caps;
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText((bioLocked()?'EDIT PLAYER':MM.rbNew?'\u2605 REBIRTH '+MM.rbNew:'CREATE PLAYER')+'  ·  SLOT '+(MM.slot+1),40,48);drawPosPill(450);
- g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'APPEARANCE & ATTRIBUTE UPGRADES  ·  biometrics are locked after creation':'STEP 3  ·  APPEARANCE & ATTRIBUTES',40,76);
+ g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(bioLocked()?'ATTRIBUTE UPGRADES  ·  biometrics are locked after creation':'STEP 4  ·  ATTRIBUTES',40,76);
  g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('POINTS LEFT',920,26);g.font='bold 32px Georgia';g.fillStyle=rem>0?'#7fffa0':GOLD;g.fillText(rem,920,60);
  // the biometrics chosen on the previous page (read only here; the button goes back to change them)
  mRR(40,88,390,146,10,'rgba(255,255,255,.04)','rgba(255,255,255,.1)');
@@ -4967,9 +4968,6 @@ function drawCreate(){
  g.font='13px system-ui';g.fillStyle='#9aa';g.fillText(fmtH(d.h)+'  ·  '+d.wt+' lb  ·  WS '+fmtH(d.ws)+'  ·  '+BODY[btEff(d)].n,58,156);
  {let tx=58;g.font='bold 9px system-ui';bioTags(d).forEach(([t,c])=>{const w=g.measureText(t).width+14;mRR(tx,166,w,20,10,'rgba(255,255,255,.06)',c);g.textAlign='center';g.fillStyle=c;g.fillText(t,tx+w/2,180);tx+=w+5})}
  {const[bx,by,bw,bh]=BIO_BTN,lk=bioLocked(),on=MM.row==4&&!lk;mRR(bx,by,bw,bh,8,on?HL:lk?'rgba(255,255,255,.03)':'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font=lk?'bold 12px system-ui':'bold 14px Georgia';g.fillStyle=lk?'#6a7080':on?'#fff':'#cfd3dc';g.fillText(lk?'\u{1F512}  BIOMETRICS LOCKED AFTER CREATION':'◀   EDIT BIOMETRICS',bx+bw/2,by+21)}
- {const[ax,ay,aw,ah]=AP_RECT,on=MM.row==5&&!MM.apS;mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,255,255,.07)',on?GOLD:null);g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText('APPEARANCE \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('skin \u00b7 hair \u00b7 face',ax+aw/2,ay+36)}
- {const[ax,ay,aw,ah]=SIG_BTN,on=MM.row==5&&!!MM.apS,u=sigUse(d.sig),sp=spOf(lvInfo(d.xp||0).lv,rbOf(d));mRR(ax,ay,aw,ah,8,on?HL:'rgba(255,210,63,.07)',on?GOLD:'rgba(255,210,63,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':GOLD;g.fillText('SIGNATURES \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(u.n+' equipped \u00b7 '+sp+' SP',ax+aw/2,ay+36)}
- {const[ax,ay,aw,ah]=STORE_BTN,on=MM.row==5&&MM.apS==2,off=(d.anim&&d.anim.off||[]).length;mRR(ax,ay,aw,ah,8,on?HL:'rgba(127,255,160,.07)',on?GOLD:'rgba(127,255,160,.3)');g.textAlign='center';g.font='bold 13px Georgia';g.fillStyle=on?'#fff':'#7fffa0';g.fillText('STORE \u25b6',ax+aw/2,ay+20);g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(off?off+' animation'+(off>1?'s':'')+' off':'all animations on',ax+aw/2,ay+36)}
  // TRADE-OFFS (v1.25): the elite budget meter, then what holds the selected attribute down and its rivals
  {const eu=eliteUsed(d.st),full=eu>=ELITE[1],sk=MM.row>=6&&MM.row<6+STATS.length?STATS[MM.row-6][0]:null;
   g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText('ELITE BUDGET',44,314);
@@ -5003,7 +5001,8 @@ pcam.position.set(0,5,6.6);pcam.lookAt(0,4.8,0);
 function lookRefresh(){const d=MM.cr;if(pm){psc.remove(pm);pm.traverse(o=>{if(o.geometry)o.geometry.dispose()})}
  const w=1+(d.wt-215)/(W_MAX-W_MIN)*.08,pp={team:0,i:d.pos,n:d.pos+1,sk:d.sk,hs:d.hs,hc:d.hc,ht:1,bt:btOfBuild(d),fc:fcOfBuild(d)};build(pp);pm=pp.m;psc.add(pm);pm.scale.set(w,1,w);pm.updateMatrixWorld(true);MM.lkTop=new THREE.Box3().setFromObject(pm).max.y}
 function openLook(){MM.lk={row:0,hold:0,py:5,pz:6.6,ly:4.8};MM.pry=0;MM.pd=-1;S='look';lookRefresh()}
-function lookBack(){S='create';MM.row=5;MM.apS=0;for(const k in P)P[k]=0}
+function lookDone(){if(MM.bioNew){MM.bi=1;MM.bd=1;S='cbio';for(const k in P)P[k]=0;beep(560,.1,'triangle',.04)}else lookBack()}
+function lookBack(){if(MM.bioNew){S='cpos';for(const k in P)P[k]=0;return}S='create';MM.row=5;MM.apS=0;for(const k in P)P[k]=0}
 // ===== SIGNATURES MENU (from the attribute editor): pick which Signatures the player has equipped, within the SP budget and the limits =====
 const SG_TAB=i=>[40+i*116,84,112,36],SG_TILE=j=>[40+(j%3)*196,126+Math.floor(j/3)*90,190,84],SG_PANEL=[636,86,294,394],SG_TB=i=>[642+i*72,404,66,32],SG_DONE=[40,494,160,34],
  SG_TCOL=['#8a90a0','#e4a46c','#dfe4ea','#ffd75e'];
@@ -5078,7 +5077,7 @@ function lookAdj(r,dd,big){const d=MM.cr;
 function lookStep(up,dn,ok,dt){const L=MM.lk;
  if(up)L.row=(L.row+4)%5;if(dn)L.row=(L.row+1)%5;
  if(P.Escape||P.Backspace){lookBack();return}
- if(ok){if(L.row==4){lookBack();return}L.row++}
+ if(ok){if(L.row==4){lookDone();return}L.row++}
  const fresh=P.ArrowLeft||P.ArrowRight||P.KeyA||P.KeyD,dd=(K.ArrowRight||K.KeyD?1:0)-(K.ArrowLeft||K.KeyA?1:0),big=K.ShiftLeft||K.ShiftRight;
  if(dd&&L.row<4){if(fresh){lookAdj(L.row,dd,big);L.hold=.35}else{L.hold-=dt;if(L.hold<=0){lookAdj(L.row,dd,big);L.hold=.07}}}else L.hold=0}
 function lookPtr(x,y,type){const d=MM.cr,L=MM.lk;
@@ -5089,9 +5088,9 @@ function lookPtr(x,y,type){const d=MM.cr,L=MM.lk;
  for(let i=0;i<HAIRS.length;i++)if(mIn(x,y,hairRect(i))){d.hc=HAIRS[i];L.row=1;lookRefresh();return}
  for(let i=0;i<SKINS.length;i++)if(mIn(x,y,skinRect(i))){d.sk=SKINS[i];L.row=2;lookRefresh();return}
  for(let i=0;i<8;i++)if(mIn(x,y,faceRect(i))){d.fc=i;L.row=3;lookRefresh();return}
- if(mIn(x,y,LOOK_DONE)){L.row=4;lookBack()}}
+ if(mIn(x,y,LOOK_DONE)){L.row=4;lookDone()}}
 function drawLook(){const d=MM.cr,L=MM.lk;
- g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText('APPEARANCE  \u00b7  '+d.name,40,48);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 28px Georgia';g.fillText((MM.bioNew?'CREATE PLAYER  \u00b7  ':'APPEARANCE  \u00b7  ')+d.name,40,48);if(MM.bioNew){g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText('STEP 2  \u00b7  APPEARANCE',920,40)}
  g.clearRect(PV[0],PV[1],PV[2],PV[3]);g.strokeStyle='rgba(255,210,63,.45)';g.lineWidth=2;g.strokeRect(PV[0]-1,PV[1]-1,PV[2]+2,PV[3]+2);
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('drag the preview to rotate',PV[0]+PV[2]/2,PV[1]+PV[3]+26);
  const lab=(t,y,r)=>{g.textAlign='left';g.font='bold 12px system-ui';g.fillStyle=L.row==r?GOLD:'#8a90a0';g.fillText(t,380,y)};
@@ -5100,8 +5099,8 @@ function drawLook(){const d=MM.cr,L=MM.lk;
  for(let i=0;i<8;i++){const[x,y,w,h]=faceRect(i),on=fcOfBuild(d)==i;mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?GOLD:null);g.textAlign='center';g.font='bold 9px system-ui';g.fillStyle=on?'#fff':'#9aa';g.fillText(FACES[i].n,x+w/2,y+17)}
  const sw=(c,[x,y,w,h],on,r)=>{g.fillStyle=c;g.beginPath();g.roundRect(x,y,w,h,r);g.fill();g.strokeStyle=on?'#fff':'rgba(255,255,255,.18)';g.lineWidth=on?3:1;g.stroke();if(on){g.strokeStyle=GOLD;g.lineWidth=2;g.beginPath();g.roundRect(x-4,y-4,w+8,h+8,r+3);g.stroke()}};
  HAIRS.forEach((c,i)=>sw(c,hairRect(i),d.hc==c,6));SKINS.forEach((c,i)=>sw(c,skinRect(i),d.sk==c,8));
- const on=L.row==4;mRR(LOOK_DONE[0],LOOK_DONE[1],LOOK_DONE[2],LOOK_DONE[3],8,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 18px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText('DONE',LOOK_DONE[0]+LOOK_DONE[2]/2,LOOK_DONE[1]+27);
- g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2191/\u2193 section  \u00b7  \u2190/\u2192 change (Shift = jump a row)  \u00b7  or click  \u00b7  Esc / Done to go back',480,528)}
+ const on=L.row==4;mRR(LOOK_DONE[0],LOOK_DONE[1],LOOK_DONE[2],LOOK_DONE[3],8,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 18px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText(MM.bioNew?'CONTINUE  \u25b6':'DONE',LOOK_DONE[0]+LOOK_DONE[2]/2,LOOK_DONE[1]+27);
+ g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText((MM.bioNew?'\u2191/\u2193 section  \u00b7  \u2190/\u2192 change  \u00b7  or click  \u00b7  Esc back':'\u2191/\u2193 section  \u00b7  \u2190/\u2192 change (Shift = jump a row)  \u00b7  or click  \u00b7  Esc / Done to go back'),480,528)}
 function renderLook(){if(!pm)return;const L=MM.lk,top=MM.lkTop||5,tg=L.row==0||L.row==1||L.row==3?[top-.7,4.3,top-.8]:L.row==2?[top-1.4,7,top-1.5]:[5,6.6,4.8]; // head close-up for hair / face, upper body for skin, full body otherwise
  L.py+=(tg[0]-L.py)*.12;L.pz+=(tg[1]-L.pz)*.12;L.ly+=(tg[2]-L.ly)*.12;pcam.position.set(0,L.py,L.pz);pcam.lookAt(0,L.ly,0);
  pm.rotation.y=MM.pry+Math.sin(performance.now()/900)*(L.row==0||L.row==1||L.row==3?.55:.7);const y=540-PV[1]-PV[3];
