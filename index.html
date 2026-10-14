@@ -111,17 +111,19 @@ function post(kind,h,next){ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode=
 function finRP(){if(RP.mk){RP.clip=RP.fr.filter(f=>f.t>=RP.rel-5&&f.t<=RP.rel+2);RP.mk=0;RP.has=RP.clip.length>5?1:0}}
 const CHK={t:0},SC1=15;
 function checkBall(team){off=team;const o=TM[team][0],d=TM[1-team][0],H=hx(team),D=dr(team);
- TM.forEach(t=>t.forEach(p=>Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,hg:0})));
+ TM.forEach(t=>t.forEach(calm));
  o.x=H-D*292;o.y=HY;o.fx=D;o.fy=0;d.x=H-D*246;d.y=HY;d.fx=-D;d.fy=0;
  B={x:o.x+D*7,y:o.y,z:36,vz:0,mode:'held',h:o,t:0,so:team};shot=SC1;setCtl(0);ALAST=null;CHK.t=2;ms.on=false;CALL.n=0;TRB.t=0;
  say(team==0?'CHECK BALL  \u00b7  YOUR BALL':'CHECK BALL  \u00b7  DEFEND','#ffd23f')}
 function oneDone(){if(MODE==1&&(sc[0]>=ONE_WIN||sc[1]>=ONE_WIN)){S='over';finishGame();endInit();return true}return false}
+function calm(p){rdOff(p);Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});
+ if(p.m){const m=p.m;m.rotation.x=m.rotation.z=0;m.position.y=0;m.sh.rotation.set(-Math.PI/2,0,0);m.sh.position.set(0,.03,0);m.body.rotation.z=0;for(const b of [m.L,m.R,m.aL,m.aR])b.rotation.y=0}} // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
 function reset(next){
  if(MODE==1){finRP();if(oneDone())return;checkBall(next);return}
  finRP();
  off=next;ms.on=false;
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
-  Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rg:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});if(p.m){p.m.rotation.x=p.m.rotation.z=0;p.m.position.y=0} // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
+  calm(p); // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
   if(t==off){const s=[[860,320],[950,320],[780,150],[700,490],[640,320]][i];p.x=fr(s[0]);p.y=s[1]}
   else{p.x=fr(SPOT[i][0]-40);p.y=SPOT[i][1]}
   p.fx=-dr(off)*-1;p.fy=0;
@@ -266,12 +268,13 @@ function chase(p,dt){const dx=B.x+B.vx*.25-p.x,dy=B.y+B.vy*.25-p.y,l=Math.hypot(
 // GUARD tuning: contest reach and strength while fully in the stance, and the movement speed it allows (by perimeter defense rating)
 const GUARD={rng:.45,eff:.4,spd:p=>.45+.35*Math.max(0,Math.min(1,((p.rt&&p.rt.pd>0?p.rt.pd:50)-25)/75))};
 const shootNow=p=>(ms.on&&p.team==0&&p.i==ctl&&B.h===p)||p.sj>0;
-function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);o.push(p.kd?Object.assign({},p.kd):null);return o})),/* (kd: a posterized man's knockdown, so replays show it) */b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
-function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;RS={P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};RP.loop=RP.rt=RP.i=0;RP.l=new THREE.Vector3(47,6,32);RP.snap=1;RP.fd=null;S='replay';ms.on=false;beep(400,.1)}
-function endRep(){TM.forEach((t,a)=>t.forEach((p,b)=>Object.assign(p,RS.P[a][b])));Object.assign(B,RS.B);Object.assign(ms,RS.ms);ctl=RS.ctl;S='play'}
+function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);o.push(p.kd?Object.assign({},p.kd):null);o.push(p.rdh||null);return o})),/* (kd: a posterized man's knockdown, so replays show it) */b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
+function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;TM.flat().forEach(rdOff);RS={P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};RP.loop=RP.rt=RP.i=0;RP.l=new THREE.Vector3(47,6,32);RP.snap=1;RP.fd=null;S='replay';ms.on=false;beep(400,.1)}
+function endRep(){TM.flat().forEach(rdOff);TM.forEach((t,a)=>t.forEach((p,b)=>Object.assign(p,RS.P[a][b],{rd:null})));Object.assign(B,RS.B);Object.assign(ms,RS.ms);ctl=RS.ctl;S='play'}
 function repStep(dt){const c=RP.clip,len=c[c.length-1].t-c[0].t;RP.rt+=dt;if(RP.rt>len+.5){RP.rt=0;RP.i=0;RP.loop++;RP.snap=1}
  const tt=c[0].t+Math.min(RP.rt,len);while(RP.i<c.length-1&&c[RP.i+1].t<=tt)RP.i++;const f=c[RP.i];
- TM.forEach((t,a)=>t.forEach((p,b)=>{const o=f.p[a][b];SF.forEach((k,j)=>p[k]=o[j]);p.dunk=o[SF.length];p.lay=o[SF.length+1]||null;p.ps=o[SF.length+2]||null;p.kd=o[SF.length+3]?Object.assign({},o[SF.length+3]):null}));
+ TM.forEach((t,a)=>t.forEach((p,b)=>{const o=f.p[a][b];SF.forEach((k,j)=>p[k]=o[j]);p.dunk=o[SF.length];p.lay=o[SF.length+1]||null;p.ps=o[SF.length+2]||null;p.kd=o[SF.length+3]?Object.assign({},o[SF.length+3]):null;
+  const h=o[SF.length+4];if(RP.i==0){if(p.rd)rdOff(p);p.rdN=h&&h.n}else if(h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,h.dx,h.dz,h.mag,h.tone)}})); // the ragdoll hits replay too
  Object.assign(B,f.b);if(f.b.ht)B.h=TM[f.b.ht[0]][f.b.ht[1]];ms.on=f.ms[0];ms.t=f.ms[1];ctl=f.ms[2]}
 // ===== per-player match stats (PTS / AST / REB), shown on the ball-handler HUD =====
 let PSTAT=[[],[]],ALAST=null;
@@ -699,10 +702,59 @@ function posterHit(d,p,pz){say('POSTERIZED!  ·  '+(DKS[p.dunk.sty].pzn||p.dunk.
  else if(pz=='flat'){k.T=3;d.stun=3}}
 // LIGHT RAGDOLL (strength mismatch, see the contact in dunkStep): his body tilt is a damped spring (stiffness k, damping c: tips with the impulse, overshoots
 // once, settles upright) and his arms trail the motion (pose). va / vb = angular velocity (rad/s) about his own x (pitch, + = head forward) / z (roll, + = head right).
-const RG={k:45,c:7.5,max:.45,str:5};
-function ragHit(p,va,vb){const r=p.rg||(p.rg={a:0,b:0,va:0,vb:0});r.va+=va;r.vb+=vb}
-function ragStep(p,dt){const r=p.rg;if(!r)return;r.va+=(-RG.k*r.a-RG.c*r.va)*dt;r.vb+=(-RG.k*r.b-RG.c*r.vb)*dt;r.a=mClamp(r.a+r.va*dt,-RG.max,RG.max);r.b=mClamp(r.b+r.vb*dt,-RG.max,RG.max);
- if(Math.abs(r.a)+Math.abs(r.b)<.003&&Math.abs(r.va)+Math.abs(r.vb)<.03)p.rg=null}
+// ===== RAGDOLL PHYSICS: a small Verlet engine =====
+// The body is 14 point masses (pelvis, chest, shoulders, elbows, wrists, hips, knees, ankles) joined by stick constraints (RD_E: [a, b, stiffness]),
+// under gravity, colliding with the floor (with friction). MUSCLE TONE: every point is pulled (spring K, damper C) towards where the animation has that joint,
+// so a player is "an animated body with physics on top": a hit drops his tone (loose, the impulse throws him about, gravity pulls), then the tone ramps back
+// to 1, the physics re-converges onto the animation and he is handed back to it. The rig is then posed FROM the points (root, torso twist, each limb + hinge).
+const RG={str:5,K:420,C:30,gv:32,it:6,h:1/120,rel:1.1};
+const RD_E=[[0,1,1],[0,8,1],[0,9,1],[8,9,1],[1,2,1],[1,3,1],[2,3,1],[0,2,.6],[0,3,.6],[8,1,.6],[9,1,.6],[8,2,.3],[9,3,.3],[8,3,.3],[9,2,.3],
+ [2,4,1],[4,6,1],[3,5,1],[5,7,1],[8,10,1],[10,12,1],[9,11,1],[11,13,1]];
+const RD_MIN=[[2,6,.5],[3,7,.5],[8,12,.55],[9,13,.55]]; // an elbow / knee can't fold flat: shoulder-wrist, hip-ankle stay above this share of the limb length
+const RD_RAD=[.5,.6,.4,.4,.22,.22,.14,.14,.4,.4,.28,.28,0,0]; // contact radius with the floor (x height)
+const RD_W=[.55,1,1,1,.85,.85,.7,.7,.45,.45,.15,.15,0,0]; // how much of a hit each point takes: the upper body the most, the planted feet none
+const _RV=Array.from({length:14},()=>new THREE.Vector3()),_RX=new THREE.Vector3(),_RY=new THREE.Vector3(),_RZ=new THREE.Vector3(),_RA=new THREE.Vector3(),_RB=new THREE.Vector3(),_RC=new THREE.Vector3(),_RM=new THREE.Matrix4();
+const rdBones=m=>[m.body,m.aL,m.aR,m.L,m.R,m.aL.e,m.aR.e,m.L.k,m.R.k];
+function rdTgt(m,o){const J=[m.body,null,m.aL,m.aR,m.aL.e,m.aR.e,m.aL.w,m.aR.w,m.L,m.R,m.L.k,m.R.k,m.L.k.f,m.R.k.f]; // the animation's joint positions (world)
+ J.forEach((j,i)=>{if(j)j.getWorldPosition(_RA);else m.body.localToWorld(_RA.set(0,m.aR.position.y,0));o[i*3]=_RA.x;o[i*3+1]=_RA.y;o[i*3+2]=_RA.z})}
+function rdHit(p,dx,dz,mag,tone){const m=p.m;if(!m)return;let r=p.rd;
+ if(S!='replay'){const h=p.rdh;p.rdh={n:(h?h.n:0)+1,dx,dz,mag,tone}} // (so the replay can throw him the same way)
+ if(!r){m.updateMatrixWorld(true);r=p.rd={x:new Float32Array(42),o:new Float32Array(42),g:new Float32Array(42),go:new Float32Array(42),L:null,t:0,t0:1,acc:0,sv:null};
+  rdTgt(m,r.g);r.x.set(r.g);r.go.set(r.g);const v=[p.vx/10,(p.vz||0)/10,p.vy/10];for(let i=0;i<42;i++)r.o[i]=r.x[i]-v[i%3]*RG.h; // starts moving with him
+  const ax=m.aR.position.x,sy=m.aR.position.y+2.3,lx=m.R.position.x,sc=m.scale,Q=[[0,2.3],[0,sy],[-ax,sy],[ax,sy],[-ax,sy-1.1],[ax,sy-1.1],[-ax,sy-2.1],[ax,sy-2.1],[-lx,2.3],[lx,2.3],[-lx,1.1],[lx,1.1],[-lx,0],[lx,0]].map(([x,y])=>[x*sc.x,y*sc.y]),
+   d=(a,b)=>Math.hypot(Q[a][0]-Q[b][0],Q[a][1]-Q[b][1]); // rest lengths, from the rig's own proportions (body type x height)
+  r.L=RD_E.map(([a,b])=>d(a,b));r.Lm=RD_MIN.map(([a,b,f])=>f*d(a,b));r.s=sc.y}
+ r.t=0;r.t0=Math.min(r.t0,tone);
+ for(let i=0;i<14;i++){const w=RD_W[i]*mag*RG.h;r.o[i*3]-=dx*w;r.o[i*3+1]-=.12*w;r.o[i*3+2]-=dz*w}} // impulse = a change of velocity (Verlet: velocity is x - o)
+function rdTone(r){const H=.14;return r.t<H?r.t0:r.t0+(1-r.t0)*sm3(Math.min(1,(r.t-H)/RG.rel))}
+function rdStep(p,dt){const r=p.rd,m=p.m;if(!r||!m||dt<=0)return;m.updateMatrixWorld(true);
+ r.go.set(r.g);rdTgt(m,r.g);r.sv=rdBones(m).map(b=>[b.rotation.x,b.rotation.y,b.rotation.z]); // the animated pose (kept, so the animation runs on underneath)
+ r.t+=dt;const tn=rdTone(r),h=RG.h,x=r.x,o=r.o,K=RG.K*tn,C=RG.C*tn,gv=RG.gv*(1-tn);
+ r.acc=Math.min(r.acc+dt,.05);const n=Math.floor(r.acc/h);r.acc-=n*h;
+ for(let s=0;s<n;s++){const f=(s+1)/n;
+  for(let i=0;i<42;i++){const tg=r.go[i]+(r.g[i]-r.go[i])*f,tv=(r.g[i]-r.go[i])/dt,v=(x[i]-o[i])/h,a=K*(tg-x[i])+C*(tv-v)-(i%3==1?gv:0),nx=x[i]+v*h*.995+a*h*h;o[i]=x[i];x[i]=nx}
+  for(let it=0;it<RG.it;it++){
+   RD_E.forEach(([a,b,k],e)=>rdLen(x,a,b,r.L[e],k,0));RD_MIN.forEach(([a,b],e)=>rdLen(x,a,b,r.Lm[e],1,1));
+   for(let i=0;i<14;i++){const y=RD_RAD[i]*r.s;if(x[i*3+1]<y){x[i*3+1]=y;o[i*3]=x[i*3]-(x[i*3]-o[i*3])*.6;o[i*3+2]=x[i*3+2]-(x[i*3+2]-o[i*3+2])*.6;if(o[i*3+1]<y)o[i*3+1]=y}}}} // the floor: no sinking, friction on the slide
+ let dev=0;for(let i=0;i<42;i++)dev=Math.max(dev,Math.abs(x[i]-r.g[i]));
+ if(tn>=.999&&dev<.05&&r.t>.5){p.rd=null;return} // back under animation (he is where it has him: no pop)
+ rdPose(p,r)}
+function rdLen(x,a,b,L,k,mn){const i=a*3,j=b*3,dx=x[j]-x[i],dy=x[j+1]-x[i+1],dz=x[j+2]-x[i+2],d=Math.hypot(dx,dy,dz)||1e-6;if(mn&&d>=L)return;
+ const c=(d-L)/d*.5*k;x[i]+=dx*c;x[i+1]+=dy*c;x[i+2]+=dz*c;x[j]-=dx*c;x[j+1]-=dy*c;x[j+2]-=dz*c}
+function rdPose(p,r){const m=p.m,V=_RV;for(let i=0;i<14;i++)V[i].set(r.x[i*3],r.x[i*3+1],r.x[i*3+2]);
+ _RX.subVectors(V[9],V[8]).normalize();_RY.subVectors(V[1],V[0]);_RY.addScaledVector(_RX,-_RY.dot(_RX)).normalize();_RZ.crossVectors(_RX,_RY); // root: across the hips / up the spine
+ m.quaternion.setFromRotationMatrix(_RM.makeBasis(_RX,_RY,_RZ));m.position.copy(V[0]).addScaledVector(_RY,-m.body.position.y*m.scale.y);m.updateMatrixWorld(true);
+ const sL=m.worldToLocal(_RA.copy(V[2])),sR=m.worldToLocal(_RB.copy(V[3]));_RX.subVectors(sR,sL);_RX.y=0;if(_RX.lengthSq()>1e-6){_RX.normalize();m.body.rotation.set(0,Math.atan2(-_RX.z,_RX.x),0)} // torso: the shoulders' twist
+ m.body.updateMatrixWorld(true);m.ayk=1; // (pose eases the arms' swing / torso roll back afterwards)
+ rdLimb(m.aL,m.aL.e,m.body,V[4],V[6],1);rdLimb(m.aR,m.aR.e,m.body,V[5],V[7],1);rdLimb(m.L,m.L.k,m,V[10],V[12],-1);rdLimb(m.R,m.R.k,m,V[11],V[13],-1)}
+function rdLimb(j,hg,par,E,W,sg){ // point the bone's -y at the elbow/knee, bend the hinge (elbow forward, knee back) to reach the wrist/ankle
+ const e=par.worldToLocal(_RA.copy(E)),w=par.worldToLocal(_RB.copy(W)),u=_RC.subVectors(e,j.position).normalize();
+ _RY.copy(u).negate();_RZ.set(0,0,1).applyQuaternion(j.quaternion);_RZ.addScaledVector(_RY,-_RZ.dot(_RY)).normalize(); // the animation's bend plane: the fallback (and stops a joint bending backwards)
+ w.sub(e).normalize();const fu=Math.max(-1,Math.min(1,w.dot(u)));w.addScaledVector(u,-fu);const l=w.length();let ang=Math.acos(fu);
+ if(l>.05&&w.dot(_RZ)*sg>0)_RZ.copy(w).multiplyScalar(sg/l);else ang=Math.min(ang,.15);
+ _RX.crossVectors(_RY,_RZ).normalize();_RZ.crossVectors(_RX,_RY);j.quaternion.setFromRotationMatrix(_RM.makeBasis(_RX,_RY,_RZ));hg.rotation.set(-sg*ang,0,0)}
+function rdRestore(p){const r=p.rd,m=p.m;if(r&&r.sv&&m)rdBones(m).forEach((b,i)=>b.rotation.set(...r.sv[i]))} // the animated joint angles back (each frame before pose(), and when it ends)
+function rdOff(p){rdRestore(p);p.rd=null}
 function knockDown(d,p){const[vx,vy]=pushDir(d,p);
  const yaw=d.m?d.m.rotation.y:Math.atan2(d.fx,d.fy),fx=Math.sin(yaw),fy=Math.cos(yaw); // his BODY's facing as drawn right now (not where the AI wants to turn him)
  const fw=vx*fx+vy*fy,lf=vx*fy-vy*fx; // that push in his frame: fw along his facing, lf to his left (his left = (fy, -fx): the rig's +x)
@@ -804,9 +856,9 @@ function dunkStep(p,dt){
   const u=Math.min(1,k.ta/k.tA);k.pt=u;k.t=.22+.78*u;
   if(k.mk&&!k.lost&&!k.hit&&u>=.62){let v=null,vd=KD.r;for(const q of TM[1-p.team]){const l=Math.hypot(q.x-p.x,q.y-p.y);if(q.stun<=0&&l<vd){vd=l;v=q}}
    if(v){k.hit=1;k.vic=v;if(pzOf(k)&&v===dd)posterHit(v,p,pzOf(k));else knockDown(v,p);
-    if(((p.rt&&p.rt.str)||50)>=((v.rt&&v.rt.str)||50)+RG.str){const[vx,vy]=pushDir(v,p),yw=v.m?v.m.rotation.y:Math.atan2(v.fx,v.fy),fx=Math.sin(yw),fy=Math.cos(yw);ragHit(v,3.2*(vx*fx+vy*fy),3.2*(vy*fx-vx*fy));k.rag=1}/* much stronger: both go loose (the dunker on the way down) */if(v===dd)dd.lock=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}}
+    if(((p.rt&&p.rt.str)||50)>=((v.rt&&v.rt.str)||50)+RG.str){const[vx,vy]=pushDir(v,p);rdHit(v,vx,vy,Math.min(10,5+.35*(((p.rt&&p.rt.str)||50)-((v.rt&&v.rt.str)||50)-RG.str)),.3);k.rag=1}/* much stronger: both go loose (the dunker on the way down) */if(v===dd)dd.lock=0;shake=.9;beep(90,.25,'square');FX.t=.4;FX.x=(p.x+v.x)/20;FX.z=(p.y+v.y)/20;FX.y=7.6}}
   if(k.ta>=k.tA){
-   k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(k.rag)ragHit(p,-1.6,(Math.random()-.5)*1.2);if(dd)dd.lock=0;
+   k.ph=4;k.pf=0;k.t=1;k.za=p.z;if(k.rag&&p.m){const yw=p.m.rotation.y,sd=(Math.random()-.5)*.6;rdHit(p,-Math.sin(yw)+sd*Math.cos(yw),-Math.cos(yw)-sd*Math.sin(yw),3.2,.5)}if(dd)dd.lock=0;
    {const bx=D>0?932:8,LD=DKS[k.sty].land,cy=LD&&LD.keep>=.9?LD.keep:.8;let vx=(k.cvx||0)*cy,vy=(k.cvy||0)*cy;const rm=Math.max(0,Math.abs(bx-p.x)-14)*1.7;if(vx*D>0&&Math.abs(vx)>rm)vx=Math.sign(vx)*rm;p.vx=vx;p.vy=vy} // sprint momentum carries through the slam (capped so you don't slide out past the baseline)
    if(k.pv)SPV.slam=1;else if(k.mk&&!k.lost){const jc=jumpCont(p,k.pst?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
    if(k.lost||k.pv){} // blocked on the way up (bkHit already sent the ball loose)
@@ -2544,7 +2596,6 @@ function pose(p,dt){
   else Object.assign(q,{Lh:-.6,Rh:-.25,Lk:.8,Rk:.3,Lx:-1.4,Rx:-1.6,Le:-.3,Re:-.5,Lz:-1.3,Rz:1.3,lean:-.1,drop:.05,tw:0,r:8})} // down: limbs splayed, one knee up (getting up: the normal pose eases back in)
  else if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
- if(p.rg){const g=p.rg;q.Lx=(q.Lx||0)-.16*g.va;q.Rx=(q.Rx||0)-.16*g.va;q.Lz=(q.Lz||0)-.14*g.vb-.4*Math.abs(g.va)*.3;q.Rz=(q.Rz||0)-.14*g.vb+.4*Math.abs(g.va)*.3} // ragdoll: arms lag the swing, a little out for balance
  const r=q.r,S=(j,v)=>{j.rotation.x=ex(j.rotation.x,v,dt,r)};
  S(m.L,q.Lh);S(m.L.k,q.Lk);S(m.R,q.Rh);S(m.R.k,q.Rk);S(m.aL,q.Lx);S(m.aL.e,q.Le);S(m.aR,q.Rx);S(m.aR.e,q.Re);S(m.aL.w,q.Lw);S(m.aR.w,q.Rw);
  m.aL.rotation.z=ex(m.aL.rotation.z,q.Lz,dt,r);m.aR.rotation.z=ex(m.aR.rotation.z,q.Rz,dt,r);
@@ -2606,11 +2657,11 @@ function render(dt){
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
   m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw;
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
-  if(p.kd&&p.rg)ragStep(p,dt); // (knocked down: the spring only swings his arms)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
-  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=ex(p.rbx||0,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);p.rbz=ex(p.rbz||0,0,dt,10);ragStep(p,dt);m.rotation.x=p.rbx+(p.rg?p.rg.a:0);m.rotation.z=p.rbz+(p.rg?p.rg.b:0)} // stumble (stb) = a slight backward lean; any other stun = full fall
-  if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
+  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=ex(p.rbx||0,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);p.rbz=ex(p.rbz||0,0,dt,10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
+  rdRestore(p);if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
   if(p.kd&&p.z<1){m.updateMatrixWorld(true);_KB.makeEmpty();for(const o of [m.body,m.L,m.R])_KB.expandByObject(o);m.position.y-=_KB.min.y;m.sh.position.y+=_KB.min.y} // knocked down: whatever is lowest (back, backside, knees) rests ON the floor, not floating
+  if(p.rd){rdStep(p,dt);if(p.rd){m.sh.quaternion.copy(m.quaternion).invert().multiply(_KQ.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2));m.sh.position.set(0,0,0);m.updateMatrixWorld(true);m.worldToLocal(m.sh.position.set(m.position.x,.03,m.position.z))}else{m.sh.quaternion.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2);m.sh.position.x=m.sh.position.z=0}} // RAGDOLL physics on top of the animation (the shadow stays flat on the floor)
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
  }));
  ballM.position.set(B.x/10,B.z/10,B.y/10);{const h=B.h;if((B.mode=='held'||B.mode=='inbound')&&h&&h.ps&&!h.ps.go&&passHand(h,_PSR))ballM.position.copy(_PSR)} // pass wind-up: the ball in his handsballM.visible=ballS.visible=S!='intro'&&S!='over';
@@ -4281,10 +4332,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.57'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.58'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.58','Real ragdoll physics',['New physics engine: every player now has a 14-joint ragdoll body (pelvis, chest, shoulders, elbows, wrists, hips, knees, ankles) simulated with gravity, joint constraints, and floor collision with friction.',
+  'Strength-mismatch dunks (dunker 5+ STR over the defender) now go through it: the defender is thrown back by the hit, his limbs react on their own and his muscles pull him back into his stance; the dunker gets knocked back off the contact on the way down. Elbows and knees only bend the natural way.',
+  'Ragdoll hits show in replays, and every player is fully reset at the start of every possession, including 1v1 check balls.']],
  ['v1.57','Strength matters',['When a dunker with at least 5 more STRENGTH than the defender makes contact at the rim, both players go loose: the defender is shoved along the hit and wobbles (or flops as he goes down), the dunker recoils on the way down. Their bodies swing and settle like real weight, arms trailing.',
   'Every player is reset to normal at the start of every possession: no knockdown, wobble, rim hang or tilt carries over.']],
  ['v1.56','Back on their feet',['Fixed: a posterized player could stay tilted over or stuck on the floor after his knockdown (most often after a SHOULDER SPIN, or after watching the replay). He now gets back up properly, and everyone is reset upright at the start of every possession.']],
