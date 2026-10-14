@@ -4209,10 +4209,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.41'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.42'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.42','New Store',['STORE (player menu) now opens on two choices: COSMETICS (coming soon) and ANIMATIONS.',
+  'ANIMATIONS: pick FINISHING, SHOOTING or PASSING along the bottom, then a group on the left (e.g. DUNKS or LAYUPS), then a PACKAGE. Your player shows it on the right.',
+  'Animations now come in packages you EQUIP: e.g. BASIC TOMAHAWKS, LONG TOMAHAWKS, BASIC TWO-HANDERS, ATHLETIC TWO-HANDERS, SPINS & WINDMILLS, REVERSE LAYUPS.',
+  'Every dunk package has a DUNK RATING based on how hard the dunks are in real life: technique, jump distance and height.']],
  ['v1.41','Player menu',['Picking a saved player on the CAREER screen and pressing NEXT now opens a full player menu: big tiles on the left, your player standing on the right with his name and OVR above him.',
   'Tiles: PLAY, ATTRIBUTES, SIGNATURES, APPEARANCE, STORE, REBIRTH (at max level), DELETE and BACK.',
   'SIGNATURES, APPEARANCE and STORE are back: open them from this menu. Changes save as soon as you leave them.']],
@@ -4749,19 +4753,14 @@ const DUNK_W={0:.15,1:.25,2:.25,3:.25,5:.1,9:.22,10:.2,11:.22,12:.2,13:.22,14:.2
 function dunkPick(p,dn){const L=[];let tot=0;for(const v of DUNKV){if(v.sty==4||DKS[v.sty].oop||dn<v.req||!animOn(p,'dnk:'+v.sty))continue;L.push(v.sty);tot+=DUNK_W[v.sty]}
  if(!L.length)return animAny(p,'dnk',DUNKV.map(v=>v.sty).filter(s=>s!=4&&!DKS[s].oop),null,animOn(p,'dnk:4')?4:0);let r=Math.random()*tot;for(const s of L){r-=DUNK_W[s];if(r<0)return s}return L[L.length-1]}
 // ---- the screen
-function openStore(){MM.st={tab:0,sel:0,sc:0,msg:'',mt:0,hov:null};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 function storeBack(){if(MM.fromAct){actReturn();return}S='create';MM.row=5;MM.apS=2;for(const k in P)P[k]=0}
 const stHave=(it,at)=>((MM.cr.st&&MM.cr.st[at])||25)>=it.req;
-function storeToggle(i){const T=STORE_T[MM.st.tab],L=T.items(),it=L[i];if(!it)return;const off=MM.cr.anim.off,isOff=off.includes(it.k);
- if(!stHave(it,T.at)){storeMsg('LOCKED: NEEDS '+statLbl(T.at)+' '+it.req);return}
- if(!isOff){const lob=k=>/^dnk:(6|7|8|10)$/.test(k),grp=L.filter(x=>stHave(x,T.at)&&!off.includes(x.k)&&x.k!='dnk:4'&&lob(x.k)==lob(it.k));if(!T.opt&&it.k!='dnk:4'&&grp.length<=1){storeMsg('KEEP AT LEAST ONE '+T.n.replace(/S$/,'')+' ON');return}off.push(it.k);beep(300,.05)}
- else{off.splice(off.indexOf(it.k),1);beep(620,.06,'triangle')}}
 const statLbl=a=>((STATS.find(z=>z[0]==a)||[a,a])[1]).replace('LAYUP / CLOSE SHOT','LAYUP');
 function storeMsg(s){MM.st.msg=s;MM.st.mt=2;beep(160,.08,'square')}
 // ===== STORE PREVIEW: the selected (or hovered) animation, played on loop by YOUR player on a little half court to the right of the list. It runs the
 // game's own animation code - dunkStep (with k.pv: no score, no sound, no defenders), layStep, passPose, the jump shot - on a stand-alone copy of the
 // player that is never part of a game (not in TM, never the ball handler). Side-on camera; the rim is where the game's is (x 88.8 ft, 10 ft up).
-const SPV={sc:null,cam:null,p:null,q:null,ball:null,key:'',t:0,lt:0,bf:null,done:0,slam:0},SPV_R=[352,148,568,300],SPV_H=888;
+const SPV={sc:null,cam:null,p:null,q:null,ball:null,key:'',t:0,lt:0,bf:null,done:0,slam:0},SPV_R=[344,74,592,228],SPV_H=888;
 function spvInit(){if(SPV.sc)return;const s=new THREE.Scene();s.background=new THREE.Color(0x141821);s.add(new THREE.AmbientLight(0xffffff,.82));
  {const l=new THREE.DirectionalLight(0xffffff,.7);l.position.set(60,40,80);s.add(l)}
  const box=(w,h,d,c,x,y,z,o)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial(Object.assign({color:c},o||{})));m.position.set(x,y,z);s.add(m);return m};
@@ -4848,46 +4847,84 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
   o.m.position.set(o.x/10,o.z/10,o.y/10);o.m.rotation.y=o.ang+sp3+o.lyw;pose(o,dt)}
  const cam=SPV.cam,cx=SPV.c=='pas'?81:SPV.c=='sht'?78:79;cam.position.set(cx-1.5,7.2,32+27);cam.lookAt(cx+.5,6.3,32);
  const[x,y,w,h]=SPV_R;R.setScissorTest(true);R.setViewport(x,540-y-h,w,h);R.setScissor(x,540-y-h,w,h);R.render(SPV.sc,cam);R.setScissorTest(false);R.setViewport(0,0,960,540)}
-// ---- the screen: categories along the top, that category's animations down the left (each with its ON / OFF switch), and the PREVIEW on the right:
-// whatever row the mouse is over (or else the selected one) is played on loop by your player, with its name and description under it
-const STB=i=>[40+i*222,92,206,40],STROW=i=>[40,148+i*41,296,37],ST_N=8,STOG=r=>[r[0]+r[2]-66,r[1]+8,58,21];
-function storeStep(dt){const st=MM.st,L=STORE_T[st.tab].items();st.mt=Math.max(0,st.mt-dt);
- const lr=(P.ArrowRight||P.KeyD||P.KeyE||P.Tab?1:0)-(P.ArrowLeft||P.KeyA||P.KeyQ?1:0);if(lr){st.tab=(st.tab+lr+STORE_T.length)%STORE_T.length;st.sel=0;st.sc=0;st.hov=null}
- if(P.ArrowDown||P.KeyS){st.sel=Math.min(L.length-1,st.sel+1);st.hov=null}if(P.ArrowUp||P.KeyW){st.sel=Math.max(0,st.sel-1);st.hov=null}
- st.sc=Math.max(0,Math.min(st.sc||0,STORE_T[st.tab].items().length-ST_N));if(st.sel<st.sc)st.sc=st.sel;if(st.sel>=st.sc+ST_N)st.sc=st.sel-ST_N+1; // keep the selection in view
- if(P.Enter||P.Space)storeToggle(st.sel);if(P.Escape||P.Backspace)storeBack()}
-function storePtr(x,y,type){const st=MM.st,L=STORE_T[st.tab].items(),o=st.sc||0;let hv=null;for(let i=0;i<Math.min(L.length-o,ST_N);i++)if(mIn(x,y,STROW(i)))hv=o+i;
- if(type==1){st.hov=hv;return}if(type!=0)return; // hovering a row previews it
- if(mIn(x,y,RO_BACK)){storeBack();return}
- for(let i=0;i<STORE_T.length;i++)if(mIn(x,y,STB(i))){st.tab=i;st.sel=0;st.sc=0;st.hov=null;return}
- if(hv!=null){st.sel=hv;if(mIn(x,y,STOG(STROW(hv-o))))storeToggle(hv)}} // clicking a row selects it (and keeps it in the preview); clicking its switch turns it ON / OFF
-function drawStore(){const st=MM.st,d=MM.cr,T=STORE_T[st.tab],L=T.items(),off=d.anim.off;
- g.textAlign='left';g.fillStyle=GOLD;g.font='bold 30px Georgia';g.fillText('STORE',40,48);
- g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(d.name+'  ·  '+POS[d.pos]+'  ·  hover over or click an animation to watch it  ·  switch the ones you have ON or OFF  ·  locked ones unlock as your ratings go up',40,72);
- STORE_T.forEach((t,i)=>{const[x,y,w,h]=STB(i),on=st.tab==i,its=t.items(),n=its.filter(it=>stHave(it,t.at)&&!off.includes(it.k)).length;
-  mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?GOLD:'rgba(255,255,255,.12)');g.textAlign='left';g.font='bold 15px Georgia';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(t.n,x+14,y+25);
-  g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=on?GOLD:'#8a90a0';g.fillText(n+' / '+its.length+' ON',x+w-12,y+25)});
- const o=st.sc||0;if(L.length>ST_N){const[x0,y0]=STROW(0),hh=ST_N*41-4,bh=hh*ST_N/L.length;mRR(341,y0,4,hh,2,'rgba(255,255,255,.08)');mRR(341,y0+(hh-bh)*o/(L.length-ST_N),4,bh,2,GOLD); // scroll bar
-  g.textAlign='right';g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText((o>0?'▲ ':'')+(o+1)+'-'+Math.min(L.length,o+ST_N)+' of '+L.length+(o+ST_N<L.length?' ▼':'')+'  ·  scroll',336,141)}
- const pv=st.hov!=null&&L[st.hov]?st.hov:st.sel;
- L.slice(o,o+ST_N).forEach((it,i)=>{const r=STROW(i),[x,y,w,h]=r,j=o+i,sel=st.sel==j,hov=pv==j,have=stHave(it,T.at),isOn=have&&!off.includes(it.k);
-  mRR(x,y,w,h,8,sel?'rgba(40,32,8,.9)':hov?'rgba(255,255,255,.09)':'rgba(255,255,255,.04)',sel?GOLD:hov?'rgba(255,210,63,.45)':'rgba(255,255,255,.08)');
-  g.textAlign='left';{let fz=14;g.font='bold '+fz+'px Georgia';while(g.measureText(it.n).width>212&&fz>9){fz-=.5;g.font='bold '+fz+'px Georgia'}}g.fillStyle=have?'#fff':'#6a7080';g.fillText(it.n,x+12,y+23);
-  if(hov){g.fillStyle=GOLD;g.font='10px system-ui';g.fillText('▶',x+w-80,y+23)}
-  const[bx,by,bw,bh]=STOG(r);
-  if(!have){mRR(bx,by,bw,bh,10,'rgba(255,90,90,.12)','rgba(255,120,120,.5)');g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle='#ff9a9a';g.fillText('🔒 '+it.req,bx+bw/2,by+15)}
-  else{mRR(bx,by,bw,bh,10,isOn?'rgba(76,255,122,.2)':'rgba(255,255,255,.06)',isOn?'#4cff7a':'rgba(255,255,255,.25)');const kx=isOn?bx+bw-18:bx+3;mRR(kx,by+3,15,15,7.5,isOn?'#4cff7a':'#6a7080');
-   g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle=isOn?'#7fffa0':'#9aa';g.fillText(isOn?'ON':'OFF',isOn?bx+22:bx+37,by+15)}});
- // the preview panel (the 3D stage is drawn into it, see STORE PREVIEW) and the caption under it
- const it=L[pv],[px,py,pw,ph]=SPV_R;mRR(px-3,py-3,pw+6,ph+6,10,'rgba(255,255,255,.03)','rgba(255,255,255,.14)');
- if(it){g.clearRect(px,py,pw,ph);spvFrame(it.k);const have=stHave(it,T.at),isOn=have&&!off.includes(it.k);
-  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='rgba(255,255,255,.7)';g.fillText('▶  PREVIEW',px+10,py+18);
-  g.font='bold 20px Georgia';g.fillStyle='#fff';g.fillText(it.n,px,py+ph+26);
-  g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=!have?'#ff9a9a':isOn?'#7fffa0':'#9aa';g.fillText(!have?'🔒 LOCKED  ·  NEEDS '+statLbl(T.at)+' '+it.req:isOn?'● ON  ·  your player uses it':'○ OFF  ·  your player won\'t use it',px+pw,py+ph+24);
-  g.textAlign='left';g.font='12px system-ui';g.fillStyle='#9aa3b4';{let s=it.d||'';while(g.measureText(s).width>pw&&s.length>4)s=s.slice(0,-2);g.fillText(s+(s!==(it.d||'')?'…':''),px,py+ph+44)}}
+// ---- the screen (v1.42, 2K style): STORE home (COSMETICS · ANIMATIONS) -> ANIMATIONS: category tabs along the bottom, a vertical menu on the left
+// (category -> its groups -> that group's PACKAGES), the selected package playing on loop on the right with an EQUIP button.
+// A package is a set of store keys equipped together: EQUIP switches all of them ON, UNEQUIP switches them OFF (same b.anim.off save as before).
+// Dunk packages carry a DUNK RATING = 40% technique + 30% jump distance + 30% height reached (r = those three, 0-99).
+const AN_CAT=[
+ {n:'FINISHING',ic:'fin',sub:[
+  {n:'DUNKS',at:'dnk',pk:[{n:'BASIC TWO-HANDERS',k:[2,13],r:[20,25,40]},{n:'BASIC TOMAHAWKS',k:[0,1,9],r:[35,30,50]},{n:'POSTERIZERS',k:[4],r:[55,35,80]},{n:'ALLEY-OOPS',k:[6,7,8],r:[60,40,75]},
+   {n:'ATHLETIC TWO-HANDERS',k:[15,12,14],r:[70,50,85]},{n:'LONG TOMAHAWKS',k:[5,17,16],r:[65,90,75]},{n:'SPINS & WINDMILLS',k:[3,11],r:[95,45,88]},{n:'SUPERMAN',k:[10],r:[90,99,90]}].map(p=>Object.assign(p,{k:p.k.map(s=>'dnk:'+s)}))},
+  {n:'LAYUPS',at:'lay',pk:[{n:'BASIC LAYUPS',k:[0,5]},{n:'TOUCH FINISHES',k:[1,4,2]},{n:'EURO STEP',k:[6]},{n:'REVERSE LAYUPS',k:[3,7]}].map(p=>Object.assign(p,{k:p.k.map(i=>'lay:'+i)}))}]},
+ {n:'SHOOTING',ic:'sht',sub:[{n:'FADEAWAYS',at:'mid',pk:[{n:'FADEAWAY',k:['sht:fade']},{n:'POST FADEAWAY',k:['sht:pfade']}]}]},
+ {n:'PASSING',ic:'pas',sub:[{n:'PASSES',at:'pas',pk:[{n:'BASIC PASSES',k:['pas:chest','pas:bounce','pas:over']},{n:'ONE-HAND PASSES',k:['pas:one','pas:base']},{n:'FLASHY PASSES',k:['pas:btb']}]}]}];
+const dkRate=r=>Math.round(.4*r[0]+.3*r[1]+.3*r[2]);
+let AN_IT=null;const anItem=k=>(AN_IT||(AN_IT=Object.fromEntries(STORE_T.flatMap(t=>t.items().map(i=>[i.k,Object.assign({at:t.at},i)])))))[k];
+const anGrp=k=>k=='dnk:4'||k.startsWith('sht:')?null:/^dnk:(6|7|8|10)$/.test(k)?'oop':k.split(':')[0],AN_GN={dnk:'DUNK',oop:'ALLEY-OOP',lay:'LAYUP',pas:'PASS'}; // each group keeps one unlocked animation ON (the posterizer and fadeaways are optional)
+const pkOn=pk=>pk.k.every(k=>!MM.cr.anim.off.includes(k)),pkHave=pk=>pk.k.some(k=>stHave(anItem(k),anItem(k).at)),pkReq=pk=>Math.min(...pk.k.map(k=>anItem(k).req));
+function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
+ if(!pkHave(pk)){const it=anItem(pk.k[0]);storeMsg('LOCKED: NEEDS '+statLbl(it.at)+' '+pkReq(pk));return}
+ if(!pkOn(pk)){pk.k.forEach(k=>{const i=off.indexOf(k);if(i>=0)off.splice(i,1)});beep(620,.06,'triangle');return}
+ const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
+ pk.k.forEach(k=>{if(!off.includes(k))off.push(k)});beep(300,.05)}
+function openStore(){MM.st={pg:'hub',hub:1,cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
+const ST_HUB=i=>[110+i*390,130,350,250],ST_BK=[24,482,150,40],AN_ROW=i=>[24,92+i*48,300,42],AN_TAB=i=>[480-(AN_CAT.length*90-14)/2+i*90,466,76,64],AN_EQ=[760,400,176,40];
+const anList=st=>{const c=AN_CAT[st.cat];return st.lv?c.sub[st.sub].pk:c.sub},anPk=st=>st.lv?AN_CAT[st.cat].sub[st.sub].pk[st.sel]:null;
+function anEnter(st){if(!st.lv){st.sub=st.sel;st.lv=1;st.sel=0;beep(520,.05,'triangle')}else pkEquip(anPk(st))}
+function anBack(st){if(st.lv){st.lv=0;st.sel=st.sub;beep(300,.05,'triangle')}else{st.pg='hub';beep(300,.05,'triangle')}}
+function storeStep(dt){const st=MM.st;st.mt=Math.max(0,st.mt-dt);const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),esc=P.Escape||P.Backspace,ok=P.Enter||P.Space;
+ if(st.pg=='hub'){if(lr)st.hub=1-st.hub;if(ok){st.pg=st.hub?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle')}if(esc)storeBack();return}
+ if(st.pg=='cos'){if(ok||esc){st.pg='hub';beep(300,.05,'triangle')}return}
+ if(lr){st.cat=(st.cat+lr+AN_CAT.length)%AN_CAT.length;st.lv=0;st.sel=0;st.sub=0}
+ const n=anList(st).length;if(P.ArrowDown||P.KeyS)st.sel=Math.min(n-1,st.sel+1);if(P.ArrowUp||P.KeyW)st.sel=Math.max(0,st.sel-1);
+ if(ok)anEnter(st);if(esc)anBack(st)}
+function storePtr(x,y,type){const st=MM.st;if(type!=0)return;
+ if(st.pg=='hub'){for(let i=0;i<2;i++)if(mIn(x,y,ST_HUB(i))){st.hub=i;st.pg=i?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle');return}if(mIn(x,y,ST_BK))storeBack();return}
+ if(st.pg=='cos'){if(mIn(x,y,ST_BK)){st.pg='hub';beep(300,.05,'triangle')}return}
+ if(mIn(x,y,ST_BK)){anBack(st);return}
+ for(let i=0;i<AN_CAT.length;i++)if(mIn(x,y,AN_TAB(i))){st.cat=i;st.lv=0;st.sel=0;st.sub=0;beep(440,.05,'triangle');return}
+ const L=anList(st);for(let i=0;i<L.length;i++)if(mIn(x,y,AN_ROW(i))){if(st.lv)st.sel=i;else{st.sel=i;anEnter(st)}return}
+ if(st.lv&&mIn(x,y,AN_EQ))pkEquip(anPk(st))}
+function anIcon(ic,cx,cy,s,col){g.save();g.translate(cx,cy);g.scale(s/60,s/60);g.fillStyle=col;g.strokeStyle=col;g.lineWidth=6;g.lineCap='round';g.lineJoin='round';
+ const ln=(...p)=>{g.beginPath();g.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)g.lineTo(p[i],p[i+1]);g.stroke()},dot=(x,y,r)=>{g.beginPath();g.arc(x,y,r,0,6.283);g.fill()};
+ if(ic=='fin'){g.lineWidth=3;ln(8,-20,26,-20);ln(10,-20,13,-10,21,-10,24,-20);g.lineWidth=6;dot(-6,-10,6);ln(-8,-3,-12,12);ln(-7,-1,9,-17);ln(-8,0,-20,6);ln(-12,12,-4,24);ln(-12,12,-24,18);dot(15,-25,5)}
+ else if(ic=='sht'){dot(0,-14,6);ln(0,-7,0,10);ln(0,-5,-6,-22);ln(0,-5,6,-22);dot(0,-27,6);ln(0,10,-6,26);ln(0,10,6,26)}
+ else if(ic=='pas'){dot(-10,-14,6);ln(-10,-7,-10,10);ln(-10,-4,8,-6);ln(-10,-2,-20,8);ln(-10,10,-16,26);ln(-10,10,-2,26);dot(19,-7,6);g.lineWidth=3;ln(12,4,3,4);ln(14,10,6,10)}
+ else if(ic=='cos'){g.beginPath();g.moveTo(-10,-24);g.quadraticCurveTo(0,-16,10,-24);g.lineTo(28,-14);g.lineTo(20,-2);g.lineTo(14,-6);g.lineTo(14,24);g.lineTo(-14,24);g.lineTo(-14,-6);g.lineTo(-20,-2);g.lineTo(-28,-14);g.closePath();g.fill()}
+ g.restore()}
+function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
+ {const gr=g.createLinearGradient(0,0,960,540);gr.addColorStop(0,'#10161f');gr.addColorStop(1,'#1c2430');g.fillStyle=gr;g.fillRect(0,0,960,540)}ccDraw();
+ const title=t=>{g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(t,30,46);g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText(d.name+'  ·  '+POS[d.pos],32,64)};
+ const back=()=>{const[x,y,w,h]=ST_BK;mRR(x,y,w,h,2,'#1f252c',C);g.textAlign='center';g.font='bold 15px system-ui';g.fillStyle='#fff';g.fillText('◀  BACK',x+w/2,y+26)};
+ if(st.pg=='hub'){title('STORE');[['COSMETICS','cos','Clothing, accessories and more'],['ANIMATIONS','fin','Dunks, layups, shots and passes']].forEach(([t,ic,s],i)=>{const[x,y,w,h]=ST_HUB(i),on=st.hub==i;
+   mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',on?'#fff':C);if(on){g.save();g.shadowColor=C;g.shadowBlur=18;g.lineWidth=3;mRR(x,y,w,h,2,null,C);g.restore()}
+   anIcon(ic,x+w/2,y+100,110,C);g.textAlign='center';g.font='bold 28px system-ui';g.fillStyle='#fff';g.fillText(t,x+w/2,y+h-46);g.font='12px system-ui';g.fillStyle='#8fa3b8';g.fillText(s,x+w/2,y+h-22)});
+  back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('←/→ choose  ·  Enter open  ·  Esc back',936,510);return}
+ if(st.pg=='cos'){title('COSMETICS');anIcon('cos',480,210,120,'rgba(63,184,255,.35)');g.textAlign='center';g.font='italic 900 56px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText('COMING SOON',480,330);
+  g.font='14px system-ui';g.fillStyle='#8fa3b8';g.fillText('Cosmetics are on the way in a future update.',480,362);back();return}
+ // ---- ANIMATIONS
+ title('ANIMATIONS');const cat=AN_CAT[st.cat],L=anList(st),pk=anPk(st);
+ mRR(14,74,320,384,2,'rgba(8,10,16,.75)',null);g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8fa3b8';g.fillText(cat.n+(st.lv?'  ›  '+cat.sub[st.sub].n:''),26,88);
+ L.forEach((it,i)=>{const[x,y,w,h]=AN_ROW(i),on=st.sel==i,lk=st.lv&&!pkHave(it),eq=st.lv&&!lk&&pkOn(it);mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',on?'#fff':C);
+  g.textAlign='center';let f=19;g.font=f+'px system-ui';while(g.measureText(it.n).width>w-70&&f>12){f--;g.font=f+'px system-ui'}g.fillStyle=lk?'#5d6b7a':C;g.fillText(st.lv?it.n:it.n.charAt(0)+it.n.slice(1).toLowerCase(),x+w/2,y+28);
+  if(eq){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle='#4cff7a';g.fillText('✓',x+w-12,y+27)}else if(lk){g.textAlign='right';g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('🔒',x+w-10,y+27)}else if(!st.lv){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle=C;g.fillText('›',x+w-12,y+27)}});
+ // preview + package details
+ const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'rgba(63,184,255,.5)');
+ if(pk){const ks=pk.k,cur=ks[Math.floor(performance.now()/4500)%ks.length];g.clearRect(px,py,pw,ph);spvFrame(cur);
+  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='rgba(255,255,255,.75)';g.fillText('▶  '+anItem(cur).n,px+10,py+18);
+  g.font='italic 900 26px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(pk.n,px,py+ph+34);
+  if(pk.r){const R2=dkRate(pk.r),tx=px+g.measureText(pk.n).width+16;mRR(tx,py+ph+12,128,28,14,'rgba(255,210,63,.15)',GOLD);g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('DUNK RATING  '+R2,tx+12,py+ph+31);
+   [['TECHNIQUE',pk.r[0]],['JUMP DISTANCE',pk.r[1]],['HEIGHT',pk.r[2]]].forEach(([l,v],i)=>{const bx=px+i*196,by=py+ph+52;g.font='bold 9px system-ui';g.fillStyle='#8fa3b8';g.fillText(l,bx,by);mRR(bx,by+5,150,7,3.5,'rgba(255,255,255,.1)');mRR(bx,by+5,Math.max(7,150*v/99),7,3.5,C);g.textAlign='right';g.fillStyle='#fff';g.fillText(v,bx+180,by+12);g.textAlign='left'})}
+  {let yy=py+ph+(pk.r?92:62);g.font='bold 9px system-ui';g.fillStyle='#8fa3b8';g.fillText('INCLUDES',px,yy);yy+=16;let xx=px;
+   ks.forEach(k=>{const it=anItem(k),have=stHave(it,it.at),t=(k==cur?'▶ ':'')+it.n+(have?'':'  🔒'+it.req);g.font=(k==cur?'bold ':'')+'12px system-ui';const w=g.measureText(t).width+18;if(xx+w>px+400){xx=px;yy+=22}
+    mRR(xx,yy-12,w,18,9,k==cur?'rgba(63,184,255,.2)':'rgba(255,255,255,.06)',null);g.fillStyle=have?'#fff':'#6a7080';g.fillText(t,xx+9,yy+1);xx+=w+6})}
+  {const[x,y,w,h]=AN_EQ,eq=pkOn(pk),lk=!pkHave(pk);mRR(x,y,w,h,2,lk?'#2a2f37':eq?'#1e3a28':'#ffb020',lk?'#555':eq?'#4cff7a':'#fff');g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle=lk?'#8a90a0':eq?'#4cff7a':'#11131a';
+   g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(eq&&!lk){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText('Enter / click to unequip',x+w/2,y+h+12)}}}
+ else{g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle='#8fa3b8';g.fillText('Choose '+L.map(s=>s.n.toLowerCase()).join(' or ')+' on the left',px+pw/2,py+ph/2)}
  if(st.mt>0){g.textAlign='center';g.font='bold 14px system-ui';const tw_=g.measureText(st.msg).width+28;mRR(px+pw/2-tw_/2,py+10,tw_,26,13,'rgba(20,10,10,.85)','rgba(255,120,120,.6)');g.fillStyle='#ff9a9a';g.fillText(st.msg,px+pw/2,py+28)}
- mRR(RO_BACK[0],RO_BACK[1],RO_BACK[2],RO_BACK[3],8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('DONE',RO_BACK[0]+RO_BACK[2]/2,RO_BACK[1]+22);
- g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('←/→ tab  ·  ↑/↓ choose  ·  Enter switch on / off  ·  Esc done  ·  saved when you SAVE PLAYER',600,524)}
+ // category tabs along the bottom
+ AN_CAT.forEach((c,i)=>{const[x,y,w,h]=AN_TAB(i),on=st.cat==i;mRR(x,y,w,h,2,on?C:'#1f252c',on?'#fff':C);anIcon(c.ic,x+w/2,y+h/2,46,on?'#fff':C)});
+ back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('←/→ category  ·  ↑/↓ choose  ·  Enter open / equip  ·  Esc back',936,532)}
 function drawMenus(){
  if(S=='cust'){drawCust();return}
  g.fillStyle='#000';g.fillRect(0,0,960,540);
