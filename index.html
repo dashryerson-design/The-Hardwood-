@@ -121,7 +121,7 @@ function reset(next){
  finRP();
  off=next;ms.on=false;
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
-  Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0});
+  Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0});if(p.m){p.m.rotation.x=p.m.rotation.z=0}
   if(t==off){const s=[[860,320],[950,320],[780,150],[700,490],[640,320]][i];p.x=fr(s[0]);p.y=s[1]}
   else{p.x=fr(SPOT[i][0]-40);p.y=SPOT[i][1]}
   p.fx=-dr(off)*-1;p.fy=0;
@@ -2599,7 +2599,7 @@ function render(dt){
   m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw;
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
-  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)} // (local push (lf, 0, fw): the head goes that way)else{m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);m.rotation.z=ex(m.rotation.z,0,dt,10)} // stumble (stb) = a slight backward lean; any other stun = full fall
+  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{m.rotation.x=ex(m.rotation.x,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);m.rotation.z=ex(m.rotation.z,0,dt,10)} // stumble (stb) = a slight backward lean; any other stun = full fall
   if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
   if(p.kd&&p.z<1){m.updateMatrixWorld(true);_KB.makeEmpty();for(const o of [m.body,m.L,m.R])_KB.expandByObject(o);m.position.y-=_KB.min.y;m.sh.position.y+=_KB.min.y} // knocked down: whatever is lowest (back, backside, knees) rests ON the floor, not floating
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
@@ -4272,10 +4272,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.55'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.56'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.56','Back on their feet',['Fixed: a posterized player could stay tilted over or stuck on the floor after his knockdown (most often after a SHOULDER SPIN, or after watching the replay). He now gets back up properly, and everyone is reset upright at the start of every possession.']],
  ['v1.55','More posters',['With the POSTERIZER Signature, poster dunks happen far more often: any defender within 11 ft (Bronze), 14 ft (Silver) or 18 ft (Gold) of the rim can be your victim when you go up, not just a man standing right in front of it.',
   'Poster dunks now go down 63% (Bronze), 76% (Silver) or 95% (Gold) of the time.','Alley-oop finishes posterize too: with the badge, a defender near the rim gets put into the play and dunked on.']],
  ['v1.54','Posters in replays',['Replays now show the defender getting posterized: the hit, the fall (or stumble) and getting back up, exactly as it happened.']],
