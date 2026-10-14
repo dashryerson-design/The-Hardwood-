@@ -4172,7 +4172,7 @@ function netHostIn(pr){const I=pr.in,R=NET.rin;if(!I)return;R.K={};NET_HELD.forE
 function netCtrl(p,dt){const sm=ms,sc_=CAMM;ms=MS2;CAMM=0;MS2.show=0;try{ctrl(p,dt,NET.rin)}finally{MS2=ms;ms=sm;CAMM=sc_;if(MS2.show===1)NET.m2n++;MS2.show=0;if(!MS2.on)NET.prt=0}}
 function netSnap(){const R=v=>typeof v=='number'?Math.round(v*100)/100:v,o2=o=>{try{return o&&JSON.parse(JSON.stringify(o,(k,v)=>k=='by'||k=='dd'||(v&&typeof v=='object'&&v.m&&v.team!=null)?undefined:R(v)))}catch(e){return null}};
  if(SST2.t!==NET.sstT){NET.sstT=SST2.t;NET.ssn++}
- return{t:Math.round(performance.now()),p:TM.map(tm=>tm.map(p=>{const o=SF.map(k=>R(p[k]));o.push(o2(p.dunk),o2(p.lay),R(p.grd||0),R(p.st||0),p.bm?{k:p.bm.k,t:R(p.bm.t),d:R(p.bm.d)}:null,p.ps?{ty:p.ps.ty,k:p.ps.k,t:R(p.ps.t),wu:p.ps.wu,d:p.ps.d,go:p.ps.go,fa:p.ps.fa==null?null:R(p.ps.fa)}:null);return o})),
+ return{t:Math.round(performance.now()),p:TM.map(tm=>tm.map(p=>{const o=SF.map(k=>R(p[k]));o.push(o2(p.dunk),o2(p.lay),R(p.grd||0),R(p.st||0),p.bm?{k:p.bm.k,t:R(p.bm.t),d:R(p.bm.d)}:null,p.ps?{ty:p.ps.ty,k:p.ps.k,t:R(p.ps.t),wu:p.ps.wu,d:p.ps.d,go:p.ps.go,fa:p.ps.fa==null?null:R(p.ps.fa)}:null,o2(p.rdh),p.rd?1:0);return o})), // (+ the last ragdoll hit and whether he is ragdolled now)
   b:{x:R(B.x),y:R(B.y),z:R(B.z),mode:B.mode,perf:B.perf?1:0,ht:B.h?[B.h.team,B.h.k]:null},o:off,sc:sc.slice(),ck:R(CHK.t),sh:R(shot),m:[msg.s,msg.c,NET.mid],
   m2:[MS2.on?1:0,MS2.res,R(MS2.pw||0),R(MS2.last||0),NET.m2n],ss:NET.ssn?{typ:SST2.typ,q:SST2.q,rel:SST2.rel&&{q:SST2.rel.q,ms:R(SST2.rel.ms)},c:R(SST2.c),ft:SST2.ft,n:NET.ssn}:null,
   ps:TM.map(tm=>{const s=pstat(tm[0]);return[s.pts,s.ast,s.reb,s.stl,s.tpm,s.tpa,s.fgm,s.fga,s.dfa||0,s.dfm||0]}),ov:S=='over'?1:0}}
@@ -4194,7 +4194,8 @@ const NET_DISC=new Set(['jph','air','side']);
 function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen;
  for(let lt=0;lt<2;lt++){const p=TM[lt][0],oa=a.p[1-lt][0],ob=b.p[1-lt][0];if(!p||!oa||!ob)continue;
   SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side')v=-v;p[k]=v});
-  const n=SF.length;p.dunk=ob[n];p.lay=ob[n+1]||null;p.grd=ob[n+2]||0;if(ob[n+3])p.st=ob[n+3];p.bm=ob[n+4]?Object.assign({},ob[n+4]):null;p.ps=ob[n+5]&&PASS_T[ob[n+5].ty]?Object.assign({},ob[n+5]):null}
+  const n=SF.length;p.dunk=ob[n];p.lay=ob[n+1]||null;p.grd=ob[n+2]||0;if(ob[n+3])p.st=ob[n+3];p.bm=ob[n+4]?Object.assign({},ob[n+4]):null;p.ps=ob[n+5]&&PASS_T[ob[n+5].ty]?Object.assign({},ob[n+5]):null;
+  {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,-h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}} // RAGDOLL: the host's hit (mirrored) is run through the same physics here; when the host lets him up, so does the guest
  B.x=940-L(a.b.x,b.b.x);B.y=L(a.b.y,b.b.y);B.z=L(a.b.z,b.b.z);B.mode=b.b.mode;B.perf=!!b.b.perf;B.h=b.b.ht?TM[1-b.b.ht[0]][b.b.ht[1]]||null:null;
  off=1-b.o;CHK.t=b.ck;shot=b.sh;
  const ns=[b.sc[1],b.sc[0]];if(sn.sc&&(ns[0]>sn.sc[0]||ns[1]>sn.sc[1]))crowdRoar();sc=ns;sn.sc=ns;
@@ -4349,10 +4350,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.59'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.60'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.60','Online ragdolls',['Online games now show the full ragdoll on both screens: the host sends each ragdoll hit and the guest runs it through the same physics, so both players see the same fall at the same moment, and both see everyone get back up when the possession resets.']],
  ['v1.59','Full ragdoll',['Strength-mismatch dunks (dunker 5+ STR over the defender) now send BOTH players fully ragdoll at the heaviest contact, 0.05s before the ball goes through: no muscle, just gravity, momentum and the hit. The defender is thrown back off the slam and the dunker drops off the rim.',
   'Real joint limits keep it human: elbows and knees only bend the natural way, hips can\'t over-extend, the head can\'t go through the floor, bodies slide with floor friction and land on each other instead of through.',
   'They stay down until the possession resets (or the ball changes hands after a miss), then everyone is back to normal. Shows in replays.']],
