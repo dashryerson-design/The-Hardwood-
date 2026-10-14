@@ -2724,7 +2724,7 @@ function draw(){
  if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
  if(ONL_S.has(S))onlDraw();if(NET.on&&S=='play')netOverlay();
  if(S=='cdebut'){renderDebut();drawDebut()}
- if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();profBtnDraw();if(PN.on)pnDraw();if(PF.on)profDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
+ if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();profBtnDraw();lbMiniDraw();if(PN.on)pnDraw();if(PF.on)profDraw();if(LB.on)lbDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
   ['RESUME','CUSTOMISATION','REPLAY CAM:  '+['FAR','CLOSE','BASKET','DRONE'][RC],'MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText((on&&i==2?'◀  ':'')+t+(on&&i==2?'  ▶':''),480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · A/D or ←/→ change replay cam · K to close',480,462);g.fillText('Replay cam follows the scorer · graphics, ball trail and court live under CUSTOMISATION',480,486)}
@@ -2973,7 +2973,7 @@ function lvInfo(xp){xp=Math.max(0,xp|0);let L=1,left=xp;while(L<LV_MAX&&left>=ex
 let xpPop={n:0,t:0,why:''},lvUp=0,matchXp=0,gameXp=null;
 function addExp(n,why,bonus){const b=ACTIVE>=0?SLOTS[ACTIVE]:null;n=Math.round(n*rbExp(b)); // (rebirths: +25% each)
 if(!b||!(n>0))return null;
- const before=lvInfo(b.xp).lv;b.xp=Math.min(9999999,(b.xp|0)+n);if(!bonus)matchXp+=n;const a=lvInfo(b.xp);saveSlots();
+ const before=lvInfo(b.xp).lv;b.xp=Math.min(9999999,(b.xp|0)+n);pfLife();PF.d.xp+=n;profSave();if(!bonus)matchXp+=n;const a=lvInfo(b.xp);saveSlots();
  xpPop={n:(xpPop.t>0?xpPop.n:0)+n,t:2.2,why:why||''};
  if(a.lv>before){lvUp=2.6;let pts=0;for(let l=before;l<a.lv;l++)pts+=LV_PTS(l);a.pts=pts;say('LEVEL UP!  LEVEL '+a.lv+'  \u00b7  +'+pts+' ATTRIBUTE POINTS','#ffd23f');beep(660,.15,'triangle',.05);beep(880,.25,'triangle',.05)}
  return a}
@@ -3443,7 +3443,7 @@ function menuStep(dt){
  if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
  const nm=!(S=='cbio'&&MM.bi==0);
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
- if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
+ if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(LB.on)lbKeys(up,dn);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyL)lbOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
  else if(S=='career'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.r=MM.r==3?(lr>0?0:2):(MM.r+lr+3)%3;if(dn)MM.r=3;if(up&&MM.r==3)MM.r=0;if(ok)mainEnter();if(P.Escape||P.Backspace)S='menu'}
  else if(S=='pnmode'){const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr)MM.md=(MM.md+lr+3)%3;if(ok)modeEnter();if(P.Escape||P.Backspace)modeBack()}
  else if(S=='playnow'){
@@ -3497,7 +3497,7 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  if(type==2){MM.drag=-1;MM.pd=-1;MM.hdr=null;return}
  const[x,y]=cpos(e);
  if(ONL_S.has(S)){onlPtr(x,y,type);return}
- if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(PN.on){pnPtr(x,y,type);return}if(PF.on){profPtr(x,y,type);return}if(!MN.gate&&mIn(x,y,PF_BTN)){if(type==0)profOpen();return}if(!MN.gate&&mIn(x,y,PN_BTN)){if(type==0)pnOpen();return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
+ if(S=='menu'){if(MN.t<T_READY-.6){if(type==0){MN.t=Math.max(MN.t,T_UI);MN.boom=true}return}if(PN.on){pnPtr(x,y,type);return}if(PF.on){profPtr(x,y,type);return}if(LB.on){lbPtr(x,y,type);return}if(!MN.gate&&mIn(x,y,LB_MINI)){if(type==0)lbOpen();return}if(!MN.gate&&mIn(x,y,PF_BTN)){if(type==0)profOpen();return}if(!MN.gate&&mIn(x,y,PN_BTN)){if(type==0)pnOpen();return}if(UPD&&!MN.gate&&mIn(x,y,UPD_R)){if(type==0)updGo();return}for(let i=0;i<5;i++)if(mIn(x,y,topRect(i))){MM.t=i;if(type==0)topEnter();return}}
  else if(S=='career'){for(let i=0;i<4;i++)if(mIn(x,y,mainRect(i))){MM.r=i;if(type==0)mainEnter();return}}
  else if(S=='playnow'){
   if(type==0&&mIn(x,y,PN_BACK)){pnBack();return}
@@ -4203,10 +4203,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.34'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.35'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): the 5 most recent versions and what changed in each =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. Only the first 5 are shown.
 const PATCH=[
+ ['v1.35','Online leaderboard',['New LEADERBOARD: the top 5 by WINS shows on the left of the main menu. Click it (or press L) for the full board.',
+  'Filter by WINS, W/L RATIO, FG MADE, 3PT MADE, 3PT % (min. 10 attempts), ONLINE WINS, TOTAL EXP and TOTAL CC.',
+  'Every player with an account is on it (create one in PROFILE). Your stats are sent whenever your save backs up.',
+  'TOTAL EXP counts every EXP you earn on every player slot and never drops, even when a player is reborn. TOTAL CC counts every credit you have earned.']],
  ['v1.34','Credits on the results screen',['The end-of-game screen now shows the COURT CREDITS you earned that game, under the EXP, and says when it includes the +10% PLAYER OF THE GAME bonus.']],
  ['v1.33','Court Credits',['New currency: COURT CREDITS (CC). Your balance shows top right of the CAREER screen.',
   'Earned by your created player in every Career game: a win pays 500 CC, a loss 300 CC. On top of that: +20 CC for every shot you take, +30 per block, +30 per steal and +50 per assist.',
@@ -4273,7 +4277,9 @@ const PF={on:false,ed:false,d:null},PF_BTN=[34,372,240,58],PF_BOX=[80,52,800,440
 function profLoad(){let v=null;try{v=JSON.parse(localStorage.getItem(PF_KEY)||'null')}catch(e){}v=v&&typeof v=='object'?v:{};
  const n=o=>Math.max(0,Math.round(+o)||0),st={},md={};['gp','w','l',...PF_K].forEach(k=>st[k]=n(v.st&&v.st[k]));
  PF_MODES.forEach(m=>{const o=v.md&&v.md[m]||{};md[m]={gp:n(o.gp),w:n(o.w),l:n(o.l)}});
- PF.d={name:String(v.name||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',logo:v.logo>=0&&v.logo<TEAMS.length?v.logo|0:0,st,md}}
+ PF.d={name:String(v.name||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',logo:v.logo>=0&&v.logo<TEAMS.length?v.logo|0:0,st,md,xp:v.xp==null?null:n(v.xp),cc:v.cc==null?null:n(v.cc)}}
+// lifetime EXP (every slot, kept through rebirths) and lifetime CC earned: first seeded from the slots / wallet saved before v1.35
+function pfLife(){if(PF.d.xp==null)PF.d.xp=SLOTS.reduce((a,b)=>a+(b?b.xp|0:0),0);if(PF.d.cc==null)PF.d.cc=CC}
 function profSave(){try{localStorage.setItem(PF_KEY,JSON.stringify(PF.d))}catch(e){}}
 profLoad();
 function profRecord(){const me=NET.on?null:myP(),k=NET.on?'ONLINE':me?'CAREER':MODE+'v'+MODE,w=sc[0]>sc[1]?'w':'l',m=PF.d.md[k];
@@ -4331,7 +4337,8 @@ function acRelay(url,send,onMsg,ms=7000){return new Promise(res=>{let ws,t;const
 async function acPush(){if(!ACCT.code||ACCT.busy||ACCT.in!=null)return;const snap=acSnap();if(snap==ACCT.last)return;ACCT.busy=1;let ok=0;
  try{const{sk,pk}=await acKeys(ACCT.code),ev={pubkey:pk,created_at:Math.floor(Date.now()/1000),kind:30078,tags:[['d',AC_D]],content:snap},id=await acId(ev);
   ev.id=acHex(id);ev.sig=acHex(await H27P2P.schnorr.signAsync(id,sk));
-  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',ev],m=>{if(m[0]=='OK'&&m[1]==ev.id){if(m[2])ok++;return true}})))}catch(e){}
+  const lb={pubkey:pk,created_at:ev.created_at,kind:30078,tags:[['d',AC_LB]],content:JSON.stringify(lbCard())},lid=await acId(lb);lb.id=acHex(lid);lb.sig=acHex(await H27P2P.schnorr.signAsync(lid,sk));
+  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',ev],m=>{if(m[0]=='OK'&&m[1]==ev.id){if(m[2])ok++;return true}}).then(()=>acRelay(u,['EVENT',lb],m=>m[0]=='OK'))))}catch(e){}
  if(ok)ACCT.last=snap;ACCT.msg=ok?'SAVED TO CLOUD':'CLOUD SAVE FAILED - RETRYING SOON';ACCT.busy=0}
 async function acPull(code){const{pk}=await acKeys(code),pkB=acBytes(pk),evs=[];
  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27',{kinds:[30078],authors:[pk],'#d':[AC_D],limit:1}],m=>{if(m[0]=='EVENT'&&m[2]&&m[2].pubkey==pk)evs.push(m[2]);return m[0]=='EOSE'})));
@@ -4364,12 +4371,52 @@ setTimeout(acPush,4000);setInterval(()=>{if(S=='menu'||S=='over')acPush()},20000
 // ===== COURT CREDITS (CC): a standalone currency with its own wallet (not per slot, and NOT boosted by rebirths like EXP is), shown top right of the CAREER screen.
 // Earned by your created player in Career games: win 500 / loss 300, +20 per shot taken (2PT or 3PT), +30 per block, +30 per steal, +50 per assist, then +10% if he is PLAYER OF THE GAME. Each rebirth: +3000.
 const CC_KEY='hardwood27.credits.v1';let CC=0,ccBlk=0;try{CC=Math.max(0,parseInt(localStorage.getItem(CC_KEY))||0)}catch(e){}
-function ccAdd(n){CC=Math.min(999999999,CC+Math.max(0,Math.round(n)));try{localStorage.setItem(CC_KEY,String(CC))}catch(e){}}
+function ccAdd(n){pfLife();PF.d.cc+=Math.max(0,Math.round(n));profSave();CC=Math.min(999999999,CC+Math.max(0,Math.round(n)));try{localStorage.setItem(CC_KEY,String(CC))}catch(e){}}
 function ccMatch(fp){const me=NET.on?null:myP();if(!me)return null;const s=pstat(me),n=Math.round(((sc[0]>sc[1]?500:300)+20*(s.fga+s.tpa)+30*ccBlk+30*s.stl+50*s.ast)*(fp===me?1.1:1));ccAdd(n);return{n,potg:fp===me}}
 const ccBlock=d=>{if(d&&d===myP())ccBlk++};
 function ccDraw(){const t=CC.toLocaleString('en-US');g.save();g.font='bold 15px system-ui';const w=g.measureText(t).width+58,x=946-w,y=14;mRR(x,y,w,30,15,'rgba(8,10,16,.8)',GOLD);
  g.beginPath();g.arc(x+17,y+15,10,0,6.283);g.fillStyle=GOLD;g.fill();g.fillStyle='#2a2006';g.font='bold 9px system-ui';g.textAlign='center';g.fillText('CC',x+17,y+18);
  g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle='#fff';g.fillText(t,x+33,y+20);g.restore()}
+// ===== LEADERBOARD (main menu: top 5 by WINS on the left; click it or press L for the full board with a stat filter) =====
+// Every signed-in account publishes a public stats card to the same Nostr relays as its backup (signed with its account key, d-tag AC_LB); the board reads every card.
+// shortcut: cards are self-reported by each player's game, so a determined cheater could post fake numbers; a server that verifies games would be needed to stop that.
+const AC_LB='hardwood27-lb',LB={on:false,sel:0,cards:[],me:null,msg:'LOADING...'},LB_MINI=[34,204,240,156],LB_BOX=[80,52,800,440],LB_X=[770,66,92,30],LB_TAB=i=>[100,104+i*44,200,38];
+const LB_STATS=[['WINS',c=>c.w],['W/L RATIO',c=>c.l?c.w/c.l:c.w,v=>v.toFixed(2)],['FG MADE',c=>c.fg],['3PT MADE',c=>c.tm],['3PT %',c=>c.ta>=10?c.tm/c.ta:-1,v=>(100*v).toFixed(1)+'%','min. 10 attempts'],
+ ['ONLINE WINS',c=>c.ow],['TOTAL EXP',c=>c.xp],['TOTAL CC',c=>c.cc]];
+function lbCard(){const s=PF.d.st;pfLife();return{n:PF.d.name,lg:PF.d.logo,gp:s.gp,w:s.w,l:s.l,fg:s.fgm,tm:s.tpm,ta:s.tpa,ow:PF.d.md.ONLINE.w,xp:PF.d.xp,cc:PF.d.cc}}
+function lbClean(o){if(!o||typeof o!='object')return null;const n=k=>Math.min(1e9,Math.max(0,Math.round(+o[k])||0)),c={n:String(o.n||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',lg:o.lg>=0&&o.lg<TEAMS.length?o.lg|0:0};
+ ['gp','w','l','fg','tm','ta','ow','xp','cc'].forEach(k=>c[k]=n(k));return c}
+async function lbFetch(){const got={};try{if(ACCT.code)LB.me=(await acKeys(ACCT.code)).pk;
+ await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27lb',{kinds:[30078],'#d':[AC_LB],limit:2000}],m=>{const ev=m[2];if(m[0]=='EVENT'&&ev&&typeof ev.pubkey=='string'&&(!got[ev.pubkey]||ev.created_at>got[ev.pubkey].created_at))got[ev.pubkey]=ev;return m[0]=='EOSE'})))}catch(e){}
+ const cards=[];for(const pk in got){let c=null;try{c=lbClean(JSON.parse(got[pk].content))}catch(e){}if(c){c.pk=pk;cards.push(c)}}
+ if(cards.length||!LB.cards.length)LB.cards=cards;LB.msg=cards.length?'':'NO PLAYERS FOUND - CHECK YOUR CONNECTION'}
+// the ranked list for one stat (your own card always comes from this device, so it is up to date)
+function lbRank(i){const[,f]=LB_STATS[i],me=ACCT.code?Object.assign(lbCard(),{pk:LB.me||'me',mine:1}):null;
+ return LB.cards.filter(c=>c.pk!==LB.me).concat(me?[me]:[]).filter(c=>c.gp>0&&f(c)>=0).sort((a,b)=>f(b)-f(a)||b.gp-a.gp)}
+const lbVal=(i,c)=>{const[,f,fm]=LB_STATS[i],v=f(c);return fm?fm(v):v.toLocaleString('en-US')};
+function lbOpen(){LB.on=true;beep(520,.06,'triangle');lbFetch()}
+function lbClose(){LB.on=false;beep(300,.06,'triangle')}
+function lbKeys(up,dn){const n=LB_STATS.length;if(up)LB.sel=(LB.sel+n-1)%n;if(dn)LB.sel=(LB.sel+1)%n;if(P.Escape||P.Backspace||P.KeyL||P.Enter)lbClose()}
+function lbPtr(x,y,type){if(type!=0)return;if(mIn(x,y,LB_X)||!mIn(x,y,LB_BOX)){lbClose();return}for(let i=0;i<LB_STATS.length;i++)if(mIn(x,y,LB_TAB(i))){LB.sel=i;beep(440,.05,'triangle');return}}
+function lbRow(c,r,x,y,w,i,fz){g.textAlign='left';if(c.mine)mRR(x-4,y-fz-3,w+8,fz+8,5,'rgba(255,210,63,.16)',null);g.font='bold '+fz+'px system-ui';g.fillStyle=r<3?GOLD:'#8a90a0';g.fillText(r+1,x,y);
+ g.drawImage(teamLogo(c.lg),x+24,y-fz,fz+3,fz+3);g.fillStyle=c.mine?'#fff':'#dfe3ea';g.fillText(c.n,x+30+fz,y);g.textAlign='right';g.fillStyle='#fff';g.fillText(lbVal(i,c),x+w,y)}
+function lbMiniDraw(){if(MN.gate||MN.t<T_READY-.6||PN.on||PF.on||LB.on)return;const[x,y,w,h]=LB_MINI,L=lbRank(0).slice(0,5);g.save();mRR(x,y,w,h,12,'rgba(8,10,16,.6)','rgba(255,255,255,.14)');
+ g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle=GOLD;g.fillText('🏆  LEADERBOARD  ·  WINS',x+12,y+20);g.textAlign='right';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText('L · more',x+w-12,y+20);
+ if(!L.length){g.textAlign='left';g.font='11px system-ui';g.fillText(LB.msg||'No players yet.',x+12,y+50);g.fillText('Create an account in PROFILE to join.',x+12,y+68)}
+ L.forEach((c,r)=>lbRow(c,r,x+14,y+46+r*22,w-28,0,13));g.restore()}
+function lbDraw(){const[bx,by,bw,bh]=LB_BOX,i=LB.sel,L=lbRank(i),[nm,,,note]=LB_STATS[i];g.save();
+ g.fillStyle='rgba(4,5,9,.72)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.97)',GOLD);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('LEADERBOARD',bx+20,by+40);const tw=g.measureText('LEADERBOARD').width;
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText(L.length+' players'+(note?'  ·  '+note:''),bx+34+tw,by+38);
+ {const[x,y,w,h]=LB_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
+ LB_STATS.forEach(([t],j)=>{const[x,y,w,h]=LB_TAB(j),on=j==i;mRR(x,y,w,h,9,on?'rgba(255,210,63,.16)':'rgba(255,255,255,.05)',on?GOLD:null);g.textAlign='left';g.font='bold 14px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(t,x+14,y+24)});
+ const x=330,w=520;g.font='10px system-ui';g.fillStyle='#8a90a0';g.textAlign='left';g.fillText('#   PLAYER',x,by+76);g.textAlign='right';g.fillText(nm,x+w,by+76);
+ L.slice(0,14).forEach((c,r)=>lbRow(c,r,x,by+100+r*24,w,i,14));
+ g.textAlign='left';g.font='12px system-ui';const k=L.findIndex(c=>c.mine);
+ if(!L.length){g.fillStyle='#8a90a0';g.fillText(LB.msg||'Nobody qualifies yet.',x,by+100)}
+ g.fillStyle=GOLD;g.fillText(!ACCT.code?'Create an account in PROFILE (P) to appear here.':k<0?'Play a game to get ranked.':'You are #'+(k+1)+' of '+L.length,x,by+bh-14);
+ g.textAlign='right';g.fillStyle='#8a90a0';g.fillText('↑/↓ stat  ·  Esc / L close',x+w,by+bh-14);g.restore()}
+setTimeout(lbFetch,3000);setInterval(()=>{if(S=='menu')lbFetch()},120000);
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
 // on the website, tapping it reloads straight onto the new version (past any cached copy); in the downloaded file it opens the website. (The claude.ai
