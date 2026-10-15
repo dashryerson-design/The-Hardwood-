@@ -656,12 +656,13 @@ PASS_T.bounce.bnc=1;
 //  post-up: behind the head / hook · long (over 30 ft): hook · a defender in the lane: wraparound or between the legs (bounced round / under him) up close, otherwise
 //  behind the head / hook over him · open floor: shovel flip on the drive to a close man ahead, behind the back / elbow to a man on his side, between the legs to a
 //  man behind him, and always the no-look (and behind the head past 12 ft). Inbounds stay normal.
-function flashyPass(p,L,sp,side,fwd,lane){if(B.mode=='inbound')return null;const c=[];
+function flashyPass(p,L,sp,side,fwd,lane,air){if(B.mode=='inbound')return null;const c=[];
  if((p.pst||0)>.3)c.push('behead','hook');
  else if(L>300)c.push('hook');
  else if(lane)c.push(...(L<260?['wrap',sp>60?'legs':'behead']:['behead','hook']));
  else{if(L<170&&sp>70&&fwd>-.2)c.push('flip');if(Math.abs(side)>.45&&fwd<.6){c.push('btb');if(L<260)c.push('elbow')}if(fwd<-.2&&L<240)c.push('legs');c.push('nolook');if(L>120)c.push('behead')}
- const ok=c.filter(t=>animOn(p,'pas:'+t));return ok.length?ok[Math.random()*ok.length|0]:null}
+ const ok=c.filter(t=>animOn(p,'pas:'+t)&&!(air&&PASS_T[t].bnc));return ok.length?ok[Math.random()*ok.length|0]:null} // (air: an alley-oop lob - nothing that bounces)
+const passK=(p,ty,side)=>ty=='btb'||ty=='elbow'||ty=='behead'?(side>0?-1:1):ty=='legs'?(p.ls<0?-1:1):(PASS_T[ty].two?1:(side<-.2?-1:side>.2?1:(p.ls<0?-1:1))); // the passing hand (1 right, -1 left)
 function passType(p,tg,o){const dx=tg.x-p.x,dy=tg.y-p.y,L=Math.hypot(dx,dy)||1,sp=Math.hypot(p.vx,p.vy),pa=((p.rt&&p.rt.pas)||50),r=Math.random(),a=p.ang||0;
  const side=(dx*-Math.cos(a)+dy*Math.sin(a))/L,fwd=(dx*Math.sin(a)+dy*Math.cos(a))/L; // where the target is relative to his body (+side = his right)
  let lane=null;for(const d of TM[1-p.team]){const t=((d.x-p.x)*dx+(d.y-p.y)*dy)/(L*L);if(t<.15||t>.85)continue;if(Math.abs((d.x-p.x)*dy-(d.y-p.y)*dx)/L<22){lane=d;break}}
@@ -676,7 +677,7 @@ function passType(p,tg,o){const dx=tg.x-p.x,dy=tg.y-p.y,L=Math.hypot(dx,dy)||1,s
  else if(sp>95)ty=pa>=75&&Math.abs(side)>.55&&fwd<.6&&r<.4?'btb':r<.55?'one':r<.8?'chest':'bounce';
  else ty=pa>=85&&Math.abs(side)>.6&&r<.2?'btb':r<.5?'chest':r<.7?'bounce':r<.85?'one':'over';
  if(!animOn(p,'pas:'+ty))ty=animAny(p,'pas',['chest','one','bounce','over','base','btb'],t=>(PASS_REQ[t]||0)<=pa,'chest') // (STORE: a switched-off pass falls back to one he has on)
- const k=ty=='btb'||ty=='elbow'||ty=='behead'?(side>0?-1:1):ty=='legs'?(p.ls<0?-1:1):(PASS_T[ty].two?1:(side<-.2?-1:side>.2?1:(p.ls<0?-1:1))); // behind the back: the hand AWAY from the target wraps round
+ const k=passK(p,ty,side); // behind the back: the hand AWAY from the target wraps round
  return{ty,k}}
 function pass(p,tg,o){
  if(!tg)tg=passTarget(p);if(!tg)return; // (1v1: nobody to pass to)
@@ -1044,7 +1045,10 @@ function startOop(r,sty){const H=hx(r.team),pt_={x:H-dr(r.team)*30,y:HY},d0=near
   blk:false,mk,by:null,hit:0,sty,hang:false,oop:1,cf:DKS[sty].cf,caught:0,hzb:DKS[sty].hz||0};if(DKS[sty].cm)r.dunk.cmax*=DKS[sty].cm;{const mo=sprintN(r)?sigv(r,'momentum'):0;if(mo){r.dunk.cmax*=1+mo;r.dunk.mo=mo}}{const t=sigT(r,'poster'),v=t&&nearD({x:hx(r.team),y:HY},TM[1-r.team],[0,110,140,180][t],0);if(v)Object.assign(r.dunk,{by:v,pst:true,pzr:PZ_R[Math.random()*PZ_R.length|0],pzn:'ALLEY-OOP'})} // Posterizer: the oop finish posterizes a man near the rim too
  RP.rel=RT;RP.who=r}
 function throwOop(p,r){if(!r)return false;const H=hx(p.team),sty=oopStyle(r);startOop(r,sty);
- const fa=Math.atan2(r.x-p.x,r.y-p.y),lt=animOn(p,'pas:over')?'over':animAny(p,'pas',['chest','one','bounce','base','btb'],t=>t!='btb'||((p.rt&&p.rt.pas)||50)>=75,'over');p.ps={ty:lt,k:lt=='btb'?-1:1,t:0,wu:0,d:.38,go:1,fa,tg:r};p.bm=null; // the lob: an overhead follow-through
+ const fa=Math.atan2(r.x-p.x,r.y-p.y),pa=(p.rt&&p.rt.pas)||50,dx=r.x-p.x,dy=r.y-p.y,L=Math.hypot(dx,dy)||1,a=p.ang||0,side=(dx*-Math.cos(a)+dy*Math.sin(a))/L,fwd=(dx*Math.sin(a)+dy*Math.cos(a))/L,
+  fl=pa>=85?flashyPass(p,L,Math.hypot(p.vx,p.vy),side,fwd,null,1):null, // FLASHY LOB (PASSING 85+): a no-look, behind-the-head, hook, behind-the-back, elbow or shovel-flip alley-oop, whichever fits
+  lt=fl||(animOn(p,'pas:over')?'over':animAny(p,'pas',['chest','one','bounce','base','btb'],t=>t!='btb'||pa>=75,'over'));p.ps={ty:lt,k:fl?passK(p,fl,side):lt=='btb'?-1:1,t:0,wu:0,d:.38,go:1,fa:fl&&!PASS_T[fl].face?null:fa,tg:r};p.bm=null; // the lob: the pass's follow-through
+ if(fl)say(PASS_NM[fl]+' ALLEY-OOP!','#ffd23f');
  B.mode='pass';B.oop=1;B.from=p;B.to=r;B.t=0;B.ou=0;B.bail=0;B.z=Math.max(B.z,70*p.ht);B.sx=B.x;B.sy=B.y;B.z0=B.z;B.arc=OOP.arc[0]+OOP.arc[1]*Math.hypot(H-p.x,HY-p.y);
  TM.forEach(t=>t.forEach(d=>{d.chk=0;d.ochk=0}));B.dur=1;beep(380,.08,'triangle');say('ALLEY-OOP!','#ffd23f');return true}
 // CALL FOR THE LOB (career, Q without the ball): your created player, at the rim or running at it (within OOP.call, 24 ft), shouts for the alley-oop and the
@@ -4619,10 +4623,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.72'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.73'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.73','Flashy alley-oops',['Players with PASSING 85+ now throw their alley-oop lobs flashy too: a NO-LOOK, BEHIND THE HEAD, HOOK, BEHIND THE BACK, ELBOW or SHOVEL FLIP lob, whichever fits where the dunker is (only the ones you have switched on in the STORE).',
+  'The lob\'s name pops up when it happens, e.g. ELBOW PASS ALLEY-OOP!']],
  ['v1.72','Ball glued to the shooting hand',['Fixed: in modes where your floor spot isn\'t your roster spot, holding a jump shot left the ball hovering above your shoulder until the release, and the shot then flew off without touching your hand. It now sits in your hands from the moment you start the shot.',
   'Fixed: a jump shot could leave from the dribble spot beside the shooter on a slow frame. Every release now leaves from the right hand\'s fingertips at the flick.',
   'The ball now slides into the shooting hand twice as fast (0.05s) when you start a shot.']],
@@ -5131,7 +5137,7 @@ const HL_ATTR=[
  {t:'LAYUP / CLOSE SHOT',tag:'LAY',d:'Finishing at the rim with layups.\n• Make chance when open goes from about 60% at 25 to 95% at 100, and a contest costs far less at high ratings (40% at 25, 15% at 100).\n• Your layup meter window is bigger with a higher rating and shrinks less when you\'re contested.\n• Unlocks fancier finishes: finger roll 55, floater 65, scoop 70, euro step 75, reverse 82, over-the-shoulder reverse 92. Overhand and power layups are always available.\n• Better finishers shield the ball away from a shot-blocker in the air.'},
  {t:'DUNKING',tag:'DNK',d:'Throwing it down.\n• Open dunks are a sure thing from 35 up.\n• A dunk with a defender at the rim needs at least 50 to score, and the chance climbs from 55% at 50 to 92% at 100.\n• The higher it is, the more often you posterize a defender standing at the rim (15% at 25, 95% at 100), and that defender is stunned.\n• AI players only dunk with 62 or more. You can try a dunk (F) at any rating.\n• Helps your vertical when you jump to block.'},
  {t:'STRENGTH',tag:'STR',d:'Who wins when bodies collide.\n• Stronger players push weaker ones back on contact: drives stall against a strong defender, and a strong driver bullies through a weak one. Weight adds to this.\n• Post-up backdowns (hold G) push the defender back faster.\n• Adds to your chance of finishing a poster dunk and helps power layups.'},
- {t:'PASSING',tag:'PAS',d:'How good your passes are.\n• Passes travel faster (about 80% speed at 25, 130% at 100), so there\'s less time to intercept them.\n• A teammate who shoots within about 4 seconds of your pass gets a boost to his make chance (almost nothing at 25, about +6% at 100).\n• Good AI passers look to pass more.\n• At 85+ every pass is a flashy one that fits the play (no-look, behind the head, elbow, wraparound, between the legs, hook, shovel flip, behind the back).'},
+ {t:'PASSING',tag:'PAS',d:'How good your passes are.\n• Passes travel faster (about 80% speed at 25, 130% at 100), so there\'s less time to intercept them.\n• A teammate who shoots within about 4 seconds of your pass gets a boost to his make chance (almost nothing at 25, about +6% at 100).\n• Good AI passers look to pass more.\n• At 85+ every pass is a flashy one that fits the play (no-look, behind the head, elbow, wraparound, between the legs, hook, shovel flip, behind the back) - alley-oop lobs too.'},
  {t:'PERIMETER DEFENSE',tag:'PD',d:'Guarding the ball away from the basket.\n• Your contests on jump shots from mid-range and three reach further and hurt the shooter more.\n• Holding G (guard stance) slows you down less: you keep 45% of your speed at 25 and 80% at 100.\n• AI defenders with high ratings react faster to the ball handler and stay tighter on him.\n• When a sprinting ball handler tries to blow by you with a move, a higher rating means you CUT HIM OFF more often: you bump him back in front of you and take away his momentum.'},
  {t:'INTERIOR DEFENSE',tag:'IDF',d:'Defending near the basket.\n• Your contests on layups, close shots and dunks reach further and are stronger.\n• Being close enough to contest a dunk means a dunker with low dunking can\'t score over you.\n• It doesn\'t change blocks: that\'s Blocking (and getting your hand to the ball).'},
  {t:'BLOCKING',tag:'BLK',d:'Sending shots back.\n• Layups and dunks are only blocked if your hand actually touches the ball. Blocking (with Dunking) sets how high you jump, and blocking alone sets how accurately your hand goes for the ball: up to about 1.3 ft off at 25, just a few inches at 100. Good blockers also correct their aim as they rise, then slap at the ball with the forearm and wrist when their hand gets there.\n• Jump shots: a defender in the air close to the shooter blocks about 12% at 25, 40% at 60 and 65% at 100.\n• AI shot-blockers with high ratings go up more often and time their jumps better.'},
