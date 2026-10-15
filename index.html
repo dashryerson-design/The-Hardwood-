@@ -122,7 +122,7 @@ function jsOf(p){if(p.jsO&&JS_M[p.jsO])return JS_M[p.jsO];if(p._js&&p._jsB===p.b
  else{const nm=(tmOf(p).pl||[])[p.i];if(JS_PL[nm])id=JS_PL[nm];else{const ok=JS.filter(j=>!j.sig&&jsRt(p,JS_M[j.id])>=JS_M[j.id].req);let h=0;for(const c of String(nm||p.i))h=(h*31+c.charCodeAt(0))>>>0;id=ok[Math.max(0,ok.length-1-h%Math.min(4,ok.length))].id}} // AI: one of the best few he qualifies for
  p._jsB=p.build;return p._js=JS_M[id]}
 function jsApply(p){p._js=null;p.st=.55*jsOf(p).ms} // (the shot meter's speed follows his jumper)
-const SF=['x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs','spn'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
+const SF=['akk','akt','akT','aks','x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs','spn'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
 let AC;function beep(f,d=.1,t='sine',v=.05){try{AC=AC||new AudioContext();const o=AC.createOscillator(),a=AC.createGain();o.type=t;o.frequency.value=f;a.gain.value=v;o.connect(a);a.connect(AC.destination);o.start();a.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
 const say=(s,c='#fff')=>{msg={s,t:1.5,c}};
 const widFor=(t,i)=>{const w=TEAMS[TI[t]].wd;return w&&w[i]||1}; // (no team uses wd any more - body shape comes from body types, see BODY) // per-player body-width override: A.Sanad is built much wider (1.4) than anyone else (created players top out at ~1.19)
@@ -162,7 +162,7 @@ function prFix(){if(!PR||PR>3||!TM[1][0])return;const d=TM[1][0]; // the practic
  if(PR==3){d.x=hx(0)-dr(0)*30;d.y=HY;d.fx=-dr(0);d.fy=0} // the rim protector starts AT the rim
  if(!d.prk){d.prk=1;for(const k in d.rt)if(typeof d.rt[k]=='number')d.rt[k]=PR==3&&(k=='blk'||k=='id'||k=='str')?82:70}} // a MID-LEVEL defender (70s across the board); the rim protector blocks at 82
 function oneDone(){if(MODE==1&&!PR&&(sc[0]>=ONE_WIN||sc[1]>=ONE_WIN)){S='over';finishGame();endInit();return true}return false}
-function calm(p){rdOff(p);Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});
+function calm(p){rdOff(p);Object.assign(p,{akk:0,akt:0,vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});
  if(p.m){const m=p.m;m.rotation.x=m.rotation.z=0;m.position.y=0;m.sh.rotation.set(-Math.PI/2,0,0);m.sh.position.set(0,.03,0);m.body.rotation.z=0;for(const b of [m.L,m.R,m.aL,m.aR])b.rotation.y=0}} // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
 function reset(next){
  if(HC){finRP();if(oneDone())return;checkBall(next);return}
@@ -366,7 +366,7 @@ function repPlan(){const c=RP.clip,w=RP.who,wt=w.team,wk=w.k,n=SF.length,c0=c[0]
  else{add((tBall||rel)+.12,'shotFront',.3,{who:w,pre:.9,ts:(tBall||rel)-.32});add(fin+.2,'flight',.62,{who:w});add(te,'react',1,{who:w})}
  if(!segs.length)segs.push({a:t0,b:te,ty:'react',sp:1,who:w});
  return{t0,te:segs[segs.length-1].b,segs,kind}}
-const REP_DISC=new Set(['jph','air','side','ls','sfs']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
+const REP_DISC=new Set(['jph','air','side','ls','sfs','akk','aks']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
 function repLo(a,b,u){if(!a)return a;const o=Object.assign({},a);if(b&&b.ph===a.ph&&b.sty===a.sty)for(const k of REP_LERP)if(typeof a[k]=='number'&&typeof b[k]=='number')o[k]=a[k]+(b[k]-a[k])*u;return o} // (a move's own clock, smoothed between frames)
 function repStep(dt){const c=RP.clip,D=RP.dir;RP.rdt=dt;let st=0;
  if(RP.ct==null){RP.ct=D.t0;st=1}
@@ -856,7 +856,7 @@ function move(p,k,nofo){
  if(MODE==1)p.ckT=-99;
  p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1),v:drbPick(p)};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
  fo*=am;if(d&&d.swp>0)fo*=1.5;{const an='ZVB'.includes(k)?sigv(p,'ankle'):0;if(an)fo=Math.min(.95,fo+an)} // ankle-breaker chance now comes from the BALL HANDLE rating (was a flat 30-55%, 75% on combos)
- if(!nofo&&d&&Math.random()<fo){d.stun=.85;d.stb=0;say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
+ if(!nofo&&d&&Math.random()<fo){ankleBreak(d,p,k);say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
  if(fast&&!nofo&&d&&k!='V'&&!(d.stun>0)&&!(d.lock>0)&&inFront(d,p))bbTry(p,d); // BLOW-BY or CUT-OFF
 }
@@ -1083,6 +1083,51 @@ function rdLimb(j,hg,par,E,W,sg){ // point the bone's -y at the elbow/knee, bend
  _RX.crossVectors(_RY,_RZ).normalize();_RZ.crossVectors(_RX,_RY);j.quaternion.setFromRotationMatrix(_RM.makeBasis(_RX,_RY,_RZ));hg.rotation.set(-sg*ang,0,0)}
 function rdRestore(p){const r=p.rd,m=p.m;if(r&&r.sv&&m)rdBones(m).forEach((b,i)=>b.rotation.set(...r.sv[i]))} // the animated joint angles back (each frame before pose(), and when it ends)
 function rdOff(p){rdRestore(p);p.rd=null}
+// ===== ANKLE BREAKERS (v1.93): the beaten defender loses his footing in one of five ways, picked from the move and how he was moving =====
+//  1 BACK   - stumbles backwards in a few panicked steps, sits down hard, gets up   (step-backs, some hesis)
+//  2 SLIP   - his feet shoot out the way he was already sliding, he lands on his hip (crossovers / between the legs / behind the back while he is moving)
+//  3 SIDE   - lurches sideways the wrong way on crossed feet, catches himself on one hand (crosses, spins)
+//  4 HIPS   - his hips open the wrong way, legs tangle and he drops to a knee  (crosses, hesis, spins)
+//  5 BUCKLE - both ankles give: he sinks to his knees, hands down in front   (hesis, step-backs)
+// The state lives in flat numbers (akk variant, akt clock, akT length, aks side +1 = his L side) so replays and online play carry it like any other pose field.
+const AK_T=[0,1.7,1.6,1.15,1.35,1.5],AK_FR=[0,2.6,1.8,2.8,3.5,5];
+function ankleBreak(d,p,k){const sp=Math.hypot(d.vx,d.vy),fx=d.fx,fy=d.fy,rx=-fy,ry=fx, // r = his L side in the world
+  wl=-(p.bx*rx+p.by*ry),mv=sp>55?(d.vx*rx+d.vy*ry)/sp:0,r=Math.random(); // wl: the WRONG way (opposite the attacker's new line) · mv: the way he was moving
+ const v=k=='V'?(r<.65?1:5):k=='X'?(r<.4?5:r<.75?1:4):k=='C'?(r<.5?3:4):sp>55&&r<.55?2:r<.75?4:3;
+ const sd=v==2?(Math.sign(mv)||1):(Math.sign(wl)||1);
+ Object.assign(d,{akk:v,akt:0,akT:AK_T[v],aks:sd,stun:AK_T[v],stb:0,jump:0,lock:0});
+ const[ux,uy,u]=v==1?[-fx,-fy,95]:v==5?[-fx,-fy,30]:[rx*sd,ry*sd,v==2?Math.max(sp,120):v==3?150:110];d.vx=ux*u;d.vy=uy*u}
+const akS=(t,a,b)=>sm3(Math.max(0,Math.min(1,(t-a)/(b-a)))); // 0 -> 1 between a and b
+function akBody(p){const t=p.akt,s=p.aks,v=p.akk; // [pitch (- = back), roll (+ = toward his L side)]
+ if(v==1)return t<.5?[-.04-.36*t/.5,0]:t<1.25?[-.5,0]:[-.5*(1-akS(t,1.25,1.6)),0];
+ if(v==2)return t<.18?[-.2,-s*.35]:t<1.0?[-.3,-s*1.25]:[-.3*(1-akS(t,1,1.5)),-s*1.25*(1-akS(t,1,1.5))];
+ if(v==3)return t<.55?[.05,s*(.2+.45*t/.55)]:t<.85?[.2,s*.75]:[.2*(1-akS(t,.85,1.1)),s*.75*(1-akS(t,.85,1.1))];
+ if(v==4)return t<.35?[.15,s*.2]:t<1.0?[.3,s*.35]:[.3*(1-akS(t,1,1.3)),s*.35*(1-akS(t,1,1.3))];
+ return t<.25?[0,0]:t<1.05?[.15,0]:[.15*(1-akS(t,1.05,1.45)),0]}
+const akYaw=p=>p.akk==4?-p.aks*1.0*akS(p.akt,0,.18)*(1-akS(p.akt,.95,1.3)):0; // HIPS: his hips (and the rest of him) swing open the wrong way
+function akPose(p,q){const t=p.akt,s=p.aks,v=p.akk,N=s>0?'L':'R',F=s>0?'R':'L',o=-s; // N = the limbs on the side he goes to, o = their 'outward' sign
+ const set=(sd,h,k,x,e,z,g)=>{if(h!=null)q[sd+'h']=h;if(k!=null)q[sd+'k']=k;if(x!=null)q[sd+'x']=x;if(e!=null)q[sd+'e']=e;if(z!=null)q[sd+'z']=z;if(g!=null)q[sd+'g']=g};
+ q.tw=0;q.drop=0;q.Lg=q.Rg=0;
+ if(v==1){ // BACK
+  if(t<.5){const w=Math.sin(t*24),a=Math.sin(t*17);set('L',-.35+.4*w,.45+.4*Math.max(0,-w),-1.6+.6*a,-.4,-1);set('R',-.35-.4*w,.45+.4*Math.max(0,w),-1.6-.6*a,-.4,1);q.lean=-.12-.15*t/.5;q.r=24}
+  else if(t<1.25){set('L',-1.45,.5,.7,-.1,-.4);set('R',-1.45,.5,.7,-.1,.4);q.lean=-.2;q.r=t<.75?20:12}
+  else{set('L',-1,1.5,-.6,-.3,-.2);set('R',-1,1.5,-.6,-.3,.2);q.lean=.5;q.r=10}}
+ else if(v==2){ // SLIP
+  if(t<.18){set(N,-.3,.2,-2.2,-.3,o*1.2,o*.9);set(F,-.1,.8,-2.2,-.3,-o*1.2,0);q.lean=-.2;q.r=30}
+  else if(t<1.0){set(N,-.6,.6,-1,-.6,-o*.3,o*.5);set(F,-.6,.8,-.3,-.1,-o*1.3,0);q.lean=-.1;q.r=t<.4?22:10}
+  else{set(N,-.8,1.6,-.5,-.4,o*.4,0);set(F,-.8,1.6,-.5,-.4,-o*.4,0);q.lean=.5;q.r=10}}
+ else if(v==3){ // SIDE
+  if(t<.55){const w=Math.sin(t*20);set(N,-.4+.35*w,.5+.3*Math.max(0,-w),-.6,-.3,o*1.3,-s*(.3+.25*w));set(F,-.4-.35*w,.5+.3*Math.max(0,w),-2,-.4,-o*.8,-s*(.3-.25*w));q.lean=.15;q.r=22}
+  else if(t<.85){set(N,-.6,1.3,-.2,-.1,o*1,o*.2);set(F,-.3,1.1,-1.8,-.4,-o*.9,0);q.lean=.5;q.r=16}
+  else{set('L',-.3,.6,-.3,-.3,-.3,0);set('R',-.3,.6,-.3,-.3,.3,0);q.lean=.2;q.r=10}}
+ else if(v==4){ // HIPS
+  if(t<.35){set(N,-1,.6,-1.4,-.5,o*.9,-s*.25);set(F,.5,.9,-1,-.5,-o*.7,-s*.2);q.lean=.45;q.r=22}
+  else if(t<1.0){set(N,-1.3,1.4,-.6,-.2,o*.4,0);set(F,.3,2,-1.5,-.4,-o*.6,0);q.lean=.55;q.r=14}
+  else{set('L',-.4,.8,-.3,-.3,-.2,0);set('R',-.4,.8,-.3,-.3,.2,0);q.lean=.25;q.r=10}}
+ else{ // BUCKLE
+  if(t<.25){set('L',-.4,1.2,-1.8,-.4,-.9,.3);set('R',-.4,1.2,-1.8,-.4,.9,-.3);q.lean=.1;q.r=24}
+  else if(t<1.05){set('L',0,2.4,-.9,-.2,-.2,0);set('R',0,2.4,-.9,-.2,.2,0);q.lean=.8;q.r=12}
+  else{set('L',-.7,1.5,-.5,-.3,-.2,0);set('R',-.7,1.5,-.5,-.3,.2,0);q.lean=.4;q.r=10}}}
 function knockDown(d,p){const[vx,vy]=pushDir(d,p);
  const yaw=d.m?d.m.rotation.y:Math.atan2(d.fx,d.fy),fx=Math.sin(yaw),fy=Math.cos(yaw); // his BODY's facing as drawn right now (not where the AI wants to turn him)
  const fw=vx*fx+vy*fy,lf=vx*fy-vy*fx; // that push in his frame: fw along his facing, lf to his left (his left = (fy, -fx): the rig's +x)
@@ -1964,7 +2009,7 @@ function step(dt){
   if(p.rd&&p.rd.full&&!p.dunk&&!(p.hg>0)){p.stun=Math.max(p.stun,99);p.vx=p.vy=p.avx=p.avy=0} // (full ragdoll: out of the play until the possession resets)
   if(p.bb){const b=p.bb;b.t+=dt;if(b.t>=b.d||p.stun>0||p.lock>0)p.bb=null;else if(b.lk){bbStep(p,b);return}}
   if(p.lock>0){p.lock-=dt;p.vx=p.vy=0;p.avx=p.avy=0;return}
-  if(p.stun>0){p.stun-=dt;if(p.stun<=0)p.stb=0;p.vx*=.8;p.vy*=.8;if(p.z>0||p.air){p.vz=(p.vz||0)-G*dt;p.z=Math.max(0,p.z+p.vz*dt);if(!p.z){p.vz=0;p.air=0;p.avx*=.3;p.avy*=.3}}return} // (hit in the air: he still comes down)
+  if(p.stun>0){p.stun-=dt;if(p.stun<=0){p.stb=0;p.akk=0}if(p.akk){p.akt+=dt;const f=Math.exp(-AK_FR[p.akk]*dt);p.vx*=f;p.vy*=f}else{p.vx*=.8;p.vy*=.8}if(p.z>0||p.air){p.vz=(p.vz||0)-G*dt;p.z=Math.max(0,p.z+p.vz*dt);if(!p.z){p.vz=0;p.air=0;p.avx*=.3;p.avy*=.3}}return} // (hit in the air: he still comes down)
   if((t==0&&i==ctl&&!AUTO||NET.host&&t==1)&&B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt); // a pass is on its way to you: you're steered onto it (control comes back on the catch)
   else if(t==0&&i==ctl&&!AUTO)ctrl(p,dt);
   else if(NET.host&&t==1)netCtrl(p,dt); // online: the guest's player, on his own keys
@@ -3172,6 +3217,7 @@ function pose(p,dt){
  else if(p.bb&&!d&&!air&&!shoot&&!p.lay)bbPose(p,q); // BLOW-BY / CUT-OFF pair
  if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
+ if(p.akk)akPose(p,q); // ANKLE BREAKER (overrides the stumble)
  // ANIMATION BLENDING (v1.70): every joint is a critically damped spring (it keeps its own velocity), so going from one action into the next - a crossover into a
  // jump shot, a run into a pass - the limbs carry their motion and ease into the new pose instead of changing direction in one frame. How stiff the springs are
  // (q.r, set by each action) ramps over ~0.1s instead of jumping, and outside dunks / layups it is capped so nothing snaps.
@@ -3247,12 +3293,12 @@ function render(dt){
   let da=tgt-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.sqd=sqz?da:0;p.sq=1-Math.min(1,Math.abs(da));p.angv=p.angv||0;smdA(p,'ang',tgt,1.1/(sqz?9:12),dt); // (turning is a spring too: he swings round and settles, never whips)
   const sp3=p.dunk&&p.dunk.sty==3?sm3(Math.max(0,Math.min(1,(p.dunk.t-p.dunk.f0)/((1-p.dunk.f0)*.8))))*2*Math.PI:0;
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
-  m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1)*(p.spn||1):0)+sp3+p.lyw+bbYaw(p);
+  m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1)*(p.spn||1):0)+sp3+p.lyw+bbYaw(p)+akYaw(p);
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
-  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=p.rbx||0;p.rbxv=p.rbxv||0;smd(p,'rbx',p.stun>0?(p.stb?-.14*p.stb:-1.2):0,.13,dt);p.rbz=ex(p.rbz||0,0,dt,10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
+  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=p.rbx||0;p.rbxv=p.rbxv||0;const akb=p.akk?akBody(p):null;smd(p,'rbx',akb?akb[0]:p.stun>0?(p.stb?-.14*p.stb:-1.2):0,akb?.09:.13,dt);p.rbz=ex(p.rbz||0,akb?akb[1]:0,dt,akb?9:10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
   rdRestore(p);if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
-  if(p.kd&&p.z<1){m.updateMatrixWorld(true);_KB.makeEmpty();for(const o of [m.body,m.L,m.R])_KB.expandByObject(o);m.position.y-=_KB.min.y;m.sh.position.y+=_KB.min.y} // knocked down: whatever is lowest (back, backside, knees) rests ON the floor, not floating
+  if((p.kd||p.akk)&&p.z<1){m.updateMatrixWorld(true);_KB.makeEmpty();for(const o of [m.body,m.L,m.R])_KB.expandByObject(o);m.position.y-=_KB.min.y;m.sh.position.y+=_KB.min.y} // knocked down: whatever is lowest (back, backside, knees) rests ON the floor, not floating
   if(p.rd){rdStep(p,dt);if(p.rd){m.sh.quaternion.copy(m.quaternion).invert().multiply(_KQ.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2));m.sh.position.set(0,0,0);m.updateMatrixWorld(true);m.worldToLocal(m.sh.position.set(m.position.x,.03,m.position.z))}else{m.sh.quaternion.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2);m.sh.position.x=m.sh.position.z=0}} // RAGDOLL physics on top of the animation (the shadow stays flat on the floor)
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
  }));
@@ -4931,10 +4977,10 @@ function netGuestStep(dt){T+=dt;msg.t-=dt;ms.show-=dt;shake=Math.max(0,shake-dt*
  NET.dly=Math.max(35,Math.min(450,Math.max(jt+18,gp*1.4+15)));NET.dl=NET.dl==null?NET.dly:NET.dl+(NET.dly-NET.dl)*Math.min(1,(NET.dly>NET.dl?.2:.02)); // (grows fast, shrinks slowly)
  const rt=now-off_-(NET.via=='p2p'?NET.dl:NET_DELAY);let a=S_[S_.length-1],b=a,u=0;for(let i=0;i<S_.length-1;i++)if(S_[i].t<=rt&&S_[i+1].t>rt){a=S_[i];b=S_[i+1];u=(rt-a.t)/Math.max(1,b.t-a.t);break}
  netApply(a.f,b.f,u)}
-const NET_DISC=new Set(['jph','air','side','sfs']);
+const NET_DISC=new Set(['jph','air','side','sfs','akk','aks']);
 function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen;
  for(let lt=0;lt<2;lt++){const p=TM[lt][0],oa=a.p[1-lt][0],ob=b.p[1-lt][0];if(!p||!oa||!ob)continue;
-  SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side'||k=='sfs')v=-v;p[k]=v});
+  SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side'||k=='sfs'||k=='aks')v=-v;p[k]=v});
   const n=SF.length;p.dunk=ob[n];p.lay=ob[n+1]||null;p.grd=ob[n+2]||0;if(ob[n+3])p.st=ob[n+3];p.bm=ob[n+4]?Object.assign({},ob[n+4]):null;p.ps=ob[n+5]&&PASS_T[ob[n+5].ty]?Object.assign({},ob[n+5]):null;
   {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,-h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}p.bb=ob[n+8]?Object.assign({},ob[n+8],{s:-ob[n+8].s}):null} // RAGDOLL: the host's hit (mirrored) is run through the same physics here; when the host lets him up, so does the guest
  B.x=940-L(a.b.x,b.b.x);B.y=L(a.b.y,b.b.y);B.z=L(a.b.z,b.b.z);B.mode=b.b.mode;B.perf=!!b.b.perf;B.h=b.b.ht?TM[1-b.b.ht[0]][b.b.ht[1]]||null:null;
@@ -5091,10 +5137,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.92'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.93'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.93','Real ankle breakers',['Ankle breakers no longer snap the defender flat on his back. He now loses his footing in one of five ways, picked from the move and how he was moving:',
+  'BACK: a few panicked backpedal steps, then he sits down hard (step-backs, hesitations). SLIP: his feet shoot out the way he was already sliding and he lands on his hip (crossovers on the move).',
+  'SIDE: he lurches the wrong way on crossed feet and catches himself on one hand (crosses, spins). HIPS: his hips open the wrong way, his legs tangle and he drops to a knee.',
+  'BUCKLE: both ankles give and he sinks to his knees, hands down. Every one plays out over 1.2-1.7s with real momentum, then he gets back up - and shows the same in replays and online.']],
  ['v1.92','Shorts, toned build, career courts',['Fixed: the tops of the thighs showed above the shorts (team intros and in game, most with a leg raised). The shorts now come up under the waistband.',
   'Fixed: the TONED body type had two odd lumps on the chest near the armpits.',
   'CAREER: after picking the team you face (and the player in 1V1) you now CHOOSE THE COURT too, just like Play Now.']],
