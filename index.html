@@ -4840,10 +4840,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.83'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.84'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.84','Dunk packages',['Dunk packages now UNLOCK as a whole at one DUNKING level (when its first dunk used to unlock), instead of dunk by dunk.',
+  'Open an unlocked package in the STORE (DUNKS) to switch each of its dunks ON or OFF - only the ones you have on get used. The list shows how many of each package\'s dunks are on.']],
  ['v1.83','Dribble package choice',['A high BALL HANDLE no longer forces the flashiest dribble package on anyone. Your created player always uses the package YOU equip in the STORE.',
   'Other players each have their own fixed pick among the packages their handle unlocks (some stay BASIC, some go PRO or FLASHY), instead of all using the best one.']],
  ['v1.82','Dribble packages',['Dribble styles are now DRIBBLE PACKAGES: BASIC 1 & 2, PRO 1 & 2 (65 / 72), ELITE 1 & 2 (78 / 83) and FLASHY 1 & 2 (86 / 89 BALL HANDLE).',
@@ -5598,6 +5600,9 @@ const AN_CAT=[
  {n:'SHOOTING',ic:'sht',sub:[{n:'JUMP SHOTS',at:'tp',pk:JS.map(j=>({n:j.n,k:['js:'+j.id]}))},{n:'FADEAWAYS',at:'mid',pk:[{n:'FADEAWAY',k:['sht:fade']},{n:'POST FADEAWAY',k:['sht:pfade']}]}]},
  {n:'PASSING',ic:'pas',sub:[{n:'PASSES',at:'pas',pk:[{n:'BASIC PASSES',k:['pas:chest','pas:bounce','pas:over']},{n:'ONE-HAND PASSES',k:['pas:one','pas:base']},{n:'FLASHY PASSES',k:['pas:btb','pas:nolook','pas:behead','pas:elbow','pas:wrap','pas:legs','pas:hook','pas:flip']}]}]},
  {n:'DRIBBLING',ic:'drb',sub:[{n:'DRIBBLE PACKAGES',at:'bh',pk:DRB.map((s,i)=>({n:s.n,k:['drb:'+i]}))}]}];
+// DUNK PACKAGES (v1.84): a package UNLOCKS as a whole at one DUNKING level (its easiest dunk's old requirement); inside an unlocked package you switch each dunk on / off.
+const DK_PK=AN_CAT[0].sub[0].pk;DK_PK.forEach(pk=>{const r=Math.min(...pk.k.map(k=>(DUNKV.find(v=>'dnk:'+v.sty==k)||{req:0}).req));pk.req=r;pk.k.forEach(k=>{const v=DUNKV.find(v=>'dnk:'+v.sty==k);if(v)v.req=r})});
+const anDk=st=>st.cat==0&&st.sub==0; // (the dunk list: packages open into their dunks)
 const dkRate=r=>Math.round(.4*r[0]+.3*r[1]+.3*r[2]);
 let AN_IT=null;const anItem=k=>(AN_IT||(AN_IT=Object.fromEntries(STORE_T.flatMap(t=>t.items().map(i=>[i.k,Object.assign({at:t.at},i)])))))[k];
 const anGrp=k=>k=='dnk:4'||k.startsWith('sht:')||k.startsWith('drb:')?null:/^dnk:(6|7|8|10)$/.test(k)?'oop':k.split(':')[0],AN_GN={dnk:'DUNK',oop:'ALLEY-OOP',lay:'LAYUP',pas:'PASS'}; // each group keeps one unlocked animation ON (the posterizer and fadeaways are optional)
@@ -5612,9 +5617,12 @@ function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
 function openStore(){MM.st={pg:'hub',hub:1,cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 const ST_HUB=i=>[110+i*390,130,350,250],ST_BK=[24,482,150,40],AN_ROW=i=>[24,92+i*48,300,42],AN_TAB=i=>[480-(AN_CAT.length*90-14)/2+i*90,466,76,64],AN_EQ=[760,400,176,40];
 const AN_VIS=7,anTop=(st,L)=>L.length<=AN_VIS?0:Math.max(0,Math.min(L.length-AN_VIS,st.sel-3)); // (long lists - the jump shots - scroll with the selection)
-const anList=st=>{const c=AN_CAT[st.cat];return st.lv?c.sub[st.sub].pk:c.sub},anPk=st=>st.lv?AN_CAT[st.cat].sub[st.sub].pk[st.sel]:null;
-function anEnter(st){if(!st.lv){st.sub=st.sel;st.lv=1;st.sel=0;beep(520,.05,'triangle')}else pkEquip(anPk(st))}
-function anBack(st){if(st.lv){st.lv=0;st.sel=st.sub;beep(300,.05,'triangle')}else{st.pg='hub';beep(300,.05,'triangle')}}
+const anDkIt=st=>DK_PK[st.pk].k.map(k=>({n:anItem(k).n,k:[k]})), // inside a dunk package: one row per dunk (a one-dunk 'package' = its on / off switch)
+ anList=st=>{const c=AN_CAT[st.cat];return st.lv==2?anDkIt(st):st.lv?c.sub[st.sub].pk:c.sub},anPk=st=>st.lv==2?anDkIt(st)[st.sel]:st.lv?AN_CAT[st.cat].sub[st.sub].pk[st.sel]:null;
+function anEnter(st){if(!st.lv){st.sub=st.sel;st.lv=1;st.sel=0;beep(520,.05,'triangle')}
+ else if(st.lv==1&&anDk(st)){const pk=anPk(st);if(!pkHave(pk)){storeMsg('LOCKED: NEEDS DUNKING '+pk.req);return}st.pk=st.sel;st.lv=2;st.sel=0;beep(520,.05,'triangle')} // open the package
+ else pkEquip(anPk(st))}
+function anBack(st){if(st.lv==2){st.lv=1;st.sel=st.pk;beep(300,.05,'triangle')}else if(st.lv){st.lv=0;st.sel=st.sub;beep(300,.05,'triangle')}else{st.pg='hub';beep(300,.05,'triangle')}}
 function storeStep(dt){const st=MM.st;st.mt=Math.max(0,st.mt-dt);const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),esc=P.Escape||P.Backspace,ok=P.Enter||P.Space;
  if(st.pg=='hub'){if(lr)st.hub=1-st.hub;if(ok){st.pg=st.hub?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle')}if(esc)storeBack();return}
  if(st.pg=='cos'){if(ok||esc){st.pg='hub';beep(300,.05,'triangle')}return}
@@ -5627,7 +5635,7 @@ function storePtr(x,y,type){const st=MM.st;if(type!=0)return;
  if(mIn(x,y,ST_BK)){anBack(st);return}
  for(let i=0;i<AN_CAT.length;i++)if(mIn(x,y,AN_TAB(i))){st.cat=i;st.lv=0;st.sel=0;st.sub=0;beep(440,.05,'triangle');return}
  const L=anList(st),tp_=anTop(st,L);for(let i=tp_;i<Math.min(L.length,tp_+AN_VIS);i++)if(mIn(x,y,AN_ROW(i-tp_))){if(st.lv)st.sel=i;else{st.sel=i;anEnter(st)}return}
- if(st.lv&&mIn(x,y,AN_EQ))pkEquip(anPk(st))}
+ if(st.lv&&mIn(x,y,AN_EQ)){if(st.lv==1&&anDk(st))anEnter(st);else pkEquip(anPk(st))}}
 function anIcon(ic,cx,cy,s,col){g.save();g.translate(cx,cy);g.scale(s/60,s/60);g.fillStyle=col;g.strokeStyle=col;g.lineWidth=6;g.lineCap='round';g.lineJoin='round';
  const ln=(...p)=>{g.beginPath();g.moveTo(p[0],p[1]);for(let i=2;i<p.length;i+=2)g.lineTo(p[i],p[i+1]);g.stroke()},dot=(x,y,r)=>{g.beginPath();g.arc(x,y,r,0,6.283);g.fill()};
  if(ic=='fin'){g.lineWidth=3;ln(8,-20,26,-20);ln(10,-20,13,-10,21,-10,24,-20);g.lineWidth=6;dot(-6,-10,6);ln(-8,-3,-12,12);ln(-7,-1,9,-17);ln(-8,0,-20,6);ln(-12,12,-4,24);ln(-12,12,-24,18);dot(15,-25,5)}
@@ -5648,11 +5656,12 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
   g.font='14px system-ui';g.fillStyle='#8fa3b8';g.fillText('Cosmetics are on the way in a future update.',480,362);back();return}
  // ---- ANIMATIONS
  title('ANIMATIONS');const cat=AN_CAT[st.cat],L=anList(st),pk=anPk(st);
- mRR(14,74,320,384,2,'rgba(8,10,16,.75)',null);g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8fa3b8';g.fillText(cat.n+(st.lv?'  ›  '+cat.sub[st.sub].n:''),26,88);
+ mRR(14,74,320,384,2,'rgba(8,10,16,.75)',null);g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8fa3b8';g.fillText(cat.n+(st.lv?'  ›  '+cat.sub[st.sub].n:'')+(st.lv==2?'  ›  '+DK_PK[st.pk].n:''),26,88);
  const tp_=anTop(st,L);if(tp_>0){g.fillStyle='#8a90a0';g.font='bold 12px system-ui';g.textAlign='center';g.fillText('▲',174,88)}if(tp_+AN_VIS<L.length){g.fillStyle='#8a90a0';g.font='bold 12px system-ui';g.textAlign='center';g.fillText('▼',174,92+AN_VIS*48+4)}
  L.forEach((it,i)=>{if(i<tp_||i>=tp_+AN_VIS)return;const[x,y,w,h]=AN_ROW(i-tp_),on=st.sel==i,lk=st.lv&&!pkHave(it),eq=st.lv&&!lk&&pkOn(it);mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',on?'#fff':C);
   g.textAlign='center';let f=19;g.font=f+'px system-ui';while(g.measureText(it.n).width>w-70&&f>12){f--;g.font=f+'px system-ui'}g.fillStyle=lk?'#5d6b7a':C;g.fillText(st.lv?it.n:it.n.charAt(0)+it.n.slice(1).toLowerCase(),x+w/2,y+28);
-  if(eq){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle='#4cff7a';g.fillText('✓',x+w-12,y+27)}else if(lk){g.textAlign='right';g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('🔒',x+w-10,y+27)}else if(!st.lv){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle=C;g.fillText('›',x+w-12,y+27)}});
+  if(st.lv==1&&anDk(st)&&!lk){const n=it.k.filter(k=>!MM.cr.anim.off.includes(k)).length;g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle=n?'#4cff7a':'#8a90a0';g.fillText(n+'/'+it.k.length+'  ›',x+w-12,y+27)} // dunks switched on
+  else if(eq){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle='#4cff7a';g.fillText('✓',x+w-12,y+27)}else if(lk){g.textAlign='right';g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('🔒',x+w-10,y+27)}else if(!st.lv){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle=C;g.fillText('›',x+w-12,y+27)}});
  // preview + package details
  const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'rgba(63,184,255,.5)');
  if(pk){const ks=pk.k,cur=ks[Math.floor(performance.now()/4500)%ks.length];g.clearRect(px,py,pw,ph);spvFrame(cur);
@@ -5666,7 +5675,7 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
    else ks.forEach(k=>{const it=anItem(k),have=stHave(it,it.at),t=(k==cur?'▶ ':'')+it.n+(have?'':'  🔒'+it.req);g.font=(k==cur?'bold ':'')+'12px system-ui';const w=g.measureText(t).width+18;if(xx+w>px+400){xx=px;yy+=22}
     mRR(xx,yy-12,w,18,9,k==cur?'rgba(63,184,255,.2)':'rgba(255,255,255,.06)',null);g.fillStyle=have?'#fff':'#6a7080';g.fillText(t,xx+9,yy+1);xx+=w+6})}
   {const[x,y,w,h]=AN_EQ,eq=pkOn(pk),lk=!pkHave(pk);mRR(x,y,w,h,2,lk?'#2a2f37':eq?'#1e3a28':'#ffb020',lk?'#555':eq?'#4cff7a':'#fff');g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle=lk?'#8a90a0':eq?'#4cff7a':'#11131a';
-   g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(eq&&!lk&&!ks[0].startsWith('js:')&&!ks[0].startsWith('drb:')){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText('Enter / click to unequip',x+w/2,y+h+12)}}}
+   const op=st.lv==1&&anDk(st);g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):op?'OPEN  ›':st.lv==2?(eq?'✓ ON':'OFF'):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(!lk&&(st.lv==2||eq&&!op&&!ks[0].startsWith('js:')&&!ks[0].startsWith('drb:'))){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText(st.lv==2?'Enter / click to switch '+(eq?'off':'on'):'Enter / click to unequip',x+w/2,y+h+12)}}}
  else{g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle='#8fa3b8';g.fillText('Choose '+L.map(s=>s.n.toLowerCase()).join(' or ')+' on the left',px+pw/2,py+ph/2)}
  if(st.mt>0){g.textAlign='center';g.font='bold 14px system-ui';const tw_=g.measureText(st.msg).width+28;mRR(px+pw/2-tw_/2,py+10,tw_,26,13,'rgba(20,10,10,.85)','rgba(255,120,120,.6)');g.fillStyle='#ff9a9a';g.fillText(st.msg,px+pw/2,py+28)}
  // category tabs along the bottom
