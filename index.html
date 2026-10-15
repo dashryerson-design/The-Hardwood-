@@ -2500,7 +2500,7 @@ function burstFx(p,st){bst=.45;bstP.copy(p);
  for(let i=0;i<26;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=4+Math.random()*12;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.45+Math.random()*.4,.18+Math.random()*.22)}
  shake=Math.max(shake,.2);sfxRelease(TRL_C)}
 function ribUpd(m,pts,w,col,inten,pw,zig,dark){const n=pts.length;if(n<2){m.visible=false;return}m.visible=true;
- const PA=m.geometry.attributes.position,CA=m.geometry.attributes.color,cp=cam.position;
+ const PA=m.geometry.attributes.position,CA=m.geometry.attributes.color,cp=(TCAM||cam).position;
  for(let i=0;i<n;i++){const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(n-1,i+1)],u=Math.min(1,p.age/TLIFE);
   const tx=a.x-b.x,ty=a.y-b.y,tz=a.z-b.z,vx=cp.x-p.x,vy=cp.y-p.y,vz=cp.z-p.z;let sx=ty*vz-tz*vy,sy=tz*vx-tx*vz,sz=tx*vy-ty*vx;const sl=Math.hypot(sx,sy,sz)||1;sx/=sl;sy/=sl;sz/=sl;
   const px=p.x+p.jx*zig,py=p.y+p.jy*zig,pz=p.z+p.jz*zig,wd=w*Math.pow(1-u,pw)*(1+.1*Math.sin(T*45+i*.5))*(i==0?.85:1)*.5,br=dark?1:Math.pow(1-u,1.25)*inten;
@@ -2623,8 +2623,11 @@ function impUpd(dt){
   for(let j=0;j<9;j++){const d=j/8*L,jj=j?1.7:0;P.setXYZ(j,IM.p.x+Math.cos(a)*Math.cos(el)*d+(Math.random()-.5)*jj,IM.p.y+Math.sin(el)*d+(Math.random()-.5)*jj,IM.p.z+Math.sin(a)*Math.cos(el)*d+(Math.random()-.5)*jj)}
   P.needsUpdate=true;l.material.opacity=1-t/.6})
 }
-function trailUpd(dt){if(B.h)lastH=B.h;const on=B.mode=='shot'&&B.perf;if(on&&!trOn)TRL_C=shTrl(B.sh||lastH); // (online guests only know who last held it)
- const st=TS[TRL_C],bp=ballM.position,cool=GFX!='LOW',sb=tb(TRL_C);if(st.rb)rbw(st);
+// STORE > COSMETICS preview: the trail's meshes move into the preview scene while it is open, and back for the game
+let TCAM=null;const TRL_OBJ=()=>[...RB,...SPR.map(o=>o.s),...TRL.map(o=>o.m),...bG,flS,rgS,bolt,tl,imF,imG,imC,...imR,...imB];
+function trlHost(sc){if(tl.parent!==sc)TRL_OBJ().forEach(o=>sc.add(o))}
+function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}const on=pv?pv.on:B.mode=='shot'&&B.perf;if(on&&!trOn)TRL_C=pv?pv.k:shTrl(B.sh||lastH); // (online guests only know who last held it)
+ const st=TS[TRL_C],bp=pv?pv.pos:ballM.position,cool=GFX!='LOW',sb=tb(TRL_C);if(st.rb)rbw(st);
  if(on&&!trOn){trOn=1;TP.length=0;burstFx(bp,st)}if(!on)trOn=0;
  {const Hn=bp.x<47?5.2:88.8;if(IM.pOn&&!on&&Math.abs(bp.x-Hn)<.25&&Math.abs(bp.z-32)<.25&&bp.y>8&&bp.y<12){IM.p.set(Hn,10,32);impactFx(TRL_C)}IM.pOn=on?1:0}
  impUpd(dt);sfxUpd(on&&S!='pause',dt);
@@ -4100,7 +4103,7 @@ function renderCPos(ox){const tm=performance.now();R.setScissorTest(true);
  cpM.forEach(o=>o.visible=true);R.setScissorTest(false);R.setViewport(0,0,960,540)}
 // layout (shared by drawing and mouse hit-testing)
 const mainRect=i=>i<3?[36,90+i*104,250,92]:[36,410,250,40],CAR_GO=[700,466,230,52],
- actOpts=()=>{const b=SLOTS[MM.slot];return['play','edit','sigs','look','store','cust',...(b&&lvInfo(b.xp).lv>=LV_MAX?['rebirth']:[]),'del','back']}, // REBIRTH only for a max-level player
+ actOpts=()=>{const b=SLOTS[MM.slot];return['play','edit','sigs','look','store',...(b&&lvInfo(b.xp).lv>=LV_MAX?['rebirth']:[]),'del','back']}, // REBIRTH only for a max-level player
  actRect=i=>{const rh=Math.min(124,500/Math.ceil(actOpts().length/2));return[24+(i%2)*290,24+(i>>1)*rh,278,rh-10]};
 const BIO_BTN=[30,488,190,34],AP_RECT=[40,246,126,44],SIG_BTN=[172,246,126,44],STORE_BTN=[304,246,126,44],statRect=j=>[CR_X[STATS[j][0]],CR_T,CR_W,CR_B-CR_T+34],SAVE_R=[790,488,140,34],CANCEL_R=[680,488,100,34];
 function mainEnter(){ // CAREER screen: pick / create a player slot
@@ -4179,7 +4182,6 @@ function actEnter(){
  else if(o=='edit'){MM.rbNew=0;openCreate(s)}
  else if(o=='rebirth'){MM.del=0;openCPos(s,rbOf(SLOTS[s])+1);beep(660,.12,'triangle');beep(990,.2,'triangle',.04)} // a brand-new build: position, body, attributes, team
  else if(o=='sigs'||o=='look'||o=='store')actSub(o);
- else if(o=='cust'){const b=SLOTS[s];if(b.trl)TRL_S=b.trl;openCust('slotact')}
  else if(o=='del'){if(MM.del){SLOTS[s]=null;if(ACTIVE==s)ACTIVE=-1;saveSlots();MM.del=0;S='career'}else MM.del=1}
  else S='career';
 }
@@ -4432,12 +4434,11 @@ const TRL_DESC={FIRE:'Explosion impact',ICE:'Frost shatter impact',BLACK:'Void c
  'GREEN LAZER':'Green laser beam','RED LAZER':'Red laser beam','BLUE LAZER':'Blue laser beam','PINK LAZER':'Pink laser beam','YELLOW LAZER':'Yellow laser beam','RAINBOW LAZER':'Laser that cycles every colour',MONEY:'Bills and gold coins',DEMONIC:'Hellfire and a blood-red void',
  STARS:'A shower of shooting stars',FAIRY:'Pink fairy dust and sparkles',BULLET:'Gunshot and a smoking round',IRISH:'Lucky clovers and gold',
  'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs',CANDY:'Sweet pink and blue sprinkles'};
-const custRect=i=>[240,150+i*70,480,60],custRows=()=>MM.back=='slotact'?['trail']:['gfx'];
+const custRect=i=>[240,150+i*70,480,60],custRows=()=>['gfx'];
 function openCust(back){MM.back=back;MM.cs=0;S='cust'}
 function custBack(){S=MM.back||'menu';for(const k in P)P[k]=0}
 function custChange(row,dd){
  if(custRows()[row]=='gfx'){const L=['LOW','COOL','SUPER'];setGfx(L[(L.indexOf(GFX)+dd+3)%3])}
- else{const L=Object.keys(TS);TRL_S=L[(L.indexOf(TRL_S)+dd+L.length)%L.length];const b=SLOTS[MM.slot];if(b){b.trl=TRL_S;saveSlots()}}
  savePrefs();
 }
 function custStep(up,dn){
@@ -4453,14 +4454,13 @@ function drawCust(){
  g.fillStyle='rgba(8,10,16,.5)';g.fillRect(0,0,960,540);
  const rows=custRows(),n=rows.length;mRR(200,66,560,174+n*70,16,'rgba(10,12,18,.84)','rgba(255,210,63,.35)');
  g.textAlign='center';g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('CUSTOMISATION',480,118);
- const V={gfx:['GRAPHICS',GFX,GFX=='SUPER'?'Ray-traced reflections + multi-light shadows':GFX=='COOL'?'Shadows + glossy court':'Fast and light'],trail:['BALL TRAIL  ·  '+(Object.keys(TS).indexOf(TRL_S)+1)+' OF '+Object.keys(TS).length,TRL_S,TRL_DESC[TRL_S]]},
+ const V={gfx:['GRAPHICS',GFX,GFX=='SUPER'?'Ray-traced reflections + multi-light shadows':GFX=='COOL'?'Shadows + glossy court':'Fast and light']},
   vals=rows.map(r=>V[r][1]),desc=rows.map(r=>V[r][2]);
  rows.map(r=>V[r][0]).forEach((l,i)=>{const[x,y,w,h]=custRect(i),on=MM.cs==i;
   mRR(x,y,w,h,10,on?HL:'rgba(255,255,255,.05)',on?GOLD:null);
   g.textAlign='left';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText(l,x+18,y+22);
   g.textAlign='right';g.font='12px system-ui';g.fillText(desc[i],x+w-18,y+22);
   g.textAlign='center';g.font='bold 24px Georgia';g.fillStyle='#fff';g.fillText(vals[i],x+w/2,y+48);
-  if(rows[i]=='trail'){g.fillStyle='#'+TS[TRL_S].g.toString(16).padStart(6,'0');g.beginPath();g.arc(x+w/2-70-g.measureText(vals[i]).width/2+10,y+41,7,0,6.283);g.fill()}
   if(on){g.fillStyle=GOLD;g.font='bold 20px system-ui';g.fillText('◀',x+60,y+48);g.fillText('▶',x+w-60,y+48)}});
  {const[x,y,w,h]=custRect(n),on=MM.cs==n;mRR(x,y,w,h,10,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 22px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText('BACK',x+w/2,y+38)}
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ select  ·  ←/→ change  ·  Esc back  ·  changes apply live',480,505);
@@ -5074,10 +5074,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.88'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.89'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.89','Ball trails in the Store',['STORE > COSMETICS is open: it is where your created player picks his BALL TRAIL now. All 24 trails in one grid; the one you are on plays live: your player\'s jump shot with a perfect release, the trail, the rim impact, a 1 second pause, then again. Enter or click to equip.',
+  'The CUSTOMISATION tile on the career player menu is gone (its trail picker moved to the Store).']],
  ['v1.88','Team laser trails',['Every player who is not a created player now shoots his team\'s laser on a perfect release: Pinkie Pies PINK, Green Gekos GREEN, Yellow Vikings YELLOW, Red Royals RED, Blue Crusaders BLUE and Rainbow Slayers RAINBOW.',
   'Your created player keeps the trail you pick in CAREER > CUSTOMISATION. In Play Now everyone uses his team\'s laser.',
   'New PINK LAZER and YELLOW LAZER trails (24 in all).']],
@@ -5696,7 +5698,7 @@ const HL_MODES=[
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
  {t:'GAME PLANS',tag:'AI TEAMS',d:'Every team has its own way of playing on offence and defence (shown on its roster page) and adjusts during the game, for example when it\'s chasing the score or a player is hot. The strip under the scoreboard shows what each team is running, and call-outs like SCREEN, POST UP, TRAP or LEAK OUT show the plan in action.'},
- {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / CAREER',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then CUSTOMISATION): 24 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
+ {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 24 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
  {t:'AFTER THE GAME',tag:'RESULTS',d:'The result screen shows the player of the game, what went well and what to work on, and the EXP you earned. From there: MAIN MENU, RUN IT BACK (rematch) or the BOX SCORE (M and B are shortcuts).'},
  {t:'TEAMS',tag:'6 TEAMS',d:'Pinkie Pies, Green Gekos, Yellow Vikings, Red Royals, Blue Crusaders and Rainbow Slayers. Each has its own style, strengths and weaknesses: see ROSTERS.'}];
 const HELP_T=[
@@ -5833,8 +5835,13 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
    p.ls=lat/9;p.spvBz=bz;const bx=Math.sin(p.ang),by=Math.cos(p.ang);pl=_SVA.set((p.x-by*lat+bx*fw)/10,bz/10,(p.y+bx*lat+by*fw)/10).clone()}
   else if(SPV.ph!='after'&&!SPV.done){const h=spvHand(p,1,_SVA).clone();h.y=Math.max(.4,h.y-1.7*Math.abs(Math.sin(SPV.t*8.5)));pl=h} // dribbling
   if(pl)bm.position.copy(pl)}
- if(SPV.done>1.1||SPV.t>9)spvStart(SPV.key)} // loop
+ if(!SPV.trl&&(SPV.done>1.1||SPV.t>9))spvStart(SPV.key)} // loop (the trail preview loops itself: trlPrevUpd)
 // one frame of the preview into the panel: step, pose (the game's pose()), place, render (scissored into SPV_R, the 2D UI is cleared there)
+// trail preview: a perfect-release jump shot; the trail runs while the ball is in flight, the rim impact plays, then 1s pause and again
+function trlPrevUpd(dt){trlHost(SPV.sc);const bf=SPV.bf,on=!!(bf&&!bf.drop&&SPV.ph=='shot');
+ if(trOn&&!on)SPV.tw=0; // flight over: the rim impact goes off now
+ if(SPV.tw!=null){SPV.tw+=dt;if(SPV.tw>=IM.dur+1){SPV.tw=null;spvStart(SPV.key)}}
+ TCAM=SPV.cam;trailUpd(dt,{on,pos:SPV.ball.position,k:SPV.tk});TCAM=null}
 function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=performance.now(),dt=Math.min(.033,(now-(SPV.lt||now))/1000)||.016;SPV.lt=now;
  spvStep(dt);for(const o of [SPV.p,SPV.q]){if(o===SPV.q&&!o.m.visible)continue;
   if(o===SPV.p){let tg=Math.atan2(o.fx,o.fy);if(SPV.c=='sht'&&SPV.ph=='set'&&SPV.v=='pfade')tg=-Math.PI/2;let da=tg-o.ang;da=Math.atan2(Math.sin(da),Math.cos(da));o.ang+=da*(1-Math.exp(-14*dt))}
@@ -5843,6 +5850,7 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
   o.m.position.set(o.x/10,o.z/10,o.y/10);o.m.rotation.y=o.ang+sp3+o.lyw+(o.spin>0?(1-o.spin/(o.sd||.5))*2*Math.PI*(o.spd||1)*(o.spn||1):0);pose(o,dt)}
  const cam=SPV.cam,cx=SPV.c=='pas'?81:SPV.c=='sht'?78:79;cam.position.set(cx-1.5,7.2,32+27);cam.lookAt(cx+.5,6.3,32);
  if(SPV.c=='drb'){cam.position.set(79,6.2,45);cam.lookAt(72,3.4,32)} // (dribble styles: closer, from the front three-quarters - the moves go side to side)
+ if(SPV.trl)trlPrevUpd(dt);
  const[x,y,w,h]=SPV_R;R.setScissorTest(true);R.setViewport(x,540-y-h,w,h);R.setScissor(x,540-y-h,w,h);R.render(SPV.sc,cam);R.setScissorTest(false);R.setViewport(0,0,960,540)}
 // ---- the screen (v1.42, 2K style): STORE home (COSMETICS · ANIMATIONS) -> ANIMATIONS: category tabs along the bottom, a vertical menu on the left
 // (category -> its groups -> that group's PACKAGES), the selected package playing on loop on the right with an EQUIP button.
@@ -5870,7 +5878,9 @@ function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
  if(!pkOn(pk)){pk.k.forEach(k=>{const i=off.indexOf(k);if(i>=0)off.splice(i,1)});beep(620,.06,'triangle');return}
  const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
  pk.k.forEach(k=>{if(!off.includes(k))off.push(k)});beep(300,.05)}
-function openStore(){MM.st={pg:'hub',hub:1,cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
+const TRL_K=Object.keys(TS),TR_CARD=i=>[24+(i%8)*114,312+(i/8|0)*54,106,48];
+function trlEquip(i){MM.cr.trl=TRL_S=TRL_K[i];beep(660,.08,'triangle')}
+function openStore(){MM.st={pg:'hub',hub:1,ts:Math.max(0,TRL_K.indexOf(MM.cr.trl||TRL_S)),cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 const ST_HUB=i=>[110+i*390,130,350,250],ST_BK=[24,482,150,40],AN_ROW=i=>[24,92+i*48,300,42],AN_TAB=i=>[480-(AN_CAT.length*90-14)/2+i*90,466,76,64],AN_EQ=[760,400,176,40];
 const AN_VIS=7,anTop=(st,L)=>L.length<=AN_VIS?0:Math.max(0,Math.min(L.length-AN_VIS,st.sel-3)); // (long lists - the jump shots - scroll with the selection)
 const anDkIt=st=>DK_PK[st.pk].k.map(k=>({n:anItem(k).n,k:[k]})), // inside a dunk package: one row per dunk (a one-dunk 'package' = its on / off switch)
@@ -5881,13 +5891,13 @@ function anEnter(st){if(!st.lv){st.sub=st.sel;st.lv=1;st.sel=0;beep(520,.05,'tri
 function anBack(st){if(st.lv==2){st.lv=1;st.sel=st.pk;beep(300,.05,'triangle')}else if(st.lv){st.lv=0;st.sel=st.sub;beep(300,.05,'triangle')}else{st.pg='hub';beep(300,.05,'triangle')}}
 function storeStep(dt){const st=MM.st;st.mt=Math.max(0,st.mt-dt);const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),esc=P.Escape||P.Backspace,ok=P.Enter||P.Space;
  if(st.pg=='hub'){if(lr)st.hub=1-st.hub;if(ok){st.pg=st.hub?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle')}if(esc)storeBack();return}
- if(st.pg=='cos'){if(ok||esc){st.pg='hub';beep(300,.05,'triangle')}return}
+ if(st.pg=='cos'){const n=TRL_K.length,ud=(P.ArrowDown||P.KeyS?1:0)-(P.ArrowUp||P.KeyW?1:0);if(lr||ud){st.ts=Math.max(0,Math.min(n-1,st.ts+lr+ud*8));beep(440,.03,'triangle')}if(ok)trlEquip(st.ts);if(esc){st.pg='hub';beep(300,.05,'triangle')}return}
  if(lr){st.cat=(st.cat+lr+AN_CAT.length)%AN_CAT.length;st.lv=0;st.sel=0;st.sub=0}
  const n=anList(st).length;if(P.ArrowDown||P.KeyS)st.sel=Math.min(n-1,st.sel+1);if(P.ArrowUp||P.KeyW)st.sel=Math.max(0,st.sel-1);
  if(ok)anEnter(st);if(esc)anBack(st)}
 function storePtr(x,y,type){const st=MM.st;if(type!=0)return;
  if(st.pg=='hub'){for(let i=0;i<2;i++)if(mIn(x,y,ST_HUB(i))){st.hub=i;st.pg=i?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle');return}if(mIn(x,y,ST_BK))storeBack();return}
- if(st.pg=='cos'){if(mIn(x,y,ST_BK)){st.pg='hub';beep(300,.05,'triangle')}return}
+ if(st.pg=='cos'){for(let i=0;i<TRL_K.length;i++)if(mIn(x,y,TR_CARD(i))){st.ts=i;trlEquip(i);return}if(mIn(x,y,ST_BK)){st.pg='hub';beep(300,.05,'triangle')}return}
  if(mIn(x,y,ST_BK)){anBack(st);return}
  for(let i=0;i<AN_CAT.length;i++)if(mIn(x,y,AN_TAB(i))){st.cat=i;st.lv=0;st.sel=0;st.sub=0;beep(440,.05,'triangle');return}
  const L=anList(st),tp_=anTop(st,L);for(let i=tp_;i<Math.min(L.length,tp_+AN_VIS);i++)if(mIn(x,y,AN_ROW(i-tp_))){if(st.lv)st.sel=i;else{st.sel=i;anEnter(st)}return}
@@ -5904,12 +5914,22 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
  {const gr=g.createLinearGradient(0,0,960,540);gr.addColorStop(0,'#10161f');gr.addColorStop(1,'#1c2430');g.fillStyle=gr;g.fillRect(0,0,960,540)}ccDraw();
  const title=t=>{g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(t,30,46);g.font='bold 10px system-ui';g.fillStyle='#8a90a0';g.fillText(d.name+'  ·  '+POS[d.pos],32,64)};
  const back=()=>{const[x,y,w,h]=ST_BK;mRR(x,y,w,h,2,'#1f252c',C);g.textAlign='center';g.font='bold 15px system-ui';g.fillStyle='#fff';g.fillText('◀  BACK',x+w/2,y+26)};
- if(st.pg=='hub'){title('STORE');[['COSMETICS','cos','Clothing, accessories and more'],['ANIMATIONS','fin','Dunks, layups, shots and passes']].forEach(([t,ic,s],i)=>{const[x,y,w,h]=ST_HUB(i),on=st.hub==i;
+ if(st.pg=='hub'){title('STORE');[['COSMETICS','cos','Ball trails for your perfect releases'],['ANIMATIONS','fin','Dunks, layups, shots and passes']].forEach(([t,ic,s],i)=>{const[x,y,w,h]=ST_HUB(i),on=st.hub==i;
    mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',on?'#fff':C);if(on){g.save();g.shadowColor=C;g.shadowBlur=18;g.lineWidth=3;mRR(x,y,w,h,2,null,C);g.restore()}
    anIcon(ic,x+w/2,y+100,110,C);g.textAlign='center';g.font='bold 28px system-ui';g.fillStyle='#fff';g.fillText(t,x+w/2,y+h-46);g.font='12px system-ui';g.fillStyle='#8fa3b8';g.fillText(s,x+w/2,y+h-22)});
   back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('←/→ choose  ·  Enter open  ·  Esc back',936,510);return}
- if(st.pg=='cos'){title('COSMETICS');anIcon('cos',480,210,120,'rgba(63,184,255,.35)');g.textAlign='center';g.font='italic 900 56px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText('COMING SOON',480,330);
-  g.font='14px system-ui';g.fillStyle='#8fa3b8';g.fillText('Cosmetics are on the way in a future update.',480,362);back();return}
+ SPV.trl=st.pg=='cos';
+ if(st.pg=='cos'){title('COSMETICS  ·  BALL TRAIL');const eq=d.trl||TRL_S,hx=c=>'#'+c.toString(16).padStart(6,'0'),k=TRL_K[st.ts];
+  TRL_K.forEach((kk,i)=>{const[x,y,w,h]=TR_CARD(i),t=TS[kk],on=st.ts==i,me=kk==eq;mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',me?'#4cff7a':on?'#fff':'#3a4450');
+   const gr=g.createLinearGradient(x+8,0,x+w-8,0);(t.rb?[0xff3b3b,0xffe14a,0x3fd45a,0x3f8cff,0xc06aff]:[t.g,t.m,t.k]).forEach((c,j,a)=>gr.addColorStop(j/(a.length-1),hx(c)));
+   g.fillStyle=gr;g.fillRect(x+8,y+8,w-16,6);g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#fff';g.fillText((me?'✓ ':'')+kk,x+w/2,y+34)});
+  // the picked trail, and the live demo: your player's jump shot with a perfect release
+  g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(k,30,130);g.font='13px system-ui';g.fillStyle='#8fa3b8';g.fillText(TRL_DESC[k],30,154);
+  g.font='bold 13px system-ui';g.fillStyle=k==eq?'#4cff7a':GOLD;g.fillText(k==eq?'✓ EQUIPPED':'ENTER / CLICK TO EQUIP',30,186);
+  const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'#3a4450');g.clearRect(px,py,pw,ph);
+  if(SPV.tk!==k){SPV.tk=k;SPV.tw=null;trOn=0;TP.length=0;SPV.key=''} // a new trail: start its demo from the top
+  spvFrame('js:'+(JS_M[d.js]?d.js:'b1'));
+  back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('arrows choose  ·  Enter equip  ·  Esc back',936,532);return}
  // ---- ANIMATIONS
  title('ANIMATIONS');const cat=AN_CAT[st.cat],L=anList(st),pk=anPk(st);
  mRR(14,74,320,384,2,'rgba(8,10,16,.75)',null);g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='#8fa3b8';g.fillText(cat.n+(st.lv?'  ›  '+cat.sub[st.sub].n:'')+(st.lv==2?'  ›  '+DK_PK[st.pk].n:''),26,88);
@@ -5960,9 +5980,9 @@ function drawMenus(){
 }
 // ===== PLAYER MENU (CAREER -> a saved player -> NEXT): 2K-style tiles down the left, the player standing on the right with his name + OVR above him =====
 // SIGNATURES / APPEARANCE / STORE open on a copy of the saved player and save straight back to his slot when you leave them (actReturn).
-const ACT_HOLE=[600,0,360,540],ACT_C='#3fb8ff',ACT_L={play:'Play',edit:'Attributes',sigs:'Signatures',look:'Appearance',store:'Store',cust:'Customisation',rebirth:'Rebirth',del:'Delete',back:'Back'};
+const ACT_HOLE=[600,0,360,540],ACT_C='#3fb8ff',ACT_L={play:'Play',edit:'Attributes',sigs:'Signatures',look:'Appearance',store:'Store',rebirth:'Rebirth',del:'Delete',back:'Back'};
 function actSub(o){const sb=SLOTS[MM.slot];MM.cr=JSON.parse(JSON.stringify(sb));MM.bioNew=false;MM.rbNew=0;MM.floor=null;MM.fromAct=1;for(const k in P)P[k]=0;if(o=='look')openLook();else if(o=='sigs')openSigs();else openStore()}
-function actReturn(){const o=SLOTS[MM.slot],c=MM.cr;if(o&&c){SLOTS[MM.slot]=sanitize(Object.assign({},o,{sk:c.sk,hs:c.hs,hc:c.hc,fc:c.fc,sig:c.sig,anim:c.anim,xp:Math.max(o.xp|0,c.xp|0)}));saveSlots()}
+function actReturn(){const o=SLOTS[MM.slot],c=MM.cr;if(o&&c){SLOTS[MM.slot]=sanitize(Object.assign({},o,{sk:c.sk,hs:c.hs,hc:c.hc,fc:c.fc,sig:c.sig,anim:c.anim,trl:c.trl,xp:Math.max(o.xp|0,c.xp|0)}));saveSlots()}
  MM.fromAct=0;S='slotact';for(const k in P)P[k]=0;beep(300,.06,'triangle')}
 function actIcon(o,cx,cy,s,col){const D='#1b2128';g.save();g.translate(cx,cy);g.scale(s/60,s/60);g.fillStyle=col;g.strokeStyle=col;g.lineWidth=5;g.lineJoin='round';g.lineCap='round';
  if(o=='play'){g.beginPath();g.arc(0,0,27,0,6.283);g.stroke();g.beginPath();g.moveTo(-8,-14);g.lineTo(15,0);g.lineTo(-8,14);g.closePath();g.fill()}
@@ -5975,7 +5995,6 @@ function actIcon(o,cx,cy,s,col){const D='#1b2128';g.save();g.translate(cx,cy);g.
  else if(o=='rebirth'){g.beginPath();g.arc(0,0,25,-2.6,.6);g.stroke();g.beginPath();g.arc(0,0,25,.55,3.75);g.stroke();
   [[.6,1],[3.75,-1]].forEach(([a,sg])=>{const x=Math.cos(a)*25,y=Math.sin(a)*25;g.beginPath();g.moveTo(x,y);g.lineTo(x+sg*8,y-sg*2);g.lineTo(x+sg*1,y-sg*9);g.closePath();g.fill()});
   g.beginPath();g.arc(0,-7,7,0,6.283);g.fill();g.beginPath();g.moveTo(-12,13);g.quadraticCurveTo(0,-2,12,13);g.closePath();g.fill()}
- else if(o=='cust'){g.beginPath();g.arc(-12,14,10,0,6.283);g.fill();g.lineWidth=7;g.beginPath();g.moveTo(-6,7);g.quadraticCurveTo(8,-4,24,-24);g.stroke();g.lineWidth=3;g.beginPath();g.moveTo(-26,4);g.quadraticCurveTo(-14,-14,8,-22);g.stroke()} // ball + streak
  else if(o=='del'){g.beginPath();g.roundRect(-17,-12,34,38,4);g.fill();g.fillRect(-23,-20,46,6);g.fillRect(-7,-26,14,6);g.strokeStyle=D;g.lineWidth=3;[-8,0,8].forEach(x=>{g.beginPath();g.moveTo(x,-4);g.lineTo(x,18);g.stroke()})}
  else{g.lineWidth=7;g.beginPath();g.moveTo(22,0);g.lineTo(-18,0);g.moveTo(-4,-15);g.lineTo(-19,0);g.lineTo(-4,15);g.stroke()}
  g.restore()}
