@@ -123,7 +123,7 @@ function jsOf(p){if(p.jsO&&JS_M[p.jsO])return JS_M[p.jsO];if(p._js&&p._jsB===p.b
  p._jsB=p.build;return p._js=JS_M[id]}
 function jsApply(p){p._js=null;p.st=.55*jsOf(p).ms} // (the shot meter's speed follows his jumper)
 const SF=['akk','akt','akT','aks','x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs','spn'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
-let AC;function beep(f,d=.1,t='sine',v=.05){try{AC=AC||new AudioContext();const o=AC.createOscillator(),a=AC.createGain();o.type=t;o.frequency.value=f;a.gain.value=v;o.connect(a);a.connect(AC.destination);o.start();a.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
+let AC;function beep(f,d=.1,t='sine',v=.05){try{AC=AC||new AudioContext();const o=AC.createOscillator(),a=AC.createGain();o.type=t;o.frequency.value=f;a.gain.value=v;o.connect(a);a.connect(rawOut('sfx'));o.start();a.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
 const say=(s,c='#fff')=>{msg={s,t:1.5,c}};
 const widFor=(t,i)=>{const w=TEAMS[TI[t]].wd;return w&&w[i]||1}; // (no team uses wd any more - body shape comes from body types, see BODY) // per-player body-width override: A.Sanad is built much wider (1.4) than anyone else (created players top out at ~1.19)
 const htFor=(t,i)=>TEAMS[TI[t]].ht[i]; // per-player model height scale, built from each player's height in inches (see BIOMETRICS)
@@ -2557,17 +2557,19 @@ function ribUpd(m,pts,w,col,inten,pw,zig,dark){const n=pts.length;if(n<2){m.visi
   CA.setXYZ(i*2,col.r*br,col.g*br,col.b*br);CA.setXYZ(i*2+1,col.r*br,col.g*br,col.b*br)}
  PA.needsUpdate=CA.needsUpdate=true;m.geometry.setDrawRange(0,(n-1)*6)}
 // ===== TRAIL SOUND DESIGN v2 (synthesised WebAudio): mix bus + reverb, in-flight loop + release + rim impact per trail, dribble whoosh =====
-let NB=null,BUS=null;const AMB={};
+let NB=null,BUS=null,OUTB='sfx';const AMB={};
 function ac(){try{AC=AC||new AudioContext();if(AC.state=='suspended')AC.resume();return AC}catch(e){return null}}
 function nbuf(){const a=ac();if(!a)return null;if(!NB){NB=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=NB.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}return NB}
 function bus(){ // master -> compressor -> out, plus a dark convolution reverb send for the big impacts
  const a=ac();if(!a)return null;if(BUS)return BUS;
- const m=a.createGain();m.gain.value=.9;const c=a.createDynamicsCompressor();c.threshold.value=-16;c.knee.value=14;c.ratio.value=5;c.attack.value=.003;c.release.value=.25;m.connect(c);c.connect(a.destination);
+ const m=a.createGain();m.gain.value=.9;const c=a.createDynamicsCompressor();c.threshold.value=-16;c.knee.value=14;c.ratio.value=5;c.attack.value=.003;c.release.value=.25;m.connect(c);c.connect(rawOut('main'));
  const len=Math.floor(a.sampleRate*2.4),ir=a.createBuffer(2,len,a.sampleRate);
  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);let lp=0;for(let i=0;i<len;i++){lp+=((Math.random()*2-1)-lp)*.3;d[i]=lp*Math.pow(1-i/len,2.8)}}
  const rv=a.createConvolver();rv.buffer=ir;const rg=a.createGain();rg.gain.value=.6;rv.connect(rg);rg.connect(m);
  return BUS={m,rv}}
-function out(a,node,rv){const b=bus();node.connect(b.m);if(rv){const s=a.createGain();s.gain.value=rv;node.connect(s);s.connect(b.rv)}}
+// each sound family (OUTB: 'sfx' · 'court' · 'trail') has its own dry + reverb-send gain in front of the shared bus, so the AUDIO menu can set its volume
+function cat(k){const b=bus();if(!b)return null;k=k||OUTB;if(!b[k]){const d=AC.createGain(),w=AC.createGain();d.connect(b.m);w.connect(b.rv);b[k]={d,w};volApply()}return b[k]}
+function out(a,node,rv){const c=cat();node.connect(c.d);if(rv){const s=a.createGain();s.gain.value=rv;node.connect(s);s.connect(c.w)}}
 function nz(d,o){o=o||{};const a=ac();if(!a||!nbuf())return;const t=a.currentTime+(o.delay||0),s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain(),v=o.v||.2,at=o.at||.005;
  s.buffer=nbuf();s.loop=true;f.type=o.ft||'lowpass';f.Q.value=o.q||1;f.frequency.setValueAtTime(o.f0||1000,t);if(o.f1)f.frequency.exponentialRampToValueAtTime(o.f1,t+d);
  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+at);g.gain.exponentialRampToValueAtTime(.0001,t+d);
@@ -2582,7 +2584,7 @@ function bell(f,d,v,delay,rv){[[1,1,1],[2.76,.45,.6],[5.4,.22,.35],[8.93,.1,.2]]
 function click(f,v,delay,rv){nz(.003+Math.random()*.01,{ft:'bandpass',f0:f,q:1.4,v:v,at:.0004,delay:delay||0,rv:rv||0})}
 // continuous in-flight bed, built once per trail, then faded in/out
 function ambient(k){
- if(AMB[k])return AMB[k];const b0=tb(k),a=ac();if(!a||!nbuf())return null;const b=bus(),m=a.createGain();m.gain.value=0;m.connect(b.m);
+ if(AMB[k])return AMB[k];const b0=tb(k),a=ac();if(!a||!nbuf())return null;const m=a.createGain();m.gain.value=0;m.connect(cat('trail').d);
  const nsrc=(f,ft,q,v)=>{const s=a.createBufferSource();s.buffer=nbuf();s.loop=true;const fl=a.createBiquadFilter();fl.type=ft;fl.frequency.value=f;fl.Q.value=q;const g=a.createGain();g.gain.value=v;s.connect(fl);fl.connect(g);g.connect(m);s.start(0,Math.random());return{g,fl}};
  const osc=(type,f,v,lp)=>{const o=a.createOscillator();o.type=type;o.frequency.value=f;const fl=a.createBiquadFilter();fl.type='lowpass';fl.frequency.value=lp;const g=a.createGain();g.gain.value=v;o.connect(fl);fl.connect(g);g.connect(m);o.start();return{o,g,fl}};
  const lfo=(f,dp,param)=>{const o=a.createOscillator();o.frequency.value=f;const g=a.createGain();g.gain.value=dp;o.connect(g);g.connect(param);o.start()};
@@ -2736,7 +2738,7 @@ function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}const on=pv?pv.on
  // release burst: flash + expanding shock ring
  if(bst>0){bst-=dt;const u=1-Math.max(0,bst)/.45;flS.visible=rgS.visible=true;flS.position.copy(bstP);rgS.position.copy(bstP);flS.scale.setScalar(2.4+11*Math.pow(u,.55));flS.material.opacity=Math.pow(1-u,1.6);flS.material.color.setHex(st.add?st.k:st.g);rgS.scale.setScalar(1.6+15*Math.sqrt(u));rgS.material.opacity=.9*Math.pow(1-u,1.2);rgS.material.color.setHex(st.add?st.m:st.g)}else flS.visible=rgS.visible=false;
  bolt.visible=on&&sb=='STORM'&&Math.random()<.5;if(bolt.visible){const p=bolt.geometry.attributes.position;for(let i=0;i<7;i++)p.setXYZ(i,bp.x+(Math.random()-.5)*5*(i?1:0),bp.y+(Math.random()-.5)*5*(i?1:0),bp.z+(Math.random()-.5)*5*(i?1:0));p.needsUpdate=true}
- const tg0=cool&&(on||bst>0)?(bst>.28?9:sb=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?(tb(IM.k)=='SUN'?40:12)*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=(tg-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
+ const tg0=cool&&(on||bst>0)?(bst>.28?9:sb=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?(tb(IM.k)=='SUN'?40:12)*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=((SET.tlight?tg:0)-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
  ballM.material.emissive.setHex(on?st.L:0);ballM.material.emissiveIntensity=on?.85+.2*Math.sin(T*40):1}
 
 function rimKick(i,a){const h=HP[HC?0:i];if(!h)return;h.v+=2.2*a;h.va=.016*a;h.vt=0}
@@ -3356,7 +3358,7 @@ function render(dt){
  else if(S=='admin')adCam(); // ADMIN free camera
  else if(S=='over'&&ES)endCam();
  else if(S=='intro'&&IN.rt<IN.b0)introCam();
- else{let dp,dl,fv;const sk=shake*1.5;
+ else{let dp,dl,fv;const sk=shake*1.5*[0,.45,1][SET.shake];
   const fx=Math.max(30,Math.min(64,B.x/10));cx+=(fx-cx)*Math.min(1,dt*3);
   { // possession decides which way COURT LOW faces; a short hold-time stops turnovers flip-flopping the camera
    const h=B.h&&(B.mode=='held'||B.mode=='inbound')?B.h:null;
@@ -3490,14 +3492,14 @@ function draw(){
  if(S=='intro')introDraw();
  if(S=='play'||S=='qend'||S=='pause')hud();
  if(S=='play'){meter();ctlabel();callLabels();passMark();gpLabels();sigPops();shotStats()}
- if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
+ if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='opts'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
  if(ONL_S.has(S))onlDraw();if(NET.on&&S=='play')netOverlay();
  if(S=='cdebut'){renderDebut();drawDebut()}
  if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();profBtnDraw();lbMiniDraw();if(PN.on)pnDraw();if(PF.on)profDraw();if(LB.on)lbDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
  if(S=='admin')adDraw();
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
-  ['RESUME','CUSTOMISATION','MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText(t,480,y)});
-  g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · K to close',480,462);g.fillText('Graphics, ball trail and court live under CUSTOMISATION',480,486)}
+  PAUSE_L.forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText(t,480,y)});
+  g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · K to close',480,462);g.fillText('AUDIO and VISUALS are saved on this device',480,486)}
  if(S=='replay'){g.fillStyle='#000';g.fillRect(0,0,960,46);g.fillRect(0,494,960,46);g.textAlign='left';g.fillStyle='#ff3b3b';g.font='bold 22px Georgia';g.fillText('● REPLAY  ·  #'+RP.who.n+' '+POS[RP.who.i],24,32);if((RP.sp||1)<.8){g.textAlign='right';g.fillStyle='rgba(255,255,255,'+(.55+.35*Math.sin(performance.now()/180))+')';g.font='italic bold 16px Georgia';g.fillText('SLOW MOTION',936,30)}g.textAlign='right';g.fillStyle='#fff';g.font='15px system-ui';g.fillText('T RESUME',936,525);g.textAlign='left';g.fillStyle='rgba(255,255,255,.75)';g.fillText(REP_CAMS[RP.sty||0]+'  ·  1 NEXT ANGLE',24,525);g.textAlign='center'}
  if(S=='play'&&!HC&&(RP.has||RP.mk)&&RP.show>0){g.fillStyle='rgba(10,12,18,.8)';g.beginPath();g.roundRect(360,486,240,34,17);g.fill();g.fillStyle='#ffd23f';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('PRESS T FOR REPLAY',480,508)}
  if(S=='look')renderLook();
@@ -3507,17 +3509,18 @@ function draw(){
  if(S=='qend')overlay(qn>4?'END OF OT':'END OF Q'+qn,TEAMS[TI[0]].n+' '+sc[0]+'  -  '+sc[1]+' '+TEAMS[TI[1]].n);
  if(S=='over'&&ES)drawEnd();
  if(performance.now()<introFadeEnd){g.fillStyle='rgba(0,0,0,'+Math.min(1,(introFadeEnd-performance.now())/450)+')';g.fillRect(0,0,960,540)}
+ fpsDraw()
 }
 let last=0;
-function loop(ts){frame(ts);requestAnimationFrame(loop)}
+function loop(ts){requestAnimationFrame(loop);const f=FPS_L[SET.fps];if(f&&last&&ts-last<1000/f-1.5)return;fpsTick(ts);frame(ts)} // TARGET FPS: skip screen refreshes until the next frame is due
 function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one frame of the game (loop() drives it; online, a hidden tab drives it from a worker clock)
  if(S=='replay'&&(P.Digit1||P.Numpad1)){RP.sty=(RP.sty+1)%REP_CAMS.length;RP.k=null;RP.c=null}
  if(S=='play'&&(P.Digit1||P.Numpad1)){CAMM=(CAMM+1)%CAM_N.length;camT=1;say('CAMERA:  '+CAM_N[CAMM],'#7fffa0');savePrefs()}
  menuStep(dt);onlStep(dt);if(S=='over')endStep(dt);
  if(S=='pause'&&(P.Digit1||P.Numpad1)){const n_=performance.now()/1000;if(n_-AD.t0>2){AD.t0=n_;AD.n=0}if(++AD.n>=3){AD.n=0;AD.t0=0;adStart();for(const k in P)delete P[k]}} // ADMIN CAMERA: 1 x3 within 2 s
  if(S=='admin'&&(P.KeyK||P.Escape)){adEnd();for(const k in P)delete P[k]}
- if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+2)%3;if(P.ArrowDown||P.KeyS)PM=(PM+1)%3;const dd=(P.ArrowRight||P.KeyD||P.Enter?1:0)-(P.ArrowLeft||P.KeyA?1:0);
-  if(dd){if(PM==0){if(P.Enter)S='play'}else if(PM==1){if(P.Enter)openCust('pause')}else if(P.Enter)toMenu()}
+ if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+3)%4;if(P.ArrowDown||P.KeyS)PM=(PM+1)%4;
+  if(P.Enter)pauseGo(PM);
   if(P.KeyK||P.Escape)S='play'}else if(P.KeyK&&S=='play'&&!NET.on)S='pause'; // (online there is no pause: K asks to leave, see onlStep)
  if(P.KeyT&&!HC){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
  if(RP.want&&RP.has&&S=='play'){RP.want=0;startRep()}
@@ -4401,7 +4404,7 @@ function drawCBio(){
  g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('\u2191/\u2193 row  \u00b7  \u2190/\u2192 change (Shift = bigger steps)  \u00b7  Enter next  \u00b7  Esc back  \u00b7  or click',480,530)}
 function createEnter(){if(MM.row==6+STATS.length)createSave();else if(MM.row==7+STATS.length)S='career';else if(MM.row==4){if(!bioLocked())attrBack()}else{const q=crSeq();MM.row=q[(q.indexOf(MM.row)+1)%q.length]}}
 function menuStep(dt){
- if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
+ if(S!='menu'&&S!='career'&&S!='playnow'&&S!='pnmode'&&S!='slotact'&&S!='create'&&S!='cust'&&S!='opts'&&S!='look'&&S!='rosters'&&S!='rteam'&&S!='cpos'&&S!='cbio'&&S!='ctrans'&&S!='cteam'&&S!='cconf'&&S!='cdebut'&&S!='archq'&&S!='sigs'&&S!='help'&&S!='hpage'&&S!='store')return;
  const nm=S!='cpos'; // (on the name + position page letters type the name, so W/S/A/D/Space don't navigate)
  const up=P.ArrowUp||(nm&&P.KeyW),dn=P.ArrowDown||(nm&&P.KeyS),ok=P.Enter||(nm&&S!='create'&&P.Space);
  if(S=='menu'){mainMenuStep(dt);if(PN.on)pnKeys(up,dn,ok);else if(PF.on)profKeys(up,dn,ok);else if(LB.on)lbKeys(up,dn);else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyL)lbOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyN)pnOpen();else if(MN.t>=T_READY-.6&&!P._eat&&!MN.gate&&P.KeyP)profOpen();else if(MN.t>=T_READY-.6&&!P._eat){const lr=(P.ArrowRight||P.KeyD||dn?1:0)-(P.ArrowLeft||P.KeyA||up?1:0);if(lr)MM.t=(MM.t+lr+5)%5;if(ok)topEnter()}}
@@ -4416,6 +4419,7 @@ function menuStep(dt){
   {const n=actOpts().length,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),mv=lr+(dn?2:0)-(up?2:0);if(mv){MM.sub=Math.max(0,Math.min(n-1,MM.sub+mv));MM.del=0}}
   if(ok)actEnter();if(P.Escape||P.Backspace)S='career'}
  else if(S=='cust')custStep(up,dn);
+ else if(S=='opts')optStep(up,dn);
  else if(S=='look')lookStep(up,dn,ok,dt);
  else if(S=='cteam'){
   const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);
@@ -4467,7 +4471,9 @@ function menuPtr(e,type){ // 0 down · 1 move · 2 up
  else if(S=='pnmode'){if(type==0&&mIn(x,y,PN_BACK)){modeBack();return}for(let i=0;i<modeN();i++)if(mIn(x,y,modeRect(i))){MM.md=i;if(type==0)modeEnter();return}}
  else if(S=='slotact'){
   for(let i=0;i<actOpts().length;i++)if(mIn(x,y,actRect(i))){if(MM.sub!=i)MM.del=0;MM.sub=i;if(type==0)actEnter();return}}
- else if(S=='cust'){const n=custRows().length+1;for(let i=0;i<n;i++)if(mIn(x,y,custRect(i))){MM.cs=i;if(type==0){if(i==n-1)custBack();else custChange(i,x<480?-1:1)}return}}
+ else if(S=='cust'){const n=custRows().length+1;for(let i=0;i<n;i++)if(mIn(x,y,custRect(i))){MM.cs=i;if(type==0){if(i==n-1)custBack();else custChange(i,1)}return}}
+ else if(S=='opts')optPtr(x,y,type);
+ else if(S=='pause'){for(let i=0;i<PAUSE_L.length;i++)if(mIn(x,y,pauseRect(i))){PM=i;if(type==0)pauseGo(i);return}}
  else if(S=='look')lookPtr(x,y,type);
  else if(S=='cteam'){
   if(type==0&&mIn(x,y,RO_BACK)){cteamBack();return}
@@ -4518,23 +4524,95 @@ addEventListener('keydown',e=>{ // name entry
 });
 // drawing
 
+// ===== SETTINGS (v1.97): PAUSE > AUDIO / VISUALS (also CUSTOMISATION on the main menu), saved on this device =====
+// Audio: every sound goes through a volume gain (rawOut: music · crowd · sfx straight to the master; cat(): sfx · court · trail in front of the shared compressor + reverb bus).
+// Visuals: graphics preset (setGfx), render resolution (the WebGL buffer; the 2D UI is drawn at up to 2x for 1080p+), frame cap (loop()), trail light (tl), camera shake, brightness (CSS filter on the 3D canvas), FPS counter.
+const SET_DEF={vMaster:10,vMusic:10,vCrowd:10,vCourt:10,vSfx:10,vTrail:10,bgMute:1,res:0,fps:5,tlight:1,shake:2,bright:5,showFps:0},SET=Object.assign({},SET_DEF);
+const RES_L=['AUTO',480,720,1080,1440,2160],RES_N=['AUTO','480p','720p','1080p','1440p','4K'],FPS_L=[30,60,90,120,144,0],FPS_N=['30','60','90','120','144','MAX'];
+const MIX={},VOL_K={music:'vMusic',crowd:'vCrowd',sfx:'vSfx',court:'vCourt',trail:'vTrail'};
+function rawOut(k){const a=ac();if(!MIX.m){MIX.m=a.createGain();MIX.m.connect(a.destination)}if(!MIX[k]){MIX[k]=a.createGain();MIX[k].connect(MIX.m);volApply(1)}return MIX[k]}
+function volApply(now){const a=AC;if(!a||!MIX.m)return;const t=a.currentTime,vg=k=>Math.pow(SET[k]/10,2),q=(n,v)=>{if(now){n.gain.cancelScheduledValues(t);n.gain.value=v}else n.gain.setTargetAtTime(v,t,.04)}; // (squared: the slider feels even to the ear)
+ q(MIX.m,SET.bgMute&&document.hidden?0:vg('vMaster'));for(const k in MIX)if(VOL_K[k])q(MIX[k],vg(VOL_K[k]));
+ if(BUS)for(const k of ['sfx','court','trail'])if(BUS[k]){q(BUS[k].d,vg(VOL_K[k]));q(BUS[k].w,vg(VOL_K[k]))}}
+document.addEventListener('visibilitychange',()=>volApply());
+const sfxAs=(k,f)=>function(...a){const o=OUTB;OUTB=k;try{return f.apply(this,a)}finally{OUTB=o}}; // run a sound function with its family's volume
+sfxUpd=sfxAs('trail',sfxUpd);sfxRelease=sfxAs('trail',sfxRelease);sfxImpact=sfxAs('trail',sfxImpact);sfxVoidBoom=sfxAs('trail',sfxVoidBoom);
+sfxBounce=sfxAs('court',sfxBounce);sfxStep=sfxAs('court',sfxStep);sfxSqueak=sfxAs('court',sfxSqueak);
+const GL_C=document.getElementById('gl'),FPSC={t:0,n:0,v:0};
+function applyRes(){const h=RES_L[SET.res],pr=h=='AUTO'?Math.min(devicePixelRatio,2):h/540,u=h=='AUTO'?1:Math.max(1,Math.min(2,pr));
+ if(R.getPixelRatio()!=pr){R.setPixelRatio(pr);R.setSize(960,540,false)}
+ if(ui.width!=960*u){ui.width=960*u;ui.height=540*u}g.setTransform(u,0,0,u,0,0)}
+function setApply(){volApply();applyRes();GL_C.style.filter=SET.bright==5?'':'brightness('+(.5+SET.bright*.1).toFixed(1)+')'}
+function saveSet(){try{localStorage.setItem('hardwood27.settings.v1',JSON.stringify(SET))}catch(e){}}
+function loadSet(){try{const v=JSON.parse(localStorage.getItem('hardwood27.settings.v1')||'null');if(v)for(const k in SET_DEF)if(Number.isInteger(v[k]))SET[k]=v[k]}catch(e){}
+ for(const r of [...OPT_ROWS.audio,...OPT_ROWS.vis]){const n=r.t=='vol'?11:r.t=='onoff'?2:r.c?r.c.length:0;if(n&&!(SET[r.k]>=0&&SET[r.k]<n))SET[r.k]=SET_DEF[r.k]}setApply()}
+function fpsTick(ts){FPSC.n++;if(ts-FPSC.t>=500){FPSC.v=Math.round(FPSC.n*1000/(ts-FPSC.t));FPSC.t=ts;FPSC.n=0}}
+function fpsDraw(){if(!SET.showFps)return;g.save();g.textAlign='left';g.textBaseline='top';g.font='bold 12px system-ui';g.fillStyle='rgba(0,0,0,.6)';g.fillRect(4,4,62,19);g.fillStyle=FPSC.v>=55?'#7fffa0':FPSC.v>=30?GOLD:'#ff6b6b';g.fillText(FPSC.v+' FPS',10,8);g.restore()}
+// --- pause menu
+const PAUSE_L=['RESUME','AUDIO','VISUALS','QUIT'],pauseRect=i=>[240,140+i*46,480,44];
+function pauseGo(i){if(i==0)S='play';else if(i==1)openOpts('audio','pause');else if(i==2)openOpts('vis','pause');else toMenu()}
+// --- the AUDIO / VISUALS pages
+const OPT={pg:'audio',sel:0,back:'pause'},OPT_ROWS={
+ audio:[{l:'MASTER VOLUME',k:'vMaster',t:'vol',d:'Every sound in the game'},{l:'CROWD',k:'vCrowd',t:'vol',d:'The arena crowd and its cheers'},
+  {l:'COURT SOUNDS',k:'vCourt',t:'vol',d:'Ball bounces, footsteps, sneaker squeaks'},{l:'SOUND EFFECTS',k:'vSfx',t:'vol',d:'Moves, dunks, the rim, menu clicks'},
+  {l:'BALL TRAILS',k:'vTrail',t:'vol',d:'Trail hum, release and impact sounds'},{l:'MENU MUSIC',k:'vMusic',t:'vol',d:'The music in the menus'},
+  {l:'MUTE IN BACKGROUND',k:'bgMute',t:'onoff',d:'Silent while you are in another tab or app'}],
+ vis:[{l:'GRAPHICS PRESET',k:'gfx',t:'gfx'},{l:'RESOLUTION',k:'res',t:'ch',c:RES_N,d:'Higher is sharper but slower (AUTO = your screen)'},
+  {l:'TARGET FPS',k:'fps',t:'ch',c:FPS_N,d:'Frame rate cap (MAX = as fast as your screen)'},{l:'TRAILS LIGHT THE COURT',k:'tlight',t:'onoff',d:'Ball trails cast light on the floor and players (COOL / SUPER)'},
+  {l:'CAMERA SHAKE',k:'shake',t:'ch',c:['OFF','LOW','FULL'],d:'Dunks, ankle breakers, the SUN GOD rumble'},{l:'BRIGHTNESS',k:'bright',t:'vol',d:'How bright the court looks'},
+  {l:'SHOW FPS',k:'showFps',t:'onoff',d:'A frame counter in the top left corner'}]},
+ optRows=()=>OPT_ROWS[OPT.pg],optRect=i=>i<optRows().length?[150,92+i*50,660,44]:[i==optRows().length?150:490,450,320,40];
+function openOpts(pg,back){OPT.pg=pg;OPT.sel=0;OPT.back=back;S='opts'}
+function optBack(){S=OPT.back;for(const k in P)P[k]=0}
+function optReset(){for(const r of optRows())if(r.k in SET_DEF)SET[r.k]=SET_DEF[r.k];if(OPT.pg=='vis'){setGfx('COOL');savePrefs()}setApply();saveSet();beep(520,.08,'triangle')}
+function optChange(i,dd){const r=optRows()[i];if(!r)return;
+ if(r.t=='gfx'){const L=['LOW','COOL','SUPER'];setGfx(L[(L.indexOf(GFX)+dd+3)%3]);savePrefs();return}
+ if(r.t=='onoff')SET[r.k]=SET[r.k]?0:1;else if(r.t=='vol')SET[r.k]=Math.max(0,Math.min(10,SET[r.k]+dd));else SET[r.k]=(SET[r.k]+dd+r.c.length)%r.c.length;
+ setApply();saveSet();optHear(r.k)}
+function optHear(k){try{ // a sample of the family just changed, at its new level
+ if(k=='vMaster'||k=='vCourt')sfxBounce(240,.9);else if(k=='vSfx')sfxWoosh('C');else if(k=='vTrail')sfxRelease(TS[TRL_S]?TRL_S:'FIRE')}catch(e){}}
+function optStep(up,dn){const n=optRows().length,N=n+2;if(up)OPT.sel=(OPT.sel+N-1)%N;if(dn)OPT.sel=(OPT.sel+1)%N;
+ if(P.Escape||P.Backspace||P.KeyK){optBack();return}
+ const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space;
+ if(OPT.sel<n){if(lr)optChange(OPT.sel,lr);else if(ok&&optRows()[OPT.sel].t!='vol')optChange(OPT.sel,1)}
+ else{if(lr)OPT.sel=OPT.sel==n?n+1:n;if(ok){if(OPT.sel==n)optReset();else optBack()}}}
+function optPtr(x,y,type){const n=optRows().length;
+ for(let i=0;i<n+2;i++){const[rx,ry,rw,rh]=optRect(i);if(!mIn(x,y,optRect(i)))continue;OPT.sel=i;if(type!=0)return;
+  if(i==n){optReset();return}if(i==n+1){optBack();return}
+  const r=optRows()[i],vc=rx+520;
+  if(r.t=='vol'&&x>=vc-107&&x<=vc+57){SET[r.k]=Math.max(0,Math.min(10,Math.ceil((x-(vc-105))/16)));setApply();saveSet();optHear(r.k);return}
+  optChange(i,r.t=='onoff'?1:x<vc?-1:1);return}}
+function drawOpts(){
+ g.fillStyle='rgba(8,10,16,.72)';g.fillRect(0,0,960,540);const rows=optRows(),n=rows.length;
+ mRR(130,20,700,486,16,'rgba(10,12,18,.88)','rgba(255,210,63,.35)');
+ g.textAlign='center';g.fillStyle=GOLD;g.font='bold 34px Georgia';g.fillText(OPT.pg=='audio'?'AUDIO':'VISUALS',480,70);
+ rows.forEach((r,i)=>{const[x,y,w,h]=optRect(i),on=OPT.sel==i,vc=x+520;
+  mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?GOLD:null);
+  g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(r.l,x+16,y+20);
+  const d=r.t=='gfx'?(GFX=='SUPER'?'Reflections + multi-light shadows':GFX=='COOL'?'Shadows + glossy court':'Fast and light'):r.d;
+  g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText(d,x+16,y+36);
+  g.fillStyle=on?GOLD:'#5d6372';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('◀',vc-125,y+28);g.fillText('▶',vc+125,y+28);
+  if(r.t=='vol'){const v=SET[r.k];for(let j=0;j<10;j++){g.fillStyle=j<v?(on?GOLD:'#b9a35a'):'rgba(255,255,255,.12)';g.fillRect(vc-105+j*16,y+14,13,16)}
+   g.fillStyle='#fff';g.font='bold 14px system-ui';g.fillText((r.k=='bright'?50+v*10:v*10)+'%',vc+86,y+28)}
+  else{const t=r.t=='gfx'?GFX:r.t=='onoff'?(SET[r.k]?'ON':'OFF'):r.c[SET[r.k]];g.fillStyle=r.t=='onoff'&&!SET[r.k]?'#8a90a0':'#fff';g.font='bold 20px Georgia';g.fillText(t,vc,y+29)}});
+ ['RESET','BACK'].forEach((t,j)=>{const i=n+j,[x,y,w,h]=optRect(i),on=OPT.sel==i;mRR(x,y,w,h,10,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 18px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText(t,x+w/2,y+27)});
+ g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ select  ·  ←/→ change  ·  Esc back  ·  changes apply live and are saved',480,526)}
 // ===== CUSTOMISATION sub-menu: graphics · ball trail · court =====
 const TRL_DESC={FIRE:'Explosion impact',ICE:'Frost shatter impact',BLACK:'Void collapse impact',STORM:'Lightning strike impact',
  'GREEN LAZER':'Green laser beam','RED LAZER':'Red laser beam','BLUE LAZER':'Blue laser beam','PINK LAZER':'Pink laser beam','YELLOW LAZER':'Yellow laser beam','RAINBOW LAZER':'Laser that cycles every colour',MONEY:'Bills and gold coins',DEMONIC:'Hellfire and a blood-red void',
  STARS:'A shower of shooting stars',FAIRY:'Pink fairy dust and sparkles',BULLET:'Gunshot and a smoking round',IRISH:'Lucky clovers and gold',
  'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs','SUN GOD':'The sun crashes down to earth',AURORA:'Northern lights, green to violet',DRAGON:'Dragon fire with a roar',GLITCH:'Corrupted pixels, flickering',CANDY:'Sweet pink and blue sprinkles'};
-const custRect=i=>[240,150+i*70,480,60],custRows=()=>['gfx'];
+const custRect=i=>[240,150+i*70,480,60],custRows=()=>['audio','vis'];
 function openCust(back){MM.back=back;MM.cs=0;S='cust'}
 function custBack(){S=MM.back||'menu';for(const k in P)P[k]=0}
 function custChange(row,dd){
- if(custRows()[row]=='gfx'){const L=['LOW','COOL','SUPER'];setGfx(L[(L.indexOf(GFX)+dd+3)%3])}
- savePrefs();
+ openOpts(custRows()[row],'cust');
 }
 function custStep(up,dn){
  const n=custRows().length+1;if(up)MM.cs=(MM.cs+n-1)%n;if(dn)MM.cs=(MM.cs+1)%n;
  if(P.Escape||P.Backspace||P.KeyK){custBack();return}
  const dd=(P.ArrowRight||P.KeyD||P.Enter?1:0)-(P.ArrowLeft||P.KeyA?1:0);
- if(dd){if(MM.cs==n-1){if(P.Enter)custBack()}else custChange(MM.cs,dd)}
+ if(P.Enter||P.Space){if(MM.cs==n-1)custBack();else custChange(MM.cs,1)}
 }
 function savePrefs(){try{localStorage.setItem('hardwood27.custom.v1',JSON.stringify({gfx:GFX,trail:TRL_S,court:COURT,cam:CAMM,tm:TI}))}catch(e){}}
 function loadPrefs(){try{const v=JSON.parse(localStorage.getItem('hardwood27.custom.v1')||'null');if(!v)return;
@@ -4543,16 +4621,12 @@ function drawCust(){
  g.fillStyle='rgba(8,10,16,.5)';g.fillRect(0,0,960,540);
  const rows=custRows(),n=rows.length;mRR(200,66,560,174+n*70,16,'rgba(10,12,18,.84)','rgba(255,210,63,.35)');
  g.textAlign='center';g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('CUSTOMISATION',480,118);
- const V={gfx:['GRAPHICS',GFX,GFX=='SUPER'?'Ray-traced reflections + multi-light shadows':GFX=='COOL'?'Shadows + glossy court':'Fast and light']},
-  vals=rows.map(r=>V[r][1]),desc=rows.map(r=>V[r][2]);
- rows.map(r=>V[r][0]).forEach((l,i)=>{const[x,y,w,h]=custRect(i),on=MM.cs==i;
+ const L=[['AUDIO','Volume of the crowd, music, court sounds, trails...'],['VISUALS','Graphics preset, resolution, FPS, trail lighting...']];
+ L.forEach(([l,d],i)=>{const[x,y,w,h]=custRect(i),on=MM.cs==i;
   mRR(x,y,w,h,10,on?HL:'rgba(255,255,255,.05)',on?GOLD:null);
-  g.textAlign='left';g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText(l,x+18,y+22);
-  g.textAlign='right';g.font='12px system-ui';g.fillText(desc[i],x+w-18,y+22);
-  g.textAlign='center';g.font='bold 24px Georgia';g.fillStyle='#fff';g.fillText(vals[i],x+w/2,y+48);
-  if(on){g.fillStyle=GOLD;g.font='bold 20px system-ui';g.fillText('◀',x+60,y+48);g.fillText('▶',x+w-60,y+48)}});
+  g.textAlign='center';g.font='bold 24px Georgia';g.fillStyle='#fff';g.fillText(l,x+w/2,y+30);g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText(d,x+w/2,y+49)});
  {const[x,y,w,h]=custRect(n),on=MM.cs==n;mRR(x,y,w,h,10,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 22px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText('BACK',x+w/2,y+38)}
- g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ select  ·  ←/→ change  ·  Esc back  ·  changes apply live',480,505);
+ g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ select  ·  Enter open  ·  Esc back',480,505);
 }
 function mRR(x,y,w,h,r,fill,stroke){g.beginPath();g.roundRect(x,y,w,h,r);if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}}
 const HL='rgba(255,210,63,.16)',GOLD='#ffd23f',statCol=v=>v>=90?GOLD:v>=70?'#7fffa0':'#7fa6ff';
@@ -4691,7 +4765,7 @@ function mainMenuStep(dt){buildMenuScene();if(MN.gate){MN.pt+=dt;return}const fi
 // all through a limiter so it hits hard without clipping. Hard stop 2.5s after the hit, so it is silent before the dust has cleared (T_CLEAR-T_HIT = 2.8s). ctx: optional (offline render)
 let BOOM_IR=null;const BOOM_V=1.1;
 function boomSfx(ctx){const a=ctx||ac();if(!a)return;try{const t=a.currentTime+.005,sr=a.sampleRate,rnd=()=>Math.random()*2-1;
- const out=a.createGain();out.gain.setValueAtTime(BOOM_V,t);out.gain.setValueAtTime(BOOM_V,t+1.9);out.gain.linearRampToValueAtTime(0,t+2.5);out.connect(a.destination);
+ const out=a.createGain();out.gain.setValueAtTime(BOOM_V,t);out.gain.setValueAtTime(BOOM_V,t+1.9);out.gain.linearRampToValueAtTime(0,t+2.5);out.connect(a===AC?rawOut('sfx'):a.destination);
  const lim=a.createDynamicsCompressor();lim.threshold.value=-6;lim.knee.value=2;lim.ratio.value=20;lim.attack.value=.001;lim.release.value=.3;lim.connect(out);
  const dry=a.createGain();dry.connect(lim);
  // the room: a short dark reverb, fed from a lowpassed send
@@ -4745,7 +4819,7 @@ function gateDraw(){g.fillStyle='#000';g.fillRect(0,0,960,540);g.save();g.textAl
 // Starts fading in during the explosion's roll-off (T_MUSIC, before the menu UI arrives at T_UI), stops when a match starts (start()) or the created-player debut begins, and picks up again with the other track on the next visit to the main menu.
 const MUS={el:[],g:[],on:0,cur:-1,nx:-1,fo:0},MUS_V=.5,MUS_IN=2,MUS_OUT=3,MUS_STOP=.6,T_MUSIC=2.8;
 function musInit(){const a=ac(),src=window.H27_MUSIC||[];if(!a||MUS.el.length||!src.length)return;MUS.nx=Math.random()*src.length|0;
- src.forEach((s,i)=>{const e=new Audio();e.preload='auto';e.src=s;e._k=0;const g=a.createGain();g.gain.value=0;a.createMediaElementSource(e).connect(g);g.connect(a.destination);MUS.el.push(e);MUS.g.push(g);
+ src.forEach((s,i)=>{const e=new Audio();e.preload='auto';e.src=s;e._k=0;const g=a.createGain();g.gain.value=0;a.createMediaElementSource(e).connect(g);g.connect(rawOut('music'));MUS.el.push(e);MUS.g.push(g);
   e.play().then(()=>{if(!(MUS.on&&MUS.cur==i)){e.pause();e.currentTime=0}}).catch(()=>{})})} // a silent play + pause inside the click unlocks each track (Safari / iOS)
 function musRamp(i,v,d){const g=MUS.g[i].gain,t=AC.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(v,t+d)}
 function musPlay(i){const e=MUS.el[i];MUS.cur=i;MUS.nx=(i+1)%MUS.el.length;MUS.on=1;MUS.fo=0;e._k++;e.currentTime=0;MUS.g[i].gain.setValueAtTime(0,AC.currentTime);musRamp(i,MUS_V,MUS_IN);e.play().catch(()=>{})}
@@ -4759,7 +4833,7 @@ function musUpd(){if(!MUS.el.length)return;
 const NAV={k:'',s:'',t:0};
 function navKey(){const L=MM.lk||{},d=MM.cr||{},sg=MM.sg||{};switch(S){
  case 'menu':return MN.t>=T_READY-.6?['menu',MM.t]:null;case 'career':return['career',MM.r];case 'playnow':return['pn'+MM.ps,MM.pc];case 'pnmode':return['pnmode',MM.md];
- case 'slotact':return['slotact',MM.sub];case 'cust':return['cust',MM.cs];case 'look':return['look',[L.row,d.hs,d.hc,d.sk,d.fc]+''];case 'cteam':return['cteam',MM.ts];
+ case 'slotact':return['slotact',MM.sub];case 'cust':return['cust',MM.cs];case 'opts':return['opts'+OPT.pg,OPT.sel];case 'look':return['look',[L.row,d.hs,d.hc,d.sk,d.fc]+''];case 'cteam':return['cteam',MM.ts];
  case 'cconf':case 'archq':return[S,MM.yn];case 'rosters':case 'rteam':return[S,MM.ro];case 'cbio':return['cbio',MM.bi];case 'sigs':return['sigs',sg.cat+','+sg.sel];
  case 'create':return['create',MM.row];case 'onsel':case 'onmode':case 'olob':case 'oroom':return[S,ONL.sel];case 'over':return ES?['over',ES.sel]:null;case 'pause':return['pause',PM]}return null}
 function navBlip(){const n=navKey();if(!n){NAV.k='';return}const k=n[0],s=''+n[1];
@@ -4781,14 +4855,14 @@ function crowdLoop(b,x){const sr=b.sampleRate,X=x*sr|0,n=b.length-X,o=AC.createB
 function crowdInit(){const src=window.H27_CROWD||[];if(CRW.busy||CRW.bed||!AC||src.length<2)return;CRW.busy=1;
  Promise.all(src.map(u=>fetch(u).then(r=>r.arrayBuffer()).then(d=>new Promise((ok,no)=>AC.decodeAudioData(d,ok,no))))).then(([b,c])=>{CRW.bed=crowdLoop(b,1);CRW.cheer=c}).catch(()=>{}).then(()=>{CRW.busy=0})}
 function crowdUpd(){const a=AC;if(!a||a.state!='running')return;if(!CRW.bed){crowdInit();return}
- const v=S=='cust'&&MM.back=='pause'?CRW_S.pause:CRW_S[S]||0;
- if(v&&!CRW.src){const s=a.createBufferSource(),dk=a.createGain(),g=a.createGain();s.buffer=CRW.bed;s.loop=true;g.gain.value=0;s.connect(dk);dk.connect(g);g.connect(a.destination);s.start(0,Math.random()*CRW.bed.duration);CRW.src=s;CRW.dk=dk;CRW.g=g;CRW.v=0}
+ const v=(S=='cust'&&MM.back=='pause')||(S=='opts'&&OPT.back=='pause')?CRW_S.pause:CRW_S[S]||0;
+ if(v&&!CRW.src){const s=a.createBufferSource(),dk=a.createGain(),g=a.createGain();s.buffer=CRW.bed;s.loop=true;g.gain.value=0;s.connect(dk);dk.connect(g);g.connect(rawOut('crowd'));s.start(0,Math.random()*CRW.bed.duration);CRW.src=s;CRW.dk=dk;CRW.g=g;CRW.v=0}
  if(!CRW.src)return;
  if(v!=CRW.v){CRW.v=v;CRW.g.gain.setTargetAtTime(v*CRW_V,a.currentTime,v?.5:.35)}
  if(!v&&CRW.g.gain.value<.002){CRW.src.stop();CRW.src=null}}
 function crowdRoar(){const a=AC;if(!a||a.state!='running'||!CRW.cheer||!CRW.src)return;const t=a.currentTime,d=CRW.dk.gain;
  if(CRW.ch){const o=CRW.ch.g.gain;o.cancelScheduledValues(t);o.setValueAtTime(o.value,t);o.linearRampToValueAtTime(0,t+.15);CRW.ch.s.stop(t+.2)} // a bucket mid-cheer: hand over to a fresh cheer
- const s=a.createBufferSource(),g=a.createGain();s.buffer=CRW.cheer;s.connect(g);g.connect(a.destination);s.start(t);CRW.ch={s,g};s.onended=()=>{if(CRW.ch&&CRW.ch.s==s)CRW.ch=null};
+ const s=a.createBufferSource(),g=a.createGain();s.buffer=CRW.cheer;s.connect(g);g.connect(rawOut('crowd'));s.start(t);CRW.ch={s,g};s.onended=()=>{if(CRW.ch&&CRW.ch.s==s)CRW.ch=null};
  g.gain.setValueAtTime(CRW_CHEER,t);g.gain.setValueAtTime(CRW_CHEER,t+CRW_HOLD+.3);g.gain.linearRampToValueAtTime(0,t+CRW_HOLD+1.6);s.stop(t+CRW_HOLD+1.7); // cheer: instant, then fades after the background is back
  d.cancelScheduledValues(t);d.setValueAtTime(d.value,t);d.linearRampToValueAtTime(0,t+.25);d.setValueAtTime(0,t+CRW_HOLD);d.linearRampToValueAtTime(1,t+CRW_HOLD+.9)} // background: quick dip out, back in after CRW_HOLD
 // ===== SHOT STATS card (bottom right) after each of YOUR shots (jump shots and layups): shot quality, release timing and contest %.
@@ -5163,10 +5237,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.96'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.97'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.97','Audio and visual settings',['PAUSE MENU is now RESUME · AUDIO · VISUALS · QUIT (mouse or keys). The same AUDIO and VISUALS pages are under CUSTOMISATION on the main menu.','AUDIO: MASTER, CROWD, COURT SOUNDS (bounces, footsteps, squeaks), SOUND EFFECTS, BALL TRAILS and MENU MUSIC volume sliders, plus MUTE IN BACKGROUND. Changing a slider plays a sample at the new level.','VISUALS: GRAPHICS PRESET (LOW / COOL / SUPER), RESOLUTION (AUTO, 480p, 720p, 1080p, 1440p, 4K), TARGET FPS (30, 60, 90, 120, 144, MAX), TRAILS LIGHT THE COURT on / off, CAMERA SHAKE (OFF / LOW / FULL), BRIGHTNESS and SHOW FPS.','RESET puts a page back to its defaults. Every setting applies live and is saved on this device.']],
  ['v1.96','Real footsteps',['Footsteps now use a recorded sneaker step instead of the synth thud','Each step gets a slight pitch and level change so it never repeats exactly','Footsteps sit at the same loudness as the ball bounce, and jogging is only a little quieter than sprinting']],
  ['v1.95','Court sounds',['BALL BOUNCES: every time the ball hits the floor (dribbles, loose balls, through the net) - four voicings with pitch variation, louder the harder it lands, quieter the further it is from the camera.',
   'FOOTSTEPS: every player\'s strides on the floor, quick and light when jogging, heavier when sprinting.',
@@ -5797,14 +5872,14 @@ const HL_MOVES=[
  {t:'JUMP / BLOCK',tag:'SPACE (DEFENCE)',d:'Jump to contest or block. A layup or dunk is only blocked if your hand actually gets to the ball, so get in the shooter\'s path and time your jump so your hand meets the ball on its way up: go a touch early rather than late, because a late jump almost never gets there.\nEven when you don\'t get a hand on it, being IN THE AIR close to a layup or dunk bothers it a lot (the closer you are, the higher your hand gets compared with the ball and the better your BLOCKING, the bigger the effect): layups get a much smaller meter window and lower odds, and dunks can rim out (ALTERED).'},
  {t:'GUARD STANCE',tag:'HOLD G (DEFENCE)',d:'Get low with your hands up: your contests are much bigger but you move slower (less slow with a high PERIMETER DEFENSE rating).'},
  {t:'SET PLAYS AND SCREENS',tag:'AI',d:'In the half court the AI offence runs real set plays instead of just moving around: FLASH CUT, ISO, FAKE HANDOFF, DRIBBLE HANDOFF, SPAIN PICK AND ROLL, STACK, KANSAS, GIVE AND GO, HORNS, FLOPPY, HAMMER, ELEVATOR DOORS, UCLA CUT and PRINCETON BACKDOOR (the play\'s name shows over the ball handler). Players cut off screens, set ball screens, roll to the rim, hand the ball off, and the handler hits the man the play gets open.\n• SCREENS are real: a defender who runs into one is held up. How long depends on the screener\'s STRENGTH and the defender\'s PERIMETER DEFENSE (a strong screen on a poor defender holds him over a second, an elite defender slides round a weak one almost straight away).\n• Teams lean towards plays that suit their game plan: pick-and-roll teams run Spain, Kansas and Horns, star teams run ISO, shooting teams run Floppy, Hammer, Stack and Elevator Doors, cutting teams run Flash Cut, Give and Go, UCLA Cut and Princeton Backdoor.'},
- {t:'CAMERA, PAUSE AND REPLAYS',tag:'1 · K · T',d:'• 1: switch camera (COURT / COURT LOW).\n• K: pause menu (resume, customisation, replay camera, main menu).\n• T: watch a replay after a bucket (every replay picks one of 7 camera angles: broadcast, baseline, backboard, sideline rail, spidercam, courtside fan, chase. 1 switches to the next angle, T goes back). T also skips the match intro. No replays in 1v1.'}];
+ {t:'CAMERA, PAUSE AND REPLAYS',tag:'1 · K · T',d:'• 1: switch camera (COURT / COURT LOW).\n• K: pause menu (RESUME, AUDIO, VISUALS, QUIT).\n• T: watch a replay after a bucket (every replay picks one of 7 camera angles: broadcast, baseline, backboard, sideline rail, spidercam, courtside fan, chase. 1 switches to the next angle, T goes back). T also skips the match intro. No replays in 1v1.'}];
 const HL_MODES=[
  {t:'CAREER',tag:'MAIN MENU',d:'Create up to 3 players, sign with a team, and level up by playing 5v5, 3v3 or 1v1 games against the AI (pick the mode, the team you face, then the court), or play a friend online. See CREATE A PLAYER for the details.'},
  {t:'PLAY NOW',tag:'MAIN MENU',d:'A quick game with the league\'s players (no created player, no EXP). Pick a mode, then the two teams, which side you play for and, last, the COURT (it shows live behind the list):\n• 5V5: full squads, four quarters.\n• 3V3: each side plays its three highest-rated players.\n• 1V1: pick any player from each team. First to 11, check ball at the top after every possession.'},
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
  {t:'GAME PLANS',tag:'AI TEAMS',d:'Every team has its own way of playing on offence and defence (shown on its roster page) and adjusts during the game, for example when it\'s chasing the score or a player is hot. The strip under the scoreboard shows what each team is running, and call-outs like SCREEN, POST UP, TRAP or LEAK OUT show the plan in action.'},
- {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 28 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
+ {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• AUDIO (pause, or CUSTOMISATION on the main menu): master, crowd, court sounds, sound effects, ball trail and menu music volumes, and mute in background.\n• VISUALS (same places): graphics preset LOW (fast) / COOL (shadows, glossy court) / SUPER (reflections, extra lights), resolution 480p to 4K, target FPS 30 to 144 or MAX, trail lighting, camera shake, brightness and an FPS counter. Use LOW, a lower resolution or a lower FPS if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 28 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
  {t:'AFTER THE GAME',tag:'RESULTS',d:'The result screen shows the player of the game, what went well and what to work on, and the EXP you earned. From there: MAIN MENU, RUN IT BACK (rematch) or the BOX SCORE (M and B are shortcuts).'},
  {t:'TEAMS',tag:'6 TEAMS',d:'Pinkie Pies, Green Gekos, Yellow Vikings, Red Royals, Blue Crusaders and Rainbow Slayers. Each has its own style, strengths and weaknesses: see ROSTERS.'}];
 const HELP_T=[
@@ -6065,6 +6140,7 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
  back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('←/→ category  ·  ↑/↓ choose  ·  Enter open / equip  ·  Esc back',936,532)}
 function drawMenus(){
  if(S=='cust'){drawCust();return}
+ if(S=='opts'){drawOpts();return}
  if(S=='playnow'&&MM.ps==5){drawCourtPick();return}
  g.fillStyle='#000';g.fillRect(0,0,960,540);
  if(S=='look'){drawLook();return}
@@ -6386,5 +6462,5 @@ function drawRTeam(){const ti=MM.ro,t=TEAMS[ti],hx=n=>'#'+n.toString(16).padStar
 function renderRTeam(){const tm=performance.now();R.setScissorTest(true);
  rtM.forEach((m,i)=>{rtM.forEach(o=>o.visible=o===m);m.rotation.y=Math.sin(tm/1100+i*1.3)*.55;const[x,y,w,h]=rtMV(i),vy=540-y-h;R.setViewport(x,vy,w,h);R.setScissor(x,vy,w,h);R.render(rsc,rcam)});
  R.setScissorTest(false);R.setViewport(0,0,960,540)}
-setCourt('STREET');buildAll();loadSlots();loadPrefs();applyRoster();MM.r=ACTIVE>=0?ACTIVE:0;reset(0);menuEnter(true);requestAnimationFrame(loop);
+setCourt('STREET');buildAll();loadSlots();loadPrefs();loadSet();applyRoster();MM.r=ACTIVE>=0?ACTIVE:0;reset(0);menuEnter(true);requestAnimationFrame(loop);
 </script></body></html>
