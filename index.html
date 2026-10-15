@@ -3613,7 +3613,14 @@ function draw(){
  fpsDraw()
 }
 let last=0;
-function loop(ts){requestAnimationFrame(loop);const f=FPS_L[SET.fps];if(f&&last&&ts-last<1000/f-1.5)return;fpsTick(ts);frame(ts)} // TARGET FPS: skip screen refreshes until the next frame is due
+function loop(ts){requestAnimationFrame(loop);if(FPS_L[SET.fps])return;fpsTick(ts);frame(ts)} // MAX: one frame per screen refresh (a TARGET FPS runs on its own clock instead, ftTick)
+// TARGET FPS (v2.02): an exact frame clock of its own, not tied to the screen's refresh (requestAnimationFrame can never go past it - on a 60 Hz screen that was a hard 60).
+// Each frame is timed with setTimeout from a message task (so the browser's 4 ms timer clamp never kicks in), and the last <1 ms is waited out with message pings.
+const FT={on:0,due:0},FT_MC=new MessageChannel();FT_MC.port1.onmessage=()=>ftTick();
+function ftTick(){const f=FPS_L[SET.fps];if(!f){FT.on=0;return}const now=performance.now(),iv=1000/f;
+ if(now>=FT.due-.15){FT.due=now-FT.due>iv?now+iv:FT.due+iv;fpsTick(now);frame(now)} // (fell behind by a whole frame: start the count again rather than rush to catch up)
+ const w=FT.due-performance.now();if(w>1.5)setTimeout(()=>FT_MC.port2.postMessage(0),w-1);else FT_MC.port2.postMessage(0)}
+function ftStart(){if(!FT.on&&FPS_L[SET.fps]){FT.on=1;FT.due=performance.now();FT_MC.port2.postMessage(0)}}
 function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one frame of the game (loop() drives it; online, a hidden tab drives it from a worker clock)
  if(S=='replay'&&(P.Digit1||P.Numpad1)){RP.sty=(RP.sty+1)%REP_CAMS.length;RP.k=null;RP.c=null}
  if(S=='play'&&(P.Digit1||P.Numpad1)){CAMM=(CAMM+1)%CAM_N.length;camT=1;say('CAMERA:  '+CAM_N[CAMM],'#7fffa0');savePrefs()}
@@ -4628,8 +4635,8 @@ addEventListener('keydown',e=>{ // name entry
 // ===== SETTINGS (v1.97): PAUSE > AUDIO / VISUALS (also CUSTOMISATION on the main menu), saved on this device =====
 // Audio: every sound goes through a volume gain (rawOut: music · crowd · sfx straight to the master; cat(): sfx · court · trail in front of the shared compressor + reverb bus).
 // Visuals: graphics preset (setGfx), render resolution (the WebGL buffer; the 2D UI is drawn at up to 2x for 1080p+), frame cap (loop()), trail light (tl), camera shake, brightness (CSS filter on the 3D canvas), FPS counter.
-const SET_DEF={vMaster:10,vMusic:10,vCrowd:10,vCourt:10,vSfx:10,vTrail:10,bgMute:1,res:0,fps:5,tlight:1,shake:2,bright:5,showFps:0},SET=Object.assign({},SET_DEF);
-const RES_L=['AUTO',480,720,1080,1440,2160],RES_N=['AUTO','480p','720p','1080p','1440p','4K'],FPS_L=[30,60,90,120,144,0],FPS_N=['30','60','90','120','144','MAX'];
+const SET_DEF={vMaster:10,vMusic:10,vCrowd:10,vCourt:10,vSfx:10,vTrail:10,bgMute:1,res:0,fps:7,tlight:1,shake:2,bright:5,showFps:0},SET=Object.assign({},SET_DEF);
+const RES_L=['AUTO',480,720,1080,1440,2160],RES_N=['AUTO','480p','720p','1080p','1440p','4K'],FPS_L=[30,60,90,120,144,165,240,0],FPS_N=['30','60','90','120','144','165','240','MAX'];
 const MIX={},VOL_K={music:'vMusic',crowd:'vCrowd',sfx:'vSfx',court:'vCourt',trail:'vTrail'};
 function rawOut(k){const a=ac();if(!MIX.m){MIX.m=a.createGain();MIX.m.connect(a.destination)}if(!MIX[k]){MIX[k]=a.createGain();MIX[k].connect(MIX.m);volApply(1)}return MIX[k]}
 function volApply(now){const a=AC;if(!a||!MIX.m)return;const t=a.currentTime,vg=k=>Math.pow(SET[k]/10,2),q=(n,v)=>{if(now){n.gain.cancelScheduledValues(t);n.gain.value=v}else n.gain.setTargetAtTime(v,t,.04)}; // (squared: the slider feels even to the ear)
@@ -4643,9 +4650,9 @@ const GL_C=document.getElementById('gl'),FPSC={t:0,n:0,v:0};
 function applyRes(){const h=RES_L[SET.res],pr=h=='AUTO'?Math.min(devicePixelRatio,2):h/540,u=h=='AUTO'?1:Math.max(1,Math.min(2,pr));
  if(R.getPixelRatio()!=pr){R.setPixelRatio(pr);R.setSize(960,540,false)}
  if(ui.width!=960*u){ui.width=960*u;ui.height=540*u}g.setTransform(u,0,0,u,0,0)}
-function setApply(){volApply();applyRes();GL_C.style.filter=SET.bright==5?'':'brightness('+(.5+SET.bright*.1).toFixed(1)+')'}
-function saveSet(){try{localStorage.setItem('hardwood27.settings.v1',JSON.stringify(SET))}catch(e){}}
-function loadSet(){try{const v=JSON.parse(localStorage.getItem('hardwood27.settings.v1')||'null');if(v)for(const k in SET_DEF)if(Number.isInteger(v[k]))SET[k]=v[k]}catch(e){}
+function setApply(){volApply();applyRes();ftStart();GL_C.style.filter=SET.bright==5?'':'brightness('+(.5+SET.bright*.1).toFixed(1)+')'}
+function saveSet(){try{localStorage.setItem('hardwood27.settings.v1',JSON.stringify(Object.assign({fv:2},SET)))}catch(e){}}
+function loadSet(){try{const v=JSON.parse(localStorage.getItem('hardwood27.settings.v1')||'null');if(v){for(const k in SET_DEF)if(Number.isInteger(v[k]))SET[k]=v[k];if(v.fv!==2&&v.fps===5)SET.fps=7}}catch(e){}
  for(const r of [...OPT_ROWS.audio,...OPT_ROWS.vis]){const n=r.t=='vol'?11:r.t=='onoff'?2:r.c?r.c.length:0;if(n&&!(SET[r.k]>=0&&SET[r.k]<n))SET[r.k]=SET_DEF[r.k]}setApply()}
 function fpsTick(ts){FPSC.n++;if(ts-FPSC.t>=500){FPSC.v=Math.round(FPSC.n*1000/(ts-FPSC.t));FPSC.t=ts;FPSC.n=0}}
 function fpsDraw(){if(!SET.showFps)return;g.save();g.textAlign='left';g.textBaseline='top';g.font='bold 12px system-ui';g.fillStyle='rgba(0,0,0,.6)';g.fillRect(4,4,62,19);g.fillStyle=FPSC.v>=55?'#7fffa0':FPSC.v>=30?GOLD:'#ff6b6b';g.fillText(FPSC.v+' FPS',10,8);g.restore()}
@@ -4659,7 +4666,7 @@ const OPT={pg:'audio',sel:0,back:'pause'},OPT_ROWS={
   {l:'BALL TRAILS',k:'vTrail',t:'vol',d:'Trail hum, release and impact sounds'},{l:'MENU MUSIC',k:'vMusic',t:'vol',d:'The music in the menus'},
   {l:'MUTE IN BACKGROUND',k:'bgMute',t:'onoff',d:'Silent while you are in another tab or app'}],
  vis:[{l:'GRAPHICS PRESET',k:'gfx',t:'gfx'},{l:'RESOLUTION',k:'res',t:'ch',c:RES_N,d:'Higher is sharper but slower (AUTO = your screen)'},
-  {l:'TARGET FPS',k:'fps',t:'ch',c:FPS_N,d:'Frame rate cap (MAX = as fast as your screen)'},{l:'TRAILS LIGHT THE COURT',k:'tlight',t:'onoff',d:'Ball trails cast light on the floor and players (COOL / SUPER)'},
+  {l:'TARGET FPS',k:'fps',t:'ch',c:FPS_N,d:'Frames per second the game runs at (MAX = your screen\'s refresh rate)'},{l:'TRAILS LIGHT THE COURT',k:'tlight',t:'onoff',d:'Ball trails cast light on the floor and players (COOL / SUPER)'},
   {l:'CAMERA SHAKE',k:'shake',t:'ch',c:['OFF','LOW','FULL'],d:'Dunks, ankle breakers, the SUN GOD rumble'},{l:'BRIGHTNESS',k:'bright',t:'vol',d:'How bright the court looks'},
   {l:'SHOW FPS',k:'showFps',t:'onoff',d:'A frame counter in the top left corner'}]},
  optRows=()=>OPT_ROWS[OPT.pg],optRect=i=>i<optRows().length?[150,92+i*50,660,44]:[i==optRows().length?150:490,450,320,40];
@@ -5339,10 +5346,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.01'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.02'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.02','Exact target FPS',['TARGET FPS is now exact: the game runs on its own frame clock instead of waiting for the screen, so 90 / 120 / 144 really are 90 / 120 / 144 frames a second (it used to stop at your screen\'s refresh rate, often 60).','New targets: 165 and 240. MAX still means one frame per screen refresh.','Note: a screen can only display as many frames as its refresh rate - extra frames still make the game update and respond more often.']],
  ['v2.01','Real swishes',['A made shot now goes through the hoop with the speed and angle it came in at (it used to stop dead and drop straight down at half speed).','The net catches it: the cords give, pull on the ball and slow it with friction while the lower net swings along with it - the ball carries on in its direction through the net, then drops out nearly straight and lands about a foot past the rim.','How much the net slows it depends on how it comes in: a deep three leaves the net at ~60% of its falling speed, a mid-range shot ~70%, a close shot ~80%, layups and dunks ~90%.','Dunks are thrown down through the net (fast, in the direction of the dunk) instead of floating through it.']],
  ['v2.00','Smoother dribble moves',['The DOUBLE SPIN is gone: FLASHY 1\'s spin is now the SHOWTIME SPIN and FLASHY 2\'s is the TORNADO SPIN, both a single turn.','Every dribble move plays 35% slower (it still covers the same ground), and there is a little more time before the next one.','Ultra-smooth blending: when a move starts (even cutting into another one) the ball glides from wherever it really is onto the new move\'s path - no more ball teleporting.','Spins ease in and out instead of turning at one constant speed, and a spin or move that gets cut short no longer snaps the body round - the turn is absorbed and eased away.','The body\'s joints are softer through a move, the player turns less sharply mid-move, and the bounce in his stride is smoothed too.']],
  ['v1.99','Realistic hoop and ball',['NEW BALL: pebbled leather grain, proper 8-panel channels (with the curved seams), a stamped logo and a bump map, so the grain and the grooves catch the light.','BACKBOARD COLLISION: the ball can no longer go into or through the glass. Loose balls and rebounds bounce off the front, the back, the sides and the bottom edge; a long miss bounces off the board; a shot from behind the backboard hits the back of it (no basket). The glass has its own thud.','NEW NET: a real diamond-mesh net hung from 12 hooks and simulated with physics. It sags under its own weight, stretches around the ball as it drops through, swings after a swish and shudders with the rim.','NEW RIM AND BACKBOARD: a painted steel rim with wear, a bracket and net hooks; tempered glass with the white border and shooter\'s square, an aluminium frame, a padded bottom edge and a padded pole. The STORE trail preview uses the new hoop too.']],
