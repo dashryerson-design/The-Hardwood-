@@ -644,13 +644,30 @@ function passTarget(p){let best=-9,tg=null;for(const q of TM[p.team]){if(q===p)c
 // k = the anatomical ball hand for one-hand types (1 right, -1 left: the pose is mirrored for a left-hand pass).
 const PASS_T={
  chest:{wu:.11,two:1,face:1,sp:1,zc:46},bounce:{wu:.12,two:1,face:1,sp:.86,zc:36},over:{wu:.15,two:1,face:1,sp:1,zc:56},
- one:{wu:.08,face:1,sp:1.03,zc:46},btb:{wu:.18,face:0,sp:.95,zc:44},base:{wu:.22,face:1,sp:1.12,zc:52}},
- PASS_NM={chest:'CHEST PASS',bounce:'BOUNCE PASS',over:'OVERHEAD PASS',one:'ONE-HAND PUSH',btb:'BEHIND THE BACK',base:'BASEBALL PASS'};
+ one:{wu:.08,face:1,sp:1.03,zc:46},btb:{wu:.18,face:0,sp:.95,zc:44},base:{wu:.22,face:1,sp:1.12,zc:52},
+ // FLASHY PASSES (v1.71, PASSING 85+): bnc = it bounces off the floor on the way
+ nolook:{wu:.1,face:0,sp:1,zc:44},behead:{wu:.16,face:0,sp:.98,zc:50},elbow:{wu:.2,face:0,sp:.9,zc:42},wrap:{wu:.14,face:0,sp:.85,zc:34,bnc:1},
+ legs:{wu:.15,face:0,sp:.82,zc:34,bnc:1},hook:{wu:.2,face:0,sp:1.1,zc:56},flip:{wu:.07,face:1,sp:.8,zc:40}},
+ PASS_NM={chest:'CHEST PASS',bounce:'BOUNCE PASS',over:'OVERHEAD PASS',one:'ONE-HAND PUSH',btb:'BEHIND THE BACK',base:'BASEBALL PASS',
+  nolook:'NO-LOOK PASS',behead:'BEHIND THE HEAD',elbow:'ELBOW PASS',wrap:'WRAPAROUND',legs:'BETWEEN THE LEGS',hook:'HOOK PASS',flip:'SHOVEL FLIP'},
+ PASS_REQ={btb:75,nolook:85,behead:85,elbow:85,wrap:85,legs:85,hook:85,flip:85}; // PASSING needed to unlock (store + games)
+PASS_T.bounce.bnc=1;
+// A FLASHY PASSER (PASSING 85+) always throws one of the flashy passes the play allows (any he has switched on in the STORE):
+//  post-up: behind the head / hook · long (over 30 ft): hook · a defender in the lane: wraparound or between the legs (bounced round / under him) up close, otherwise
+//  behind the head / hook over him · open floor: shovel flip on the drive to a close man ahead, behind the back / elbow to a man on his side, between the legs to a
+//  man behind him, and always the no-look (and behind the head past 12 ft). Inbounds stay normal.
+function flashyPass(p,L,sp,side,fwd,lane){if(B.mode=='inbound')return null;const c=[];
+ if((p.pst||0)>.3)c.push('behead','hook');
+ else if(L>300)c.push('hook');
+ else if(lane)c.push(...(L<260?['wrap',sp>60?'legs':'behead']:['behead','hook']));
+ else{if(L<170&&sp>70&&fwd>-.2)c.push('flip');if(Math.abs(side)>.45&&fwd<.6){c.push('btb');if(L<260)c.push('elbow')}if(fwd<-.2&&L<240)c.push('legs');c.push('nolook');if(L>120)c.push('behead')}
+ const ok=c.filter(t=>animOn(p,'pas:'+t));return ok.length?ok[Math.random()*ok.length|0]:null}
 function passType(p,tg,o){const dx=tg.x-p.x,dy=tg.y-p.y,L=Math.hypot(dx,dy)||1,sp=Math.hypot(p.vx,p.vy),pa=((p.rt&&p.rt.pas)||50),r=Math.random(),a=p.ang||0;
  const side=(dx*-Math.cos(a)+dy*Math.sin(a))/L,fwd=(dx*Math.sin(a)+dy*Math.cos(a))/L; // where the target is relative to his body (+side = his right)
  let lane=null;for(const d of TM[1-p.team]){const t=((d.x-p.x)*dx+(d.y-p.y)*dy)/(L*L);if(t<.15||t>.85)continue;if(Math.abs((d.x-p.x)*dy-(d.y-p.y)*dx)/L<22){lane=d;break}}
- let ty;
+ let ty;const fl=pa>=85&&!(o&&o.ty)?flashyPass(p,L,sp,side,fwd,lane):null;
  if(o&&o.ty)ty=o.ty;
+ else if(fl)ty=fl;
  else if(B.mode=='inbound')ty=L>320?'base':'over';
  else if((p.pst||0)>.3)ty='over'; // out of the post
  else if(L>420)ty='base';
@@ -658,8 +675,8 @@ function passType(p,tg,o){const dx=tg.x-p.x,dy=tg.y-p.y,L=Math.hypot(dx,dy)||1,s
  else if(lane)ty=lane.ht>=p.ht*.95||r<.6?'bounce':'over';
  else if(sp>95)ty=pa>=75&&Math.abs(side)>.55&&fwd<.6&&r<.4?'btb':r<.55?'one':r<.8?'chest':'bounce';
  else ty=pa>=85&&Math.abs(side)>.6&&r<.2?'btb':r<.5?'chest':r<.7?'bounce':r<.85?'one':'over';
- if(!animOn(p,'pas:'+ty))ty=animAny(p,'pas',['chest','one','bounce','over','base','btb'],t=>t!='btb'||pa>=75,'chest') // (STORE: a switched-off pass falls back to one he has on)
- const k=ty=='btb'?(side>0?-1:1):(PASS_T[ty].two?1:(side<-.2?-1:side>.2?1:(p.ls<0?-1:1))); // behind the back: the hand AWAY from the target wraps round
+ if(!animOn(p,'pas:'+ty))ty=animAny(p,'pas',['chest','one','bounce','over','base','btb'],t=>(PASS_REQ[t]||0)<=pa,'chest') // (STORE: a switched-off pass falls back to one he has on)
+ const k=ty=='btb'||ty=='elbow'||ty=='behead'?(side>0?-1:1):ty=='legs'?(p.ls<0?-1:1):(PASS_T[ty].two?1:(side<-.2?-1:side>.2?1:(p.ls<0?-1:1))); // behind the back: the hand AWAY from the target wraps round
  return{ty,k}}
 function pass(p,tg,o){
  if(!tg)tg=passTarget(p);if(!tg)return; // (1v1: nobody to pass to)
@@ -679,7 +696,7 @@ function passGo(p){const ps=p.ps,tg=ps.tg,P=PASS_T[ps.ty];ps.go=1;
  {const f=passSpd(p)*(1+sigv(p,'needle'))*P.sp,du=L=>Math.max(.16/f,L/((480+L*.5)*f));B.dur=du(Math.hypot(tg.x-p.x,tg.y-p.y));B.lx=tg.x;B.ly=tg.y;
   // LEAD PASS: thrown to where a moving receiver will be when it arrives (his velocity x the flight time, refined twice since the flight time depends on the distance)
   if(Math.hypot(tg.vx,tg.vy)>20)for(let i=0;i<2;i++){B.lx=mClamp(tg.x+tg.vx*B.dur,15,925);B.ly=mClamp(tg.y+tg.vy*B.dur,15,625);B.dur=du(Math.hypot(B.lx-B.sx,B.ly-B.sy))}}TM.forEach(t=>t.forEach(d=>d.chk=0));
- B.pty=ps.ty;B.bnc=0;B.z0=B.z;B.zc=P.zc*(tg.ht||1);B.vz0=(B.zc-B.z0+.5*G*B.dur*B.dur)/B.dur;beep(ps.ty=='bounce'?300:330,.06)}
+ B.pty=ps.ty;B.bnc=0;B.z0=B.z;B.zc=P.zc*(tg.ht||1);B.vz0=(B.zc-B.z0+.5*G*B.dur*B.dur)/B.dur;beep(P.bnc?300:330,.06)}
 // every step (host / offline): wind-up -> release -> follow-through. A wind-up dies if he loses the ball (stripped, a loose ball, the half ends...).
 // the receiver (AI, or you - auto-steered) runs onto a lead pass: straight to the spot it is thrown to, arriving as the ball does, then turns to it
 function passRun(p,dt){const dx=B.lx-p.x,dy=B.ly-p.y,d=Math.hypot(dx,dy),left=Math.max(.05,(1-B.t)*B.dur),v=d<6?0:Math.min(260,d/left*1.15);
@@ -701,7 +718,21 @@ const PASS_K={
  btb:{L:{Lx:.6,Le:-.55,Lz:.2,Lw:-.2,Rx:-.7,Re:-1.1,Rz:.3,tw:-.3,lean:.05},R:{Lx:.7,Le:-.3,Lz:1.05,Lw:.65,Rx:-.6,Re:-1.2,Rz:.35,tw:.35,lean:.1},
   LL:{Lh:-.2,Lk:.3,Rh:.1,Rk:.25}},
  base:{L:{Lx:-2.5,Le:-1.95,Lz:-.9,Lw:-.45,Rx:-1.5,Re:-.2,Rz:.15,tw:-.8,lean:-.08},R:{Lx:-1.85,Le:-.25,Lz:-.3,Lw:.75,Rx:-.55,Re:-1.1,Rz:.3,tw:.55,lean:.34},
-  LL:{Rh:-.6,Rk:.2,Lh:.32,Lk:.38},RL:{Rh:-.3,Rk:.35,Lh:-.1,Lk:.6}}};
+  LL:{Rh:-.6,Rk:.2,Lh:.32,Lk:.38},RL:{Rh:-.3,Rk:.35,Lh:-.1,Lk:.6}},
+ // NO-LOOK: shoulders and eyes turned away, the passing arm flings out to the other side
+ nolook:{L:{Lx:-.5,Le:-1.6,Lz:-.15,Lw:-.3,Rx:-.9,Re:-1.1,Rz:.3,tw:.45},R:{Lx:-1.35,Le:-.1,Lz:-.5,Lw:.9,Rx:-.8,Re:-1.2,Rz:.3,tw:.5,lean:.15},LL:{Rh:-.3,Rk:.2,Lh:.15,Lk:.3}},
+ // BEHIND THE HEAD: ball cocked behind the head, flicked over the far shoulder
+ behead:{L:{Lx:-2.9,Le:-2.2,Lz:.45,Lw:-.4,Rx:-.8,Re:-1.2,Rz:.3,tw:.3,lean:-.1},R:{Lx:-2.4,Le:-.5,Lz:.95,Lw:.85,Rx:-.7,Re:-1.2,Rz:.35,tw:-.35,lean:.05},LL:{Rh:-.25,Rk:.2,Lh:.1,Lk:.25}},
+ // ELBOW PASS: the ball goes behind the back, then the other arm's elbow knocks it out to the side
+ elbow:{L:{Lx:.7,Le:-.6,Lz:.35,Lw:-.2,Rx:-.4,Re:-1.6,Rz:.2,tw:-.25,lean:.05},R:{Lx:.5,Le:-.4,Lz:.5,Lw:.3,Rx:.65,Re:-2.3,Rz:.75,tw:.3,lean:.08},LL:{Lh:-.2,Lk:.3,Rh:.1,Rk:.25}},
+ // WRAPAROUND: a lunge step, the ball swung low round the defender's hip and bounced
+ wrap:{L:{Lx:.3,Le:-.4,Lz:-.55,Lw:-.2,Rx:-.6,Re:-1.2,Rz:.3,tw:-.5,lean:.3,drop:.15},R:{Lx:-.9,Le:-.2,Lz:.5,Lw:.8,Rx:-.5,Re:-1.2,Rz:.3,tw:.35,lean:.42,drop:.18},LL:{Rh:-.6,Rk:.4,Lh:.25,Lk:.45}},
+ // BETWEEN THE LEGS: a wide stride, the ball pushed down through the legs to a man behind
+ legs:{L:{Lx:-.3,Le:-.8,Lz:.3,Lw:-.3,Rx:-.5,Re:-1,Rz:.2,lean:.5,drop:.25},R:{Lx:.25,Le:-.1,Lz:.35,Lw:.9,Rx:-.4,Re:-1,Rz:.25,lean:.55,drop:.28},LL:{Lh:-.55,Lk:.5,Rh:.35,Rk:.4}},
+ // HOOK PASS: the arm sweeps out wide and over the top, body side-on
+ hook:{L:{Lx:-1,Le:-.3,Lz:-1.2,Lw:-.3,Rx:-1.2,Re:-1.4,Rz:.4,tw:-.6,lean:-.05},R:{Lx:-2.9,Le:-.2,Lz:.35,Lw:.9,Rx:-.9,Re:-1.2,Rz:.3,tw:.4,lean:.15},LL:{Rh:-.4,Rk:.25,Lh:.2,Lk:.3}},
+ // SHOVEL FLIP: underhand from the hip on the drive, a wrist flick up to him
+ flip:{L:{Lx:.25,Le:-.3,Lz:-.15,Lw:-.5,Rx:-.6,Re:-1.4,Rz:.3,lean:.35,drop:.15},R:{Lx:-1.3,Le:-.25,Lz:.1,Lw:1,Rx:-.6,Re:-1.3,Rz:.3,lean:.25,drop:.1},LL:{Rh:-.35,Rk:.25,Lh:.15,Lk:.3}}};
 const PASS_MIR=k=>k[0]=='L'?'R'+k.slice(1):k[0]=='R'?'L'+k.slice(1):k;
 function passPose(p,ps,q,moving){const K=PASS_K[ps.ty];if(!K)return;const sm=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)},mir=ps.k<0;
  const put=(src,w)=>{if(!src||w<=0)return;for(const k0 in src){const k=mir?PASS_MIR(k0):k0;let v=src[k0];if(mir&&(k0.endsWith('z')||k0=='tw'||k0.endsWith('g')))v=-v;if(k in q)q[k]+=(v-q[k])*w;else q[k]=v*w}};
@@ -1768,7 +1799,7 @@ function step(dt){
  else if(B.mode=='pass'){
   // flies straight at the lead spot; over the last third it eases into his hands if he is within reach of that spot (PASS_REACH) - if he has cut away it sails past him
   B.t+=dt/B.dur;const f=Math.min(1,B.t),rd=Math.hypot(B.to.x-B.lx,B.to.y-B.ly),u=rd<PASS_REACH&&f>.65?(f-.65)/.35:0,tx=B.lx+(B.to.x-B.lx)*u,ty=B.ly+(B.to.y-B.ly)*u;
-  B.x=B.sx+(tx-B.sx)*f;B.y=B.sy+(ty-B.sy)*f;if(B.pty=='bounce'){const fb=.6;if(f>=fb&&!B.bnc){B.bnc=1;beep(140,.05,'triangle')}B.z=f<fb?B.z0+(4-B.z0)*Math.pow(f/fb,1.25):4+(B.zc-4)*Math.sin((f-fb)/(1-fb)*Math.PI/2)}else{const tt=f*B.dur;B.z=B.z0+B.vz0*tt-.5*G*tt*tt} // (a bounce pass hits the floor 60% of the way)
+  B.x=B.sx+(tx-B.sx)*f;B.y=B.sy+(ty-B.sy)*f;if(PASS_T[B.pty]&&PASS_T[B.pty].bnc){const fb=.6;if(f>=fb&&!B.bnc){B.bnc=1;beep(140,.05,'triangle')}B.z=f<fb?B.z0+(4-B.z0)*Math.pow(f/fb,1.25):4+(B.zc-4)*Math.sin((f-fb)/(1-fb)*Math.PI/2)}else{const tt=f*B.dur;B.z=B.z0+B.vz0*tt-.5*G*tt*tt} // (a bounce pass hits the floor 60% of the way)
   for(const d of TM[1-B.from.team])if(!d.chk&&d.stun<=0&&Math.hypot(d.x-B.x,d.y-B.y)<20*stlR(d)*(1+sigv(d,'intercept'))&&B.z<d.ht*85+d.z){d.chk=1;if(Math.random()<((isHum(d)?(d.swp>0?.2:.01):(d.swp>0?AI_STL.icS:AI_STL.ic))*stlP(d)*(1+sigv(d,'intercept'))+(B.bail?SIG_BASE.bailRisk*(1-sigv(B.from,'bail')):0))*Math.max(0,1-1.6*sigv(B.from,'needle'))*(1-fgOf(B.from))){if(sigv(d,'intercept'))sigFx(d,'intercept');say('INTERCEPTED!',d.team?'#ff6b6b':'#4cff7a');(pstat(d).stl++,awardP(d,XP_STEAL,'STEAL'));post('tov',d,d.team);break}}
   if(f>=1&&B.mode=='pass'&&rd>=PASS_REACH){B.mode='loose';B.h=null;B.age=0;B.so=B.from.team;B.bd=dr(B.so);B.vx=(B.lx-B.sx)/B.dur*.55;B.vy=(B.ly-B.sy)/B.dur*.55;B.vz=0;say('MISSED PASS','#ff9f43');beep(180,.08,'square')}
   if(f>=1&&B.mode=='pass'){B.mode='held';B.vz=0;B.h=B.to;B.to.ct0=T;B.to.think=Math.max(B.to.think||0,(roleOf(B.to)=='SH'?.12:.22)+Math.random()*.15);ALAST={from:B.from,to:B.to,q:qn,c:qc};if(B.to.team==0)setCtl(B.to.k);beep(500,.05)}
@@ -4582,10 +4613,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.70'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.71'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.71','Flashy passes',['7 new flashy passes: NO-LOOK, BEHIND THE HEAD, ELBOW PASS, WRAPAROUND (bounced round the defender), BETWEEN THE LEGS (bounced), HOOK PASS and SHOVEL FLIP.',
+  'Players with PASSING 85+ now ALWAYS throw a flashy pass that fits the play: hook passes long and out of the post, wraparounds and between-the-legs past a defender in the lane, shovel flips on the drive, behind the back and elbow passes to the side, no-looks anywhere.',
+  'They unlock at PASSING 85 in the STORE (FLASHY PASSES), where you can switch each one on or off and preview it.']],
  ['v1.70','Smooth animation blending',['Every joint now moves like a spring that keeps its momentum, so one action flows into the next (a crossover into a jump shot, a sprint into a pass, a dunk into the landing) instead of snapping into the new pose.',
   'How snappy an action is now ramps in and out instead of switching on in one frame, and only dunks and layups are allowed to be really quick.',
   'Turning and stumbles / falls ease in and settle the same way.',
@@ -5088,7 +5122,7 @@ const HL_ATTR=[
  {t:'LAYUP / CLOSE SHOT',tag:'LAY',d:'Finishing at the rim with layups.\n• Make chance when open goes from about 60% at 25 to 95% at 100, and a contest costs far less at high ratings (40% at 25, 15% at 100).\n• Your layup meter window is bigger with a higher rating and shrinks less when you\'re contested.\n• Unlocks fancier finishes: finger roll 55, floater 65, scoop 70, euro step 75, reverse 82, over-the-shoulder reverse 92. Overhand and power layups are always available.\n• Better finishers shield the ball away from a shot-blocker in the air.'},
  {t:'DUNKING',tag:'DNK',d:'Throwing it down.\n• Open dunks are a sure thing from 35 up.\n• A dunk with a defender at the rim needs at least 50 to score, and the chance climbs from 55% at 50 to 92% at 100.\n• The higher it is, the more often you posterize a defender standing at the rim (15% at 25, 95% at 100), and that defender is stunned.\n• AI players only dunk with 62 or more. You can try a dunk (F) at any rating.\n• Helps your vertical when you jump to block.'},
  {t:'STRENGTH',tag:'STR',d:'Who wins when bodies collide.\n• Stronger players push weaker ones back on contact: drives stall against a strong defender, and a strong driver bullies through a weak one. Weight adds to this.\n• Post-up backdowns (hold G) push the defender back faster.\n• Adds to your chance of finishing a poster dunk and helps power layups.'},
- {t:'PASSING',tag:'PAS',d:'How good your passes are.\n• Passes travel faster (about 80% speed at 25, 130% at 100), so there\'s less time to intercept them.\n• A teammate who shoots within about 4 seconds of your pass gets a boost to his make chance (almost nothing at 25, about +6% at 100).\n• Good AI passers look to pass more.'},
+ {t:'PASSING',tag:'PAS',d:'How good your passes are.\n• Passes travel faster (about 80% speed at 25, 130% at 100), so there\'s less time to intercept them.\n• A teammate who shoots within about 4 seconds of your pass gets a boost to his make chance (almost nothing at 25, about +6% at 100).\n• Good AI passers look to pass more.\n• At 85+ every pass is a flashy one that fits the play (no-look, behind the head, elbow, wraparound, between the legs, hook, shovel flip, behind the back).'},
  {t:'PERIMETER DEFENSE',tag:'PD',d:'Guarding the ball away from the basket.\n• Your contests on jump shots from mid-range and three reach further and hurt the shooter more.\n• Holding G (guard stance) slows you down less: you keep 45% of your speed at 25 and 80% at 100.\n• AI defenders with high ratings react faster to the ball handler and stay tighter on him.\n• When a sprinting ball handler tries to blow by you with a move, a higher rating means you CUT HIM OFF more often: you bump him back in front of you and take away his momentum.'},
  {t:'INTERIOR DEFENSE',tag:'IDF',d:'Defending near the basket.\n• Your contests on layups, close shots and dunks reach further and are stronger.\n• Being close enough to contest a dunk means a dunker with low dunking can\'t score over you.\n• It doesn\'t change blocks: that\'s Blocking (and getting your hand to the ball).'},
  {t:'BLOCKING',tag:'BLK',d:'Sending shots back.\n• Layups and dunks are only blocked if your hand actually touches the ball. Blocking (with Dunking) sets how high you jump, and blocking alone sets how accurately your hand goes for the ball: up to about 1.3 ft off at 25, just a few inches at 100. Good blockers also correct their aim as they rise, then slap at the ball with the forearm and wrist when their hand gets there.\n• Jump shots: a defender in the air close to the shooter blocks about 12% at 25, 40% at 60 and 65% at 100.\n• AI shot-blockers with high ratings go up more often and time their jumps better.'},
@@ -5135,7 +5169,7 @@ const HL_MOVES=[
  {t:'ALLEY-OOP',tag:'Q',d:'With the ball, press Q to throw a lob to a teammate with DUNKING 50+ who is within dunk range of the rim (about 15 ft). He goes up and the ball lands in his right hand at the top of his jump for one of the alley-oop finishes: the two-foot FLUSH, the one-foot TOMAHAWK, the TUCK SLAM (both knees tucked) or, with DUNKING 88+, the SUPERMAN (off two feet from way out, caught laid out flat). Switch them on or off in the STORE.\nA defender who gets a hand up to the lob can tip it away, and once he has caught it, it\'s a normal dunk (it can still be blocked or altered). AI teams throw them too when their dunker is open near the rim.\nCALL FOR THE LOB (career): without the ball, run at the rim and press Q - if your player has 80+ DUNKING and is close enough (about 24 ft, running at the rim), he shouts for it and the teammate with the ball throws you the alley-oop.'},
  {t:'DUNK',tag:'F',d:'Press F within about 15 ft of the rim. The style is picked at random from the dunks you have unlocked (and switched on in the STORE): tomahawk and two-hand for everyone, extension slam at DUNKING 60, wide tomahawk at 65, cock-back slam at 70, scissor tomahawk at 72, leaning tomahawk and two-hand hammer at 75, heel-kick tomahawk at 78, backscratch hang at 80, double pump at 82, 360 and windmill at 85 (the SUPERMAN is an alley-oop finish: see ALLEY-OOP). Each one has its own take-off distance, hang time and landing: the leaning tomahawk and scissor tomahawk go up from further out (the scissor lands running), the heel-kick tomahawk lands in a deep squat, the double pump and hammer hang on the rim. With a defender at the rim you might posterize him (more often with a high DUNKING rating).'},
  {t:'POST UP',tag:'HOLD G',d:'With the ball, hold G to turn your back and back your defender down. The ball can\'t be stolen, but you move slowly. Let go of G to spin out of the post towards the rim: a better POST MOVES rating makes the spin quicker and knocks the defender off balance for longer.'},
- {t:'PASSING',tag:'E',d:'Press E to pass to the teammate you\'re facing. E also inbounds the ball. The pass type is picked to fit the play:\n• CHEST PASS: the standard two-hand pass.\n• BOUNCE PASS: when a defender is in the passing lane - it skips off the floor under his hands.\n• OVERHEAD PASS: long skip passes, out of the post, inbounds, or over a smaller defender.\n• ONE-HAND PUSH: a quick pass on the move.\n• BEHIND THE BACK: good passers (PASSING 75+) on the move, to a teammate on their off side.\n• BASEBALL PASS: long outlets up the floor, thrown like a baseball.\nEvery pass has a short wind-up while the ball is still in your hands, so it can be stripped before it leaves. Without the ball, E calls for a pass. In career, Space without the ball makes your teammate with the ball shoot.'},
+ {t:'PASSING',tag:'E',d:'Press E to pass to the teammate you\'re facing. E also inbounds the ball. The pass type is picked to fit the play:\n• CHEST PASS: the standard two-hand pass.\n• BOUNCE PASS: when a defender is in the passing lane - it skips off the floor under his hands.\n• OVERHEAD PASS: long skip passes, out of the post, inbounds, or over a smaller defender.\n• ONE-HAND PUSH: a quick pass on the move.\n• BEHIND THE BACK: good passers (PASSING 75+) on the move, to a teammate on their off side.\n• BASEBALL PASS: long outlets up the floor, thrown like a baseball.\n• FLASHY PASSES (PASSING 85+): a flashy passer ALWAYS throws one that fits the play: NO-LOOK, BEHIND THE HEAD, ELBOW PASS, WRAPAROUND, BETWEEN THE LEGS, HOOK PASS and SHOVEL FLIP (plus behind the back). Switch them on / off in the STORE.\nEvery pass has a short wind-up while the ball is still in your hands, so it can be stripped before it leaves. Without the ball, E calls for a pass. In career, Space without the ball makes your teammate with the ball shoot.'},
  {t:'STEAL',tag:'E (DEFENCE)',d:'Swipe at the ball. It works best on a plain dribble; during dribble moves it rarely works, and you can\'t steal it during a spin, a behind-the-back or a post-up. There\'s a short wait between swipes.\nWhen an AI defender reaches in on you, you\'ll see his arm shoot out at the ball (and hear a whoosh). AI defenders stay in front of you and only reach when the ball is exposed on their side of your body, especially while you\'re standing still or slow: keep moving and keep the ball away from them. A missed reach costs them a step.'},
  {t:'JUMP / BLOCK',tag:'SPACE (DEFENCE)',d:'Jump to contest or block. A layup or dunk is only blocked if your hand actually gets to the ball, so get in the shooter\'s path and time your jump so your hand meets the ball on its way up: go a touch early rather than late, because a late jump almost never gets there.\nEven when you don\'t get a hand on it, being IN THE AIR close to a layup or dunk bothers it a lot (the closer you are, the higher your hand gets compared with the ball and the better your BLOCKING, the bigger the effect): layups get a much smaller meter window and lower odds, and dunks can rim out (ALTERED).'},
  {t:'GUARD STANCE',tag:'HOLD G (DEFENCE)',d:'Get low with your hands up: your contests are much bigger but you move slower (less slow with a high PERIMETER DEFENSE rating).'},
@@ -5162,7 +5196,7 @@ const HELP_T=[
 const STORE_T=[
  {n:'LAYUPS',at:'lay',items:()=>LAYV.map((v,i)=>({k:'lay:'+i,n:v.txt,req:v.req||0,d:LAY_D[i]||''}))},
  {n:'DUNKS',at:'dnk',items:()=>DUNKV.map(v=>({k:'dnk:'+v.sty,n:v.n,req:v.req,d:v.d}))},
- {n:'PASSES',at:'pas',items:()=>Object.keys(PASS_T).map(t=>({k:'pas:'+t,n:PASS_NM[t],req:t=='btb'?75:0,d:PASS_D[t]}))},
+ {n:'PASSES',at:'pas',items:()=>Object.keys(PASS_T).map(t=>({k:'pas:'+t,n:PASS_NM[t],req:PASS_REQ[t]||0,d:PASS_D[t]}))},
  {n:'SHOTS',at:'mid',opt:1,items:()=>[{k:'sht:fade',n:'FADEAWAY',req:0,d:'Shooting while moving back: a higher jump, drifting back, leaning away from the defender.'},
   {k:'sht:pfade',n:'POST FADEAWAY',req:0,d:'Out of a post-up: a one-legged turnaround fadeaway, knee up.'}]},
  {n:'JUMP SHOTS',at:'tp',js:1,items:()=>JS.map(j=>({k:'js:'+j.id,n:j.n,req:JS_M[j.id].req,at:JS_M[j.id].at,d:j.d}))}];
@@ -5179,7 +5213,8 @@ const DUNKV=[{sty:0,n:'TOMAHAWK',req:0,d:'One hand, the ball cocked behind the h
  {sty:10,n:'SUPERMAN',req:88,d:'Alley-oop: off two feet from way out, arms in a T, catches it laid out flat, flushes it, lands running.'},
  {sty:15,n:'TWO-HAND HAMMER',req:75,d:'Two-foot, pencil-straight, ball lowered behind the head, hammered down, hangs.'},{sty:17,n:'SCISSOR TOMAHAWK',req:72,d:'One-foot from further out, legs split in the air, tomahawk, runs out.'},
  {sty:16,n:'HEEL-KICK TOMAHAWK',req:78,d:'Two-foot, heels kicked up behind, cocked far back, lands in a deep squat.'},{sty:14,n:'DOUBLE PUMP',req:82,d:'Pumps the ball down to the belly with the knees tucked, then up and slams, hangs.'}];
-const PASS_D={chest:'Two hands from the chest, step in, thumbs-down snap.',bounce:'Two hands pushed down: it skips off the floor under the defender.',over:'Two hands from above the head: skip passes, post entries, over a defender.',
+const PASS_D={nolook:'Eyes and shoulders one way, the ball flung the other.',behead:'Cocked behind the head and flicked over the far shoulder.',elbow:'Behind the back, then knocked out sideways with the other elbow.',
+ wrap:'A lunge and a low one-hander swung round the defender, off the floor.',legs:'Pushed down through his own legs to a man behind him.',hook:'One arm swept out wide and over the top: long outlets and out of the post.',flip:'An underhand flick from the hip on the drive.',chest:'Two hands from the chest, step in, thumbs-down snap.',bounce:'Two hands pushed down: it skips off the floor under the defender.',over:'Two hands from above the head: skip passes, post entries, over a defender.',
  one:'A quick one-handed push on the move.',btb:'The ball hand wraps behind the back to a teammate on the other side.',base:'Long outlet thrown like a baseball, arm cocked by the ear.'};
 function animClean(a){const ok=new Set(STORE_T.flatMap(t=>t.items().map(i=>i.k)));const off=a&&Array.isArray(a.off)?[...new Set(a.off.filter(k=>typeof k=='string'&&ok.has(k)))]:[];return{off}}
 const animOn=(p,k)=>!(p&&p.build&&p.build.anim&&p.build.anim.off&&p.build.anim.off.includes(k));
@@ -5221,7 +5256,7 @@ function spvReset(o,x,y,ang){Object.assign(o,{x,y,vx:0,vy:0,z:0,vz:0,air:0,jph:0
 function spvStart(k){const p=SPV.p,q=SPV.q,[c,v]=k.split(':');SPV.key=k;SPV.lob=null;SPV.t=0;SPV.done=0;SPV.bf=null;SPV.slam=0;SPV.c=c;SPV.v=v;q.m.visible=c=='pas';
  if(c=='dnk'){const sty=+v,st=DKS[sty]||DKS[0];spvReset(p,SPV_H-230,HY+12,Math.PI/2);p.vx=150;SPV.sty=sty;SPV.ph='run'}
  else if(c=='lay'){const L=LAYV[+v]||LAYV[0];spvReset(p,SPV_H-230,HY+(L.rv?70:22),Math.PI/2);p.vx=150;p.vy=L.rv?-14:-4;SPV.ph='run'}
- else if(c=='pas'){const mv=v=='one'||v=='btb';spvReset(p,mv?SPV_H-200:SPV_H-170,HY,Math.PI/2);if(mv)p.vx=95;spvReset(q,v=='btb'?SPV_H-60:SPV_H-20,v=='btb'?HY-110:HY,v=='btb'?0:-Math.PI/2);q.m.visible=true;SPV.ph='set'}
+ else if(c=='pas'){const mv=['one','btb','nolook','elbow','flip','legs','wrap'].includes(v),sd=['btb','elbow','behead','legs'].includes(v);spvReset(p,mv?SPV_H-200:SPV_H-170,HY,Math.PI/2);if(mv)p.vx=95;spvReset(q,sd?SPV_H-60:SPV_H-20,sd?HY-110:HY,sd?0:-Math.PI/2);q.m.visible=true;SPV.ph='set'}
  else if(c=='js'){spvReset(p,SPV_H-170,HY,Math.PI/2);p.jsO=v;p._js=null;SPV.ph='set'}
  else{const post=v=='pfade';spvReset(p,post?SPV_H-115:SPV_H-140,HY,post?-Math.PI/2:Math.PI/2);if(!post)p.vx=-55;p.pst=post?.9:0;SPV.ph='set'}p.jsO=c=='js'?v:null}
 function spvDunkK(p,sty){const st=DKS[sty]||DKS[0],ft=st.ft||(sty==2||sty==5||sty==6?2:1),k={t:0,f0:.22,ph:0,pt:0,pf:0,ta:0,age:0,sx:p.x,sy:p.y,zE:Math.max(8,103-75*p.ht),js:[1,.92,.8,.7,.6][p.i]||.8,
@@ -5247,9 +5282,9 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
     else if(!p.lay&&!SPV.bf){const a=SPV.ball.position.clone();spvFly(a,new THREE.Vector3(88.8,10.3,32),.45,3)}}
    else{vert(p,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.exp(-dt*3);p.vy*=Math.exp(-dt*3);SPV.done+=dt}}}
  else if(c=='pas'){const ty=SPV.v,P=PASS_T[ty]||PASS_T.chest;p.x+=p.vx*dt;
-  if(SPV.ph=='set'&&SPV.t>=.45){p.ps={ty,k:ty=='btb'?-1:1,t:0,wu:P.wu,d:P.wu+.38,go:0,fa:null};SPV.ph='wind'}
+  if(SPV.ph=='set'&&SPV.t>=.45){p.ps={ty,k:['btb','elbow','behead','legs'].includes(ty)?-1:1,t:0,wu:P.wu,d:P.wu+.38,go:0,fa:null};SPV.ph='wind'}
   else if(SPV.ph=='wind'){const ps=p.ps;ps.t+=dt;if(!ps.go&&ps.t>=ps.wu){ps.go=1;const a=SPV.ball.position.clone(),b=spvHand(q,1,_SVB).clone();b.y+=.2;
-    const L=Math.hypot(q.x-p.x,q.y-p.y);spvFly(a,b,Math.max(.16,L/(480+L*.5)/(P.sp||1)),ty=='over'||ty=='base'?Math.max(1.5,(P.zc||60)/10-5):.4,ty=='bounce')}
+    const L=Math.hypot(q.x-p.x,q.y-p.y);spvFly(a,b,Math.max(.16,L/(480+L*.5)/(P.sp||1)),ty=='over'||ty=='base'||ty=='hook'?Math.max(1.5,(P.zc||60)/10-5):.4,!!P.bnc)}
    if(ps.t>=ps.d){p.ps=null;SPV.ph='after'}}
   else if(SPV.ph=='after'){p.vx*=Math.exp(-dt*3);SPV.done+=dt}}
  else if(c=='sht'||c=='js'){const post=SPV.v=='pfade',js=c=='js';
@@ -5295,7 +5330,7 @@ const AN_CAT=[
    {n:'ATHLETIC TWO-HANDERS',k:[15,12,14],r:[70,50,85]},{n:'LONG TOMAHAWKS',k:[5,17,16],r:[65,90,75]},{n:'SPINS & WINDMILLS',k:[3,11],r:[95,45,88]},{n:'SUPERMAN',k:[10],r:[90,99,90]}].map(p=>Object.assign(p,{k:p.k.map(s=>'dnk:'+s)}))},
   {n:'LAYUPS',at:'lay',pk:[{n:'BASIC LAYUPS',k:[0,5]},{n:'TOUCH FINISHES',k:[1,4,2]},{n:'EURO STEP',k:[6]},{n:'REVERSE LAYUPS',k:[3,7]}].map(p=>Object.assign(p,{k:p.k.map(i=>'lay:'+i)}))}]},
  {n:'SHOOTING',ic:'sht',sub:[{n:'JUMP SHOTS',at:'tp',pk:JS.map(j=>({n:j.n,k:['js:'+j.id]}))},{n:'FADEAWAYS',at:'mid',pk:[{n:'FADEAWAY',k:['sht:fade']},{n:'POST FADEAWAY',k:['sht:pfade']}]}]},
- {n:'PASSING',ic:'pas',sub:[{n:'PASSES',at:'pas',pk:[{n:'BASIC PASSES',k:['pas:chest','pas:bounce','pas:over']},{n:'ONE-HAND PASSES',k:['pas:one','pas:base']},{n:'FLASHY PASSES',k:['pas:btb']}]}]}];
+ {n:'PASSING',ic:'pas',sub:[{n:'PASSES',at:'pas',pk:[{n:'BASIC PASSES',k:['pas:chest','pas:bounce','pas:over']},{n:'ONE-HAND PASSES',k:['pas:one','pas:base']},{n:'FLASHY PASSES',k:['pas:btb','pas:nolook','pas:behead','pas:elbow','pas:wrap','pas:legs','pas:hook','pas:flip']}]}]}];
 const dkRate=r=>Math.round(.4*r[0]+.3*r[1]+.3*r[2]);
 let AN_IT=null;const anItem=k=>(AN_IT||(AN_IT=Object.fromEntries(STORE_T.flatMap(t=>t.items().map(i=>[i.k,Object.assign({at:t.at},i)])))))[k];
 const anGrp=k=>k=='dnk:4'||k.startsWith('sht:')?null:/^dnk:(6|7|8|10)$/.test(k)?'oop':k.split(':')[0],AN_GN={dnk:'DUNK',oop:'ALLEY-OOP',lay:'LAYUP',pas:'PASS'}; // each group keeps one unlocked animation ON (the posterizer and fadeaways are optional)
