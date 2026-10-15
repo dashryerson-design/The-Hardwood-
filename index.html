@@ -122,7 +122,7 @@ function jsOf(p){if(p.jsO&&JS_M[p.jsO])return JS_M[p.jsO];if(p._js&&p._jsB===p.b
  else{const nm=(tmOf(p).pl||[])[p.i];if(JS_PL[nm])id=JS_PL[nm];else{const ok=JS.filter(j=>!j.sig&&jsRt(p,JS_M[j.id])>=JS_M[j.id].req);let h=0;for(const c of String(nm||p.i))h=(h*31+c.charCodeAt(0))>>>0;id=ok[Math.max(0,ok.length-1-h%Math.min(4,ok.length))].id}} // AI: one of the best few he qualifies for
  p._jsB=p.build;return p._js=JS_M[id]}
 function jsApply(p){p._js=null;p.st=.55*jsOf(p).ms} // (the shot meter's speed follows his jumper)
-const SF=['x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
+const SF=['x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
 let AC;function beep(f,d=.1,t='sine',v=.05){try{AC=AC||new AudioContext();const o=AC.createOscillator(),a=AC.createGain();o.type=t;o.frequency.value=f;a.gain.value=v;o.connect(a);a.connect(AC.destination);o.start();a.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
 const say=(s,c='#fff')=>{msg={s,t:1.5,c}};
 const widFor=(t,i)=>{const w=TEAMS[TI[t]].wd;return w&&w[i]||1}; // (no team uses wd any more - body shape comes from body types, see BODY) // per-player body-width override: A.Sanad is built much wider (1.4) than anyone else (created players top out at ~1.19)
@@ -341,7 +341,7 @@ function repPlan(){const c=RP.clip,w=RP.who,wt=w.team,wk=w.k,n=SF.length,c0=c[0]
  else{add((tBall||rel)+.12,'shotFront',.3,{who:w,pre:.9,ts:(tBall||rel)-.32});add(fin+.2,'flight',.62,{who:w});add(te,'react',1,{who:w})}
  if(!segs.length)segs.push({a:t0,b:te,ty:'react',sp:1,who:w});
  return{t0,te:segs[segs.length-1].b,segs,kind}}
-const REP_DISC=new Set(['jph','air','side','ls']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
+const REP_DISC=new Set(['jph','air','side','ls','sfs']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
 function repLo(a,b,u){if(!a)return a;const o=Object.assign({},a);if(b&&b.ph===a.ph&&b.sty===a.sty)for(const k of REP_LERP)if(typeof a[k]=='number'&&typeof b[k]=='number')o[k]=a[k]+(b[k]-a[k])*u;return o} // (a move's own clock, smoothed between frames)
 function repStep(dt){const c=RP.clip,D=RP.dir;RP.rdt=dt;let st=0;
  if(RP.ct==null){RP.ct=D.t0;st=1}
@@ -1488,7 +1488,7 @@ function gpOffT(p,ai,role,bh,dv,side,dt){const t=p.team,H=hx(t),D=dr(t),s=GP[t],
   if(ai.pr){const q=ai.pr;q.t+=dt;if(B.h!==q.h||B.mode!='held'){ai.pr=null;ai.prCd=1.5;return null}
    const dd=TM[1-t][gdf(1-t,q.h.k)]||near(q.h,TM[1-t],90),ux=H-q.h.x,uy=HY-q.h.y,ul=Math.hypot(ux,uy)||1,px=-uy/ul*D,py=ux/ul*D; // (px,py) = sideways, +y for side +1 at either end
    if(q.ph==0){if(!dd||q.t>4){ai.pr=null;ai.prCd=1.5;return null}const sx=dd.x+px*q.s*21-ux/ul*4,sy=dd.y+py*q.s*21-uy/ul*4;if(Math.hypot(sx-p.x,sy-p.y)<13){q.ph=1;q.t=0;gpLbl(p,'SCREEN')}return[sx,sy,150]}
-   if(q.ph==1){p.vx*=.6;p.vy*=.6;const ha=q.h.ai||(q.h.ai={t:0,tx:q.h.x,ty:q.h.y,cut:0,ct:2,cx:0,cy:0,dv:0});ha.scr={s:q.s,t:T,by:p};if(q.t>.9||Math.hypot(H-q.h.x,HY-q.h.y)<Math.hypot(H-p.x,HY-p.y)-10){q.ph=2;q.t=0;gpLbl(p,tpV(p)>=70?'POP':'ROLL')}return[p.x,p.y,0]}
+   if(q.ph==1){p.vx*=.6;p.vy*=.6;p.scrS=T;const ha=q.h.ai||(q.h.ai={t:0,tx:q.h.x,ty:q.h.y,cut:0,ct:2,cx:0,cy:0,dv:0});ha.scr={s:q.s,t:T,by:p};if(q.t>.9||Math.hypot(H-q.h.x,HY-q.h.y)<Math.hypot(H-p.x,HY-p.y)-10){q.ph=2;q.t=0;gpLbl(p,tpV(p)>=70?'POP':'ROLL')}return[p.x,p.y,0]}
    if(q.t>1.7){ai.pr=null;ai.prCd=1.5+Math.random()*1.5;return null}
    const c=tpV(p)>=70?lc(p,R3+16,q.s*110):lc(p,42,q.s*16);return[c[0],c[1],150]}}
  // THE HUB sets up at the top of the key / an elbow
@@ -1569,6 +1569,8 @@ function offBall(p,i,dt){
  ai.t-=dt;ai.ct-=dt;ai.cut=Math.max(0,ai.cut-dt);
  const dv=driving(bh)?1:0,side=bh?(toLoc(p,bh.x,bh.y)[1]>=0?1:-1):(p.y>=HY?1:-1);
  if(dv!=ai.dv){ai.dv=dv;ai.t=0} // a teammate starts (or stops) driving: re-think straight away
+ {const pT=B.mode!='shot'?plyT(p):null;if(pT){const dx=pT[0]-p.x,dy=pT[1]-p.y,dl=Math.hypot(dx,dy)||1,mv=dl>6&&pT[2]?Math.min(pT[2]*spdM(p)*trk(p),dl*3.2):0; // SET PLAY: his part in it
+  p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);const fx=(bh?bh.x:H)-p.x,fy=(bh?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;ai.t=Math.min(ai.t,.15);return}}
  const gp=GP[p.team],sp_=gp?gk(p.team,'space'):0,mv_=gp?gk(p.team,'move'):0,ck_=gp?gk(p.team,'cut'):0;if(ai.pu)ai.pu=null; // (his post-up ended when he gave the ball up)
  const drA=isDR(p)&&Math.hypot(H-p.x,HY-p.y)<DR_AI.half&&!(bh&&Math.hypot(H-bh.x,HY-bh.y)>DR_AI.half);if(drA&&bh&&B.mode=='held'&&!dv){ // (half court only: on the break he runs like everyone else)
  ai.drT=(ai.drT==null?.6:ai.drT)-dt;if(ai.drT<=0){ai.drT=DR_AI.reloc[0]+Math.random()*DR_AI.reloc[1];ai.t=0;ai.rel=1;ai.cut=0}} // D.Ryerson: always on the move to a new spot on the arc
@@ -1619,6 +1621,100 @@ function offBall(p,i,dt){
  p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);
  const fx=(bh&&!(ai.cut>0)?bh.x:H)-p.x,fy=(bh&&!(ai.cut>0)?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;
 }
+// ===== SET PLAYS (v1.74): in the half court an AI handler calls a play from the PLAYBOOK and the AI players on the floor run it, like a coach's diagram.
+// ROLES: 1 = the handler when it's called, 2-5 = his teammates on the floor in position order (PG -> C), so 4 and 5 are the bigs. Spots are local court coords
+// [al, lt] (al = out from the hoop, lt = sideways; lt is mirrored when the play is run to the other side). A phase = {d: seconds, b: role who must have the ball
+// for it to go on (else the play is over), r: {role: action}}. Actions: go [al,lt] (move there - the handler dribbles there) · sp speed (cuts ~150) ·
+// scr role (set a SCREEN on that man's defender, then stand) · pass [roles] (the handler hits the first one who is open) · give role (entry pass: he passes as
+// soon as the lane is clear) · hand role (dribble hand-off: dribble at him, hand it over as he comes past) · drive (attack the rim; the pass roles are his kick-outs).
+// A role nobody plays (3v3, 4v4) is skipped; a play needs its `need` roles. Your own player never gets moved, but the plays still look for you.
+// The play ends after its last phase, when the shot clock gets short (under 6), on a shot / turnover / loose ball, or when the ball isn't where the play expects.
+const PLAYS=[
+ {n:'FLASH CUT',need:[1,2,3,4,5],w:{cut:2},ph:[
+  {d:1.1,r:{1:{go:[255,0]},2:{go:[175,205]},3:{go:[95,-200]},4:{go:[105,-75]},5:{go:[85,62]}}},
+  {d:1.5,r:{1:{go:[250,0],pass:[3,2]},3:{go:[120,200],sp:155},5:{scr:3},2:{go:[105,-210],sp:155},4:{scr:2}}},
+  {d:1.3,r:{1:{go:[240,0],pass:[3,2,5]},5:{go:[160,30],sp:145},4:{go:[66,-52]},3:{go:[150,210]},2:{go:[140,-210]}}}]},
+ {n:'ISO',need:[1,2],w:{star:3},ph:[
+  {d:1.3,r:{1:{go:[225,110]},2:{go:[60,-215]},3:{go:[165,230]},4:{go:[190,-55]},5:{go:[60,215]}}},
+  {d:1.2,r:{1:{drive:1,pass:[4,2,3,5]}}}]},
+ {n:'FAKE HANDOFF',need:[1,2,4],w:{hub:2,cut:1},ph:[
+  {d:1.1,r:{1:{go:[255,-20]},2:{go:[175,-205]},3:{go:[175,215]},4:{go:[205,-70]},5:{go:[80,60]}}},
+  {d:2.2,r:{1:{give:4}}},
+  {d:1.4,b:4,r:{1:{scr:2},2:{go:[45,-35],sp:155},4:{pass:[2]}}},
+  {d:1.2,b:4,r:{1:{go:[75,-215]},2:{go:[60,-90]},4:{pass:[2,1,3,5]}}}]},
+ {n:'DRIBBLE HANDOFF',need:[1,2,4],w:{hub:2,move:1},ph:[
+  {d:1.1,r:{1:{go:[250,0]},2:{go:[150,-205]},3:{go:[175,215]},4:{go:[215,-60]},5:{go:[100,90]}}},
+  {d:2.2,r:{1:{give:4}}},
+  {d:2.4,b:4,r:{1:{scr:2},2:{go:[200,-110],sp:150},4:{hand:2},5:{go:[110,30],sp:140}}},
+  {d:1.3,b:2,r:{2:{drive:1,pass:[5,1,3]}}}]},
+ {n:'SPAIN PICK AND ROLL',need:[1,2,4,5],w:{pnr:3},ph:[
+  {d:1.1,r:{1:{go:[250,30]},2:{go:[40,-215]},3:{go:[40,215]},4:{go:[175,-80]},5:{go:[90,60]}}},
+  {d:1.4,r:{1:{go:[240,40]},5:{scr:1},4:{scr:2},2:{go:[215,-140],sp:155}}},
+  {d:1.6,r:{1:{go:[200,140],pass:[5,2,3]},5:{go:[40,10],sp:150},4:{go:[175,-45]}}}]},
+ {n:'STACK',need:[1,2,4,5],w:{three:2,move:1},ph:[
+  {d:1.3,r:{1:{go:[260,0]},5:{go:[60,-58]},2:{go:[85,-62]},4:{go:[110,-62]},3:{go:[175,215]}}},
+  {d:1.2,r:{2:{go:[180,-205],sp:160},1:{pass:[2]}}},
+  {d:1.5,r:{1:{go:[200,30],pass:[2,5,3]},4:{scr:5},5:{go:[150,-75],sp:145},3:{go:[80,215]}}}]},
+ {n:'KANSAS',need:[1,3,4,5],w:{pnr:2,post:1},ph:[
+  {d:1.2,r:{1:{go:[215,120]},4:{go:[235,60]},3:{go:[175,-205]},5:{go:[80,62]},2:{go:[170,215]}}},
+  {d:1.3,r:{4:{scr:1},1:{go:[215,100]}}},
+  {d:1.6,r:{1:{go:[225,-110],pass:[4,5,3,2]},4:{go:[60,-15],sp:150},5:{go:[150,70],sp:145},3:{go:[60,-215]},2:{go:[200,200]}}}]},
+ {n:'GIVE AND GO',need:[1,2,3],w:{cut:1},ph:[
+  {d:1,r:{1:{go:[250,0]},2:{go:[190,-160]},3:{go:[130,150]},4:{go:[70,170]},5:{go:[80,-60]}}},
+  {d:2.2,r:{1:{give:2}}},
+  {d:1.5,b:2,r:{3:{scr:1},1:{go:[45,15],sp:155},2:{pass:[1,3]}}}]}];
+const PLY=[null,null],PLYE=[-99,-99]; // the play each team is running · when its last one ended
+const plyRole=(P,p)=>{for(const k in P.R)if(P.R[k]===p)return+k;return 0};
+function plyStart(p){const t=p.team,F=TM[t];if(HC||F.length<3||PLY[t]||T-PLYE[t]<3.5)return false;
+ const R={1:p};F.filter(q=>q!==p).sort((a,b)=>a.i-b.i).forEach((q,j)=>R[j+2]=q);
+ const ok=PLAYS.filter(P=>P.need.every(r=>R[r])),w=ok.map(P=>{let v=1;for(const k in P.w)v+=P.w[k]*Math.max(0,gk(t,k));return v}),sw=w.reduce((a,b)=>a+b,0);if(!ok.length){PLYE[t]=T;return false}
+ let r=Math.random()*sw,i=0;while(r>w[i]&&i<ok.length-1)r-=w[i++];
+ const lt=toLoc(p,p.x,p.y)[1];PLY[t]={P:ok[i],ph:0,t:0,s:Math.abs(lt)>50?Math.sign(lt)*(ok[i].n=='ISO'||ok[i].n=='KANSAS'?1:-1):(Math.random()<.5?-1:1),R};gpLbl(p,ok[i].n);return true}
+function plyEnd(t){const P=PLY[t];if(!P)return;for(const k in P.R){const q=P.R[k];q.plG=null;q.plS=null}PLY[t]=null;PLYE[t]=T}
+function plyStep(dt){for(let t=0;t<2;t++){const P=PLY[t];if(!P)continue;
+ if(off!=t||!(B.mode=='held'||B.mode=='pass')||B.mode=='held'&&B.h.team!=t||shot<6||TM[t].some(q=>q.dunk||q.lay||q.sj>0)){plyEnd(t);continue}
+ P.t+=dt;const ph=P.P.ph[P.ph];let go_=P.t>=ph.d;for(const k in ph.r){const a=ph.r[k],to=a.give||a.hand;if(to&&B.mode=='held'&&B.h===P.R[to]&&P.R[to]!==P.R[k])go_=true} // (an entry pass / hand-off: on to the next phase as soon as it's caught)
+ if(!go_)continue;
+ if(B.mode=='pass'){P.t=ph.d;continue} // (a pass in the air: wait for the catch)
+ P.ph++;P.t=0;const nx=P.P.ph[P.ph];if(!nx||nx.b&&B.h!==P.R[nx.b]){plyEnd(t);continue}for(const k in P.R)P.R[k].plS=null}}
+// where the play wants player p this frame: [x, y, speed] (null = not in a play / nothing for him: his normal AI)
+function plyT(p){const P=PLY[p.team];if(!P||isHum(p))return null;const r=plyRole(P,p),a=P.P.ph[P.ph].r[r];
+ if(!a){if(p.plG&&B.h!==p)return[p.plG[0],p.plG[1],100];return null} // nothing new for him this phase: hold his spot
+ if(a.scr){const q=P.R[a.scr];if(!q){return null}if(p.plS){p.scrS=T;return[p.plS[0],p.plS[1],0]} // SCREEN: get on the defender's line, then stand
+  const dd=TM[1-p.team][gdf(1-p.team,q.k)]||near(q,TM[1-p.team],120);if(!dd)return null;const qa=P.P.ph[P.ph].r[plyRole(P,q)],qd=qa&&qa.go?lc(q,qa.go[0],qa.go[1]*P.s):[hx(p.team),HY];
+  const ux=qd[0]-dd.x,uy=qd[1]-dd.y,ul=Math.hypot(ux,uy)||1,sx=dd.x+ux/ul*24,sy=dd.y+uy/ul*24;
+  if(Math.hypot(sx-p.x,sy-p.y)<14||P.t>P.P.ph[P.ph].d*.6){p.plS=[p.x,p.y];if(p.gpl==null||p.gpl.s!='SCREEN'||p.gpl.t<=0)gpLbl(p,'SCREEN')}return[sx,sy,160]}
+ if(a.hand&&B.h===p){const q=P.R[a.hand];return q?[q.x,q.y,120]:null}
+ if(a.go){const c=lc(p,a.go[0],a.go[1]*P.s);p.plG=c;return[c[0],c[1],a.sp||(B.h===p?112:125)]}
+ return p.plG&&B.h!==p?[p.plG[0],p.plG[1],100]:null}
+// the handler's reads inside the play: true = he acted (or is just running the play), false = his normal read
+function plyH(p,ai,d){const t=p.team;if(!PLY[t]&&!(ai.drive>0)&&d>200&&d<430&&shot>10&&!brkOn(t)&&!ai.pu&&Math.random()<.85)plyStart(p);
+ const P=PLY[t];if(!P)return false;const r=plyRole(P,p),a=P.P.ph[P.ph].r[r];if(!a){p.think=.12;return true}
+ const opn=q=>q&&q!==p&&q.stun<=0&&!q.dunk&&laneClr(t,p.x,p.y,q.x,q.y)>=28&&cont(q)<.42&&Math.hypot(q.x-p.x,q.y-p.y)>55;
+ if(a.give){const q=P.R[a.give];if(q&&laneClr(t,p.x,p.y,q.x,q.y)>=24&&Math.hypot(q.x-p.x,q.y-p.y)>55){pass(p,q);return true}p.think=.12;return true}
+ if(a.hand){const q=P.R[a.hand];if(q&&Math.hypot(q.x-p.x,q.y-p.y)<48){pass(p,q,{ty:'one'});gpLbl(p,'HAND OFF');return true}p.think=.08;return true}
+ if(a.pass&&P.t>.35)for(const k of a.pass)if(opn(P.R[k])&&Math.random()<.75){pass(p,P.R[k]);return true}
+ if(a.drive){ai.drive=1.5;ai.dy=toLoc(p,p.x,p.y)[1]*.3;plyEnd(t);return true}
+ if(cont(p)<WOPEN&&shotEV(p,p.x,p.y,cont(p))>.95)return false; // wide open with a great look: take it, play or not
+ p.think=.12+Math.random()*.08;return true}
+// ===== SCREENS: an attacker standing set as a screener (scrS this frame) catches a chasing defender who runs into him (not the screener's own man).
+// How long he's held = (0.3 + 0.7 x the SCREENER's STRENGTH) x (1.15 - 0.75 x the DEFENDER's PERIMETER D) x sqrt(mass ratio): a strong big on a poor defender
+// holds him over a second; an elite perimeter defender on a weak screen is through in about a tenth. While caught he can't go through the screener - he slides
+// round him, at 30% of his speed (perimeter D 25) up to 90% (100). A screener much stronger (strength 0-1 more than .45 above the defender's perimeter D 0-1) also knocks him back a step (bumped).
+const SCR={r:30,again:1.5};
+function scrStep(dt){const t=off,S=TM[t].filter(q=>T-(q.scrS||-9)<.12&&B.h!==q);
+ for(const p of TM.flat()){p.scw=ex(p.scw||0,S.includes(p)?1:0,dt,9);const h=p.scrH;p.sfw=h?Math.sin(Math.min(1,h.t/h.d)*Math.PI):0;p.sfs=h?h.sd*(h.bp?2:1):0}
+ for(const d of TM[1-t]){const h=d.scrH;
+  if(h){h.t+=dt;if(h.t>=h.d||d.stun>0){d.scrX={s:h.s,T};d.scrH=null;continue}
+   const s=h.s,nx=d.x-s.x,ny=d.y-s.y,nl=Math.hypot(nx,ny)||1,ux=nx/nl,uy=ny/nl,vin=-(d.vx*ux+d.vy*uy),sp=Math.hypot(d.vx,d.vy);
+   if(vin>0){const tx=-uy*h.sd,ty=ux*h.sd,k=(.3+.6*h.pn)*sp;d.vx=tx*k+ux*12;d.vy=ty*k+uy*12} // can't go through him: slides round (better perimeter D = faster)
+   continue}
+  if(d.stun>0||d.air||d.dunk)continue;
+  for(const s of S){if(TM[1-t][gdf(1-t,s.k)]===d||d.scrX&&d.scrX.s===s&&T-d.scrX.T<SCR.again)continue;const dx=s.x-d.x,dy=s.y-d.y,l=Math.hypot(dx,dy);
+   if(l>SCR.r||d.vx*dx+d.vy*dy<=0)continue; // only one running INTO him
+   const sn=Math.max(0,Math.min(1,(((s.rt&&s.rt.str)||50)-25)/75)),pn=Math.max(0,Math.min(1,(((d.rt&&d.rt.pd)||50)-25)/75)),
+    du=(.3+.7*sn)*(1.15-.75*pn)*Math.sqrt(Math.max(.6,Math.min(1.6,bodyM(s)/bodyM(d)))),sd=dx*d.vy-dy*d.vx>0?1:-1,bp=sn-pn>.45;
+   d.scrH={s,t:0,d:du,pn,sd,bp};s.scrJ=T;if(bp){d.vx=-dx/(l||1)*70;d.vy=-dy/(l||1)*70}if(bp)gpLbl(d,'SCREENED');break}}}
 // ---- on the ball (CPU handler): bring it up, then read the floor - shoot if it is a good shot, pass to a better one, otherwise use moves / a drive to create
 // FAST BREAK tuning: pass = chance he throws the hit-ahead pass when a runner is open (a fast-paced game plan raises it towards 1), think = how often he re-reads (s)
 const FBRK={pass:.85,think:[.15,.1]};
@@ -1628,8 +1724,9 @@ function cpuH(p,dt){
  ai.drive=Math.max(0,(ai.drive||0)-dt);
  const gp=GP[p.team],brk=!!gp&&gk(p.team,'pace')>0&&gBrk(p.team); // the team's game plan / its fast-break window
  if(gp&&ai.pu){if(!p.fire&&!p.lay&&!p.dunk){gpPost(p,dt);return}ai.pu=null} // backing his man down in the post
- let tx,ty,spd=108;
- if(bc){const c=lc(p,300,lt*.4+Math.sin(T*.9+p.n)*60);tx=c[0];ty=c[1];spd=gp?(brk?128+45*gk(p.team,'pace'):near(p,TM[1-p.team],70)?128:128-25*Math.max(0,gk(p.team,'slow'))):128} // push the ball up the middle (sprint it on the break, walk it up when patient)
+ let tx,ty,spd=108;const pT=!bc&&!(ai.drive>0)?plyT(p):null;
+ if(pT){tx=pT[0];ty=pT[1];spd=pT[2]} // running the set play: dribble to his spot
+ else if(bc){const c=lc(p,300,lt*.4+Math.sin(T*.9+p.n)*60);tx=c[0];ty=c[1];spd=gp?(brk?128+45*gk(p.team,'pace'):near(p,TM[1-p.team],70)?128:128-25*Math.max(0,gk(p.team,'slow'))):128} // push the ball up the middle (sprint it on the break, walk it up when patient)
  else if(ai.drive>0){const c=lc(p,40,ai.dy);tx=c[0];ty=c[1];spd=122}
  else if(role=='PM'||role=='WG'){const c=lc(p,170+Math.sin(T*.5+p.n)*30,Math.sin(T*.9+p.n)*110);tx=c[0];ty=c[1]}
  else{tx=p.x;ty=p.y} // shooters and bigs who catch it: stay set
@@ -1660,6 +1757,7 @@ if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoeve
    else{let bd=1e9;for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);if(qd<d-60&&Math.hypot(q.x-p.x,q.y-p.y)<460&&laneClr(p.team,p.x,p.y,q.x,q.y)>26&&qd<bd){bd=qd;tg=q}}}
    if(tg&&r<.95)pass(p,tg)}
   return}
+ if(!late&&plyH(p,ai,d))return; // SET PLAY: call one / run it (his passes, hand-offs and drives come from the play)
  if(gp&&gpHalf(p,ai,r,d,lt,late))return; // the game plan's read first: a post-up, early offence, the pick and roll
  if(d<130){if(((p.rt&&p.rt.dnk)||50)>=62&&r<.6)startDunk(p);else if(layOK(p))startLayup(p);else release(p,qpick(c,p));return}
  // D.Ryerson judges a contest through his Signatures (Deadeye takes the sting out of it, Off-Balance Artist out of shooting off a move), so he rises up over a hand others pass on
@@ -1728,7 +1826,7 @@ function step(dt){
  if(S=='qend'){qt-=dt;if(qt<=0)nextQ();return}
  if(S!='play')return;
  if(CHK.t>0){CHK.t-=dt;if(CHK.t<=0)TM.forEach(t_=>t_.forEach(q=>q.ckT=T));if(B.h){B.x=B.h.x+B.h.fx*7;B.y=B.h.y+B.h.fy*7;B.z=36*B.h.ht}return} // 1v1 check-ball pause: everyone holds still
- RT+=dt;for(const q of TM[0].concat(TM[1]))if(q.sgp&&q.sgp.a>0)q.sgp.a-=dt;if(GP[0]||GP[1])gpTick(dt);RP.show-=dt;if(RP.show<=0&&!RP.mk)RP.has=0;if(!HC)snap();else{RP.has=RP.mk=0}
+ RT+=dt;for(const q of TM[0].concat(TM[1]))if(q.sgp&&q.sgp.a>0)q.sgp.a-=dt;if(GP[0]||GP[1])gpTick(dt);else for(const q of TM.flat())if(q.gpl&&q.gpl.t>0)q.gpl.t-=dt;RP.show-=dt;if(RP.show<=0&&!RP.mk)RP.has=0;if(!HC)snap();else{RP.has=RP.mk=0}
  const lv=B.mode=='held'||B.mode=='pass'||B.mode=='shot'||B.mode=='loose';
  if(lv){if(!HC)qc-=dt;if(B.mode=='held')shot-=dt}
  if(qc<=0){qc=0;endQ();return}
@@ -1739,7 +1837,7 @@ function step(dt){
   if(Math.hypot(g.x-hp.x,g.y-hp.y)>55&&Math.hypot(H-g.x,HY-g.y)>hb+8){let b=null,bs=160;for(const d of dl)if(d!==g&&Math.hypot(H-d.x,HY-d.y)<hb+30){const k=Math.hypot(d.x-hp.x,d.y-hp.y);if(k<bs){bs=k;b=d}}if(b)g=b}
   DF.g=g;if(hb<230+(GP[1-hp.team]?110*gk(1-hp.team,'pack'):0)){let b=null,bs=1e9;for(const d of dl)if(d!==g){const k=Math.hypot(H-d.x,HY-d.y);if(k<bs){bs=k;b=d}}DF.h=b}}
  CH=[];if(B.mode=='loose'&&!HC)for(const tm of TM)tm.slice().sort((a,b)=>Math.hypot(a.x-B.x,a.y-B.y)-Math.hypot(b.x-B.x,b.y-B.y)).slice(0,2).forEach(q=>CH.push(q));
- CALL.t-=dt;if(CALL.t<=0||off!=0)CALL.n=0;TRB.t-=dt;
+ CALL.t-=dt;if(CALL.t<=0||off!=0)CALL.n=0;TRB.t-=dt;plyStep(dt);
  if(CLK())ctl=myP().k;else if(off==1||B.mode=='loose'){let bi=ctl,bd=1e9;TM[0].forEach((p,i)=>{const k=Math.hypot(p.x-B.x,p.y-B.y)-(i==ctl?30:0);if(k<bd){bd=k;bi=i}});ctl=bi}
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
   if(p.dunk){dunkStep(p,dt);return}
@@ -1765,6 +1863,7 @@ function step(dt){
   else if(t==off){if(p===hp&&B.mode=='held'&&B.h===p&&(t==1||AUTO||CLK()))cpuH(p,dt);else if(B.mode=='inbound'&&p===B.h){p.vx=p.vy=0;p.fx=-dr(off);p.fy=0}else if(B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt);else offBall(p,i,dt)}
   else defAI(p,i,dt,hp);
  }));
+ scrStep(dt); // SCREENS: a defender who runs into a set screen is held / slides round it
  const ib=B.mode=='inbound'?B.h:null;
  for(const p of TM[0].concat(TM[1])){if(!p.dunk){if(p.air){p.vx=p.avx;p.vy=p.avy}p.x+=p.vx*dt;p.y+=p.vy*dt}if(p!==ib){p.x=Math.max(8,Math.min(932,p.x));p.y=Math.max(8,Math.min(632,p.y))}}
  // BODY CONTACT between opponents: nobody runs through anybody. The one driving into the contact can only move the other at bumpRate (set by
@@ -2851,6 +2950,12 @@ function pose(p,dt){
    if(p.swt!=null){const u=Math.min(1,(T-p.swt)/BLK.swat),sw=Math.sin(u*Math.PI);q[S_+'e']=-.05-.55*sw;q[S_+'w']=.3+1.1*sw;q[S_+'x']+=.12*sw;q.r=Math.max(q.r,40)}}}
  if(!d&&!air&&(p.pst||0)>.01){const w=p.pst;q.Lg-=.18*w;q.Rg+=.18*w;q.lean+=.12*w}
  if(!d&&!air&&!shoot&&!p.lay&&(p.grd||0)>.01){const w=p.grd;q.Lx=mx(q.Lx,-1.45,w);q.Rx=mx(q.Rx,-1.45,w);q.Le=mx(q.Le,-.5,w);q.Re=mx(q.Re,-.5,w);q.Lz=mx(q.Lz,-.3,w);q.Rz=mx(q.Rz,.3,w);q.Lg-=.16*w;q.Rg+=.16*w;q.lean+=.1*w} // GUARD stance: hands up, wide base
+ if(!d&&!air&&!shoot&&!p.lay&&(p.scw||0)>.01&&B.h!==p){const w=p.scw,J_=T-(p.scrJ||-9)<.3?Math.sin((T-p.scrJ)/.3*PI):0; // SETTING A SCREEN: wide base, sat down a little, forearms crossed over the chest (braces when a defender runs into it)
+  q.Lx=mx(q.Lx,-.15,w);q.Rx=mx(q.Rx,-.15,w);q.Le=mx(q.Le,-1.6,w);q.Re=mx(q.Re,-1.6,w);q.Lz=mx(q.Lz,.85,w);q.Rz=mx(q.Rz,-.85,w);q.Lg=mx(q.Lg,-.3,w);q.Rg=mx(q.Rg,.3,w);
+  q.Lh=mx(q.Lh,-.15,w);q.Rh=mx(q.Rh,-.15,w);q.Lk=mx(q.Lk,.35,w);q.Rk=mx(q.Rk,.35,w);q.drop=mx(q.drop,.16,w);q.lean=mx(q.lean,.06-.18*J_,w);q.tw=mx(q.tw,0,w)}
+ if(!d&&!air&&!shoot&&!p.lay&&(p.sfw||0)>.01){const w=p.sfw,sd=Math.sign(p.sfs)||1,N=sd>0?'R':'L'; // CAUGHT ON A SCREEN
+  if(Math.abs(p.sfs)>1){q.lean=mx(q.lean,-.3,w);q.Lx=mx(q.Lx,-1.9,w);q.Rx=mx(q.Rx,-1.9,w);q.Le=mx(q.Le,-1.3,w);q.Re=mx(q.Re,-1.3,w);q.drop=mx(q.drop,.05,w)} // bumped: knocked back, arms up
+  else{q.tw=mx(q.tw,.8*sd,w);q[N+'x']=mx(q[N+'x'],-2.2,w);q[N+'e']=mx(q[N+'e'],-.6,w);q.lean=mx(q.lean,.22,w);q.drop=mx(q.drop,.12,w)}} // fighting over: shoulder turned to squeeze past, the lead arm swims over
  // ---- jump shot: both hands carry the ball up together (the LEFT guide hand rides along the side of the ball) right to the top; only at the very end does the guide hand come off
  //      and the RIGHT hand (rig arm aL, rig faces +z) flicks the ball - wrist snaps + follows through
  if(shoot){
@@ -3119,7 +3224,7 @@ function sigPops(){for(const p of TM[0].concat(TM[1])){const g_=p.sgp;if(!g_||g_
   drawSig(g_.id,g_.t,x,y,sz);
   if(!g_.fq&&g_.t==3){const sh=Math.min(1,age/.45);if(sh<1){g.globalAlpha=al*.55*Math.sin(sh*Math.PI);g.fillStyle='#fff';g.beginPath();g.arc(x,y,sz*.42,0,6.283);g.fill();g.globalAlpha=al}}
   g.restore()}}
-function gpLabels(){if(!GP[0]&&!GP[1])return;for(const p of TM[0].concat(TM[1])){const l=p.gpl;if(!l||l.t<=0)continue;
+function gpLabels(){for(const p of TM[0].concat(TM[1])){const l=p.gpl;if(!l||l.t<=0)continue;
   const v=new THREE.Vector3(p.x/10,8.3*p.ht+p.z/10,p.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;g.save();g.globalAlpha=Math.min(1,l.t*2.5);g.textAlign='center';g.font='bold 12px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.8)';g.strokeText(l.s,x,y);g.fillStyle=tcol(p.team);g.fillText(l.s,x,y);g.restore()}}
 function callLabels(){for(const p of TM[0]){const t=p.callT>0?['BALL!','#ffd23f',p.callT]:p.shrug>0?['NOT NOW','#cfd3dc',p.shrug]:null;if(!t)continue;
   const v=new THREE.Vector3(p.x/10,7.6*p.ht,p.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;g.save();g.globalAlpha=Math.min(1,t[2]*2.2);g.textAlign='center';g.font='bold 15px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t[0],x,y);g.fillStyle=t[1];g.fillText(t[0],x,y);g.restore()}}
@@ -4463,10 +4568,10 @@ function netGuestStep(dt){T+=dt;msg.t-=dt;ms.show-=dt;shake=Math.max(0,shake-dt*
  NET.dly=Math.max(35,Math.min(450,Math.max(jt+18,gp*1.4+15)));NET.dl=NET.dl==null?NET.dly:NET.dl+(NET.dly-NET.dl)*Math.min(1,(NET.dly>NET.dl?.2:.02)); // (grows fast, shrinks slowly)
  const rt=now-off_-(NET.via=='p2p'?NET.dl:NET_DELAY);let a=S_[S_.length-1],b=a,u=0;for(let i=0;i<S_.length-1;i++)if(S_[i].t<=rt&&S_[i+1].t>rt){a=S_[i];b=S_[i+1];u=(rt-a.t)/Math.max(1,b.t-a.t);break}
  netApply(a.f,b.f,u)}
-const NET_DISC=new Set(['jph','air','side']);
+const NET_DISC=new Set(['jph','air','side','sfs']);
 function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen;
  for(let lt=0;lt<2;lt++){const p=TM[lt][0],oa=a.p[1-lt][0],ob=b.p[1-lt][0];if(!p||!oa||!ob)continue;
-  SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side')v=-v;p[k]=v});
+  SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side'||k=='sfs')v=-v;p[k]=v});
   const n=SF.length;p.dunk=ob[n];p.lay=ob[n+1]||null;p.grd=ob[n+2]||0;if(ob[n+3])p.st=ob[n+3];p.bm=ob[n+4]?Object.assign({},ob[n+4]):null;p.ps=ob[n+5]&&PASS_T[ob[n+5].ty]?Object.assign({},ob[n+5]):null;
   {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,-h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}p.bb=ob[n+8]?Object.assign({},ob[n+8],{s:-ob[n+8].s}):null} // RAGDOLL: the host's hit (mirrored) is run through the same physics here; when the host lets him up, so does the guest
  B.x=940-L(a.b.x,b.b.x);B.y=L(a.b.y,b.b.y);B.z=L(a.b.z,b.b.z);B.mode=b.b.mode;B.perf=!!b.b.perf;B.h=b.b.ht?TM[1-b.b.ht[0]][b.b.ht[1]]||null:null;
@@ -4623,10 +4728,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.73'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.74'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.74','Set plays and screens',['The AI offence now runs real set plays in the half court: FLASH CUT, ISO, FAKE HANDOFF, DRIBBLE HANDOFF, SPAIN PICK AND ROLL, STACK, KANSAS and GIVE AND GO. The play\'s name shows over the ball handler.',
+  'Players cut off screens, set ball screens and roll to the rim, flash to the high post, hand the ball off, and the handler looks for the man the play gets open. Teams lean towards plays that suit their game plan.',
+  'SCREENS are now a real thing: a defender who runs into one is held up and has to slide round it. The screener\'s STRENGTH decides how long; the defender\'s PERIMETER DEFENSE gets him round it faster and more smoothly. A big mismatch knocks him back a step.',
+  'New animations: setting a screen (wide base, forearms crossed, bracing on contact), fighting over a screen, and getting bumped by one.']],
  ['v1.73','Flashy alley-oops',['Players with PASSING 85+ now throw their alley-oop lobs flashy too: a NO-LOOK, BEHIND THE HEAD, HOOK, BEHIND THE BACK, ELBOW or SHOVEL FLIP lob, whichever fits where the dunker is (only the ones you have switched on in the STORE).',
   'The lob\'s name pops up when it happens, e.g. ELBOW PASS ALLEY-OOP!']],
  ['v1.72','Ball glued to the shooting hand',['Fixed: in modes where your floor spot isn\'t your roster spot, holding a jump shot left the ball hovering above your shoulder until the release, and the shot then flew off without touching your hand. It now sits in your hands from the moment you start the shot.',
@@ -5136,9 +5245,9 @@ const HL_ATTR=[
  {t:'SPEED',tag:'SPD',d:'How fast you run, with or without the ball.\n• At 70 you move at the normal speed. 25 is about 23% slower, 90 about 10% faster, and above 90 it rises quickly (99 is roughly 55% faster).\n• Also speeds up chasing loose balls, your run-up to dunks and layups, and fast breaks.\n• Dribble-move bursts only get part of the bonus, so very fast players don\'t glide.\n• Helps a little in sprinting blow-bys.'},
  {t:'LAYUP / CLOSE SHOT',tag:'LAY',d:'Finishing at the rim with layups.\n• Make chance when open goes from about 60% at 25 to 95% at 100, and a contest costs far less at high ratings (40% at 25, 15% at 100).\n• Your layup meter window is bigger with a higher rating and shrinks less when you\'re contested.\n• Unlocks fancier finishes: finger roll 55, floater 65, scoop 70, euro step 75, reverse 82, over-the-shoulder reverse 92. Overhand and power layups are always available.\n• Better finishers shield the ball away from a shot-blocker in the air.'},
  {t:'DUNKING',tag:'DNK',d:'Throwing it down.\n• Open dunks are a sure thing from 35 up.\n• A dunk with a defender at the rim needs at least 50 to score, and the chance climbs from 55% at 50 to 92% at 100.\n• The higher it is, the more often you posterize a defender standing at the rim (15% at 25, 95% at 100), and that defender is stunned.\n• AI players only dunk with 62 or more. You can try a dunk (F) at any rating.\n• Helps your vertical when you jump to block.'},
- {t:'STRENGTH',tag:'STR',d:'Who wins when bodies collide.\n• Stronger players push weaker ones back on contact: drives stall against a strong defender, and a strong driver bullies through a weak one. Weight adds to this.\n• Post-up backdowns (hold G) push the defender back faster.\n• Adds to your chance of finishing a poster dunk and helps power layups.'},
+ {t:'STRENGTH',tag:'STR',d:'Who wins when bodies collide.\n• Stronger players push weaker ones back on contact: drives stall against a strong defender, and a strong driver bullies through a weak one. Weight adds to this.\n• Post-up backdowns (hold G) push the defender back faster.\n• Adds to your chance of finishing a poster dunk and helps power layups.\n• Screens: the stronger you are, the longer a defender who runs into your screen is held up (a big strength edge knocks him back a step).'},
  {t:'PASSING',tag:'PAS',d:'How good your passes are.\n• Passes travel faster (about 80% speed at 25, 130% at 100), so there\'s less time to intercept them.\n• A teammate who shoots within about 4 seconds of your pass gets a boost to his make chance (almost nothing at 25, about +6% at 100).\n• Good AI passers look to pass more.\n• At 85+ every pass is a flashy one that fits the play (no-look, behind the head, elbow, wraparound, between the legs, hook, shovel flip, behind the back) - alley-oop lobs too.'},
- {t:'PERIMETER DEFENSE',tag:'PD',d:'Guarding the ball away from the basket.\n• Your contests on jump shots from mid-range and three reach further and hurt the shooter more.\n• Holding G (guard stance) slows you down less: you keep 45% of your speed at 25 and 80% at 100.\n• AI defenders with high ratings react faster to the ball handler and stay tighter on him.\n• When a sprinting ball handler tries to blow by you with a move, a higher rating means you CUT HIM OFF more often: you bump him back in front of you and take away his momentum.'},
+ {t:'PERIMETER DEFENSE',tag:'PD',d:'Guarding the ball away from the basket.\n• Your contests on jump shots from mid-range and three reach further and hurt the shooter more.\n• Holding G (guard stance) slows you down less: you keep 45% of your speed at 25 and 80% at 100.\n• AI defenders with high ratings react faster to the ball handler and stay tighter on him.\n• When a sprinting ball handler tries to blow by you with a move, a higher rating means you CUT HIM OFF more often: you bump him back in front of you and take away his momentum.\n• Screens: a higher rating gets you round a screen faster and more smoothly (you slide round it at 30% of your speed at 25, 90% at 100, and you\'re held for a much shorter time).'},
  {t:'INTERIOR DEFENSE',tag:'IDF',d:'Defending near the basket.\n• Your contests on layups, close shots and dunks reach further and are stronger.\n• Being close enough to contest a dunk means a dunker with low dunking can\'t score over you.\n• It doesn\'t change blocks: that\'s Blocking (and getting your hand to the ball).'},
  {t:'BLOCKING',tag:'BLK',d:'Sending shots back.\n• Layups and dunks are only blocked if your hand actually touches the ball. Blocking (with Dunking) sets how high you jump, and blocking alone sets how accurately your hand goes for the ball: up to about 1.3 ft off at 25, just a few inches at 100. Good blockers also correct their aim as they rise, then slap at the ball with the forearm and wrist when their hand gets there.\n• Jump shots: a defender in the air close to the shooter blocks about 12% at 25, 40% at 60 and 65% at 100.\n• AI shot-blockers with high ratings go up more often and time their jumps better.'},
  {t:'REBOUNDING',tag:'REB',d:'Grabbing missed shots.\n• Bigger reach for the ball, especially while you\'re in the air.\n• Wins more battles when several players go for the same board (height helps too).'},
@@ -5188,6 +5297,7 @@ const HL_MOVES=[
  {t:'STEAL',tag:'E (DEFENCE)',d:'Swipe at the ball. It works best on a plain dribble; during dribble moves it rarely works, and you can\'t steal it during a spin, a behind-the-back or a post-up. There\'s a short wait between swipes.\nWhen an AI defender reaches in on you, you\'ll see his arm shoot out at the ball (and hear a whoosh). AI defenders stay in front of you and only reach when the ball is exposed on their side of your body, especially while you\'re standing still or slow: keep moving and keep the ball away from them. A missed reach costs them a step.'},
  {t:'JUMP / BLOCK',tag:'SPACE (DEFENCE)',d:'Jump to contest or block. A layup or dunk is only blocked if your hand actually gets to the ball, so get in the shooter\'s path and time your jump so your hand meets the ball on its way up: go a touch early rather than late, because a late jump almost never gets there.\nEven when you don\'t get a hand on it, being IN THE AIR close to a layup or dunk bothers it a lot (the closer you are, the higher your hand gets compared with the ball and the better your BLOCKING, the bigger the effect): layups get a much smaller meter window and lower odds, and dunks can rim out (ALTERED).'},
  {t:'GUARD STANCE',tag:'HOLD G (DEFENCE)',d:'Get low with your hands up: your contests are much bigger but you move slower (less slow with a high PERIMETER DEFENSE rating).'},
+ {t:'SET PLAYS AND SCREENS',tag:'AI',d:'In the half court the AI offence runs real set plays instead of just moving around: FLASH CUT, ISO, FAKE HANDOFF, DRIBBLE HANDOFF, SPAIN PICK AND ROLL, STACK, KANSAS and GIVE AND GO (the play\'s name shows over the ball handler). Players cut off screens, set ball screens, roll to the rim, hand the ball off, and the handler hits the man the play gets open.\n• SCREENS are real: a defender who runs into one is held up. How long depends on the screener\'s STRENGTH and the defender\'s PERIMETER DEFENSE (a strong screen on a poor defender holds him over a second, an elite defender slides round a weak one almost straight away).\n• Teams lean towards plays that suit their game plan: pick-and-roll teams run Spain and Kansas, star teams run ISO, cutting teams run Flash Cut and Give and Go.'},
  {t:'CAMERA, PAUSE AND REPLAYS',tag:'1 · K · T',d:'• 1: switch camera (COURT / COURT LOW).\n• K: pause menu (resume, customisation, replay camera, main menu).\n• T: watch a replay after a bucket (every replay picks one of 7 camera angles: broadcast, baseline, backboard, sideline rail, spidercam, courtside fan, chase. 1 switches to the next angle, T goes back). T also skips the match intro. No replays in 1v1.'}];
 const HL_MODES=[
  {t:'CAREER',tag:'MAIN MENU',d:'Create up to 3 players, sign with a team, and level up by playing 5v5, 3v3 or 1v1 games against the AI, or play a friend online. See CREATE A PLAYER for the details.'},
