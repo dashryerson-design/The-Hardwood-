@@ -813,8 +813,9 @@ const DRB=[
 DRB.forEach(P=>{for(const k in P.m)P.m[k]=Object.assign({dr:.28,tw:.4,ln:.15},P.m[k]);P.d='ZXCVBN'.split('').map(k=>P.m[k].n).join(' · ')}); // (unset = the plain move) · d = its six animations
 const drbA=(v,k)=>(DRB[v|0]||DRB[0]).m[k]||DRB[0].m.Z; // package v's animation for move k
 const drbT=u=>sm3(sm3(u)); // the tempo that hangs at both ends and snaps through the middle
-// which package p uses: your created player - the one you equipped (the best one below it that your handle allows if it no longer does); AI - the best his handle unlocks
-function drbPick(p){const bh=(p.rt&&p.rt.bh)||50;let v=p.build?p.build.drb|0:DRB.length-1;while(v>0&&DRB[v].req>bh)v--;return v}
+// which package p uses - never forced by his rating: your created player uses the one YOU equipped (only stepped down if your handle no longer reaches it);
+// every other player has his own fixed pick among the packages his handle unlocks (seeded by team + player, so it never changes mid-game)
+function drbPick(p){const bh=(p.rt&&p.rt.bh)||50;let v;if(p.build)v=p.build.drb|0;else{let n=0;while(n<DRB.length-1&&DRB[n+1].req<=bh)n++;v=(Math.imul((TI[p.team]|0)*7+p.i+3,2654435761)>>>0)%(n+1)}while(v>0&&DRB[v].req>bh)v--;return v}
 // the ball during a move: [sideways, forward, height, progress 0-1] (local to the handler; hz0 = his hip height)
 function drbBall(h,bm,hz0){const S=drbA(bm.v,bm.k),u=Math.min(1,bm.t/bm.d),k=bm.k,uu=S.tmp?drbT(u):u,fl=uu<.5?1-(2*uu)**2:1-(2-2*uu)**2;
  let lat=h.side*9,fw=7,bz=k=='X'?4+(hz0-4)*(.55+.45*Math.cos(uu*6.283)):4+(hz0-4)*fl;
@@ -4839,10 +4840,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.82'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.83'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.83','Dribble package choice',['A high BALL HANDLE no longer forces the flashiest dribble package on anyone. Your created player always uses the package YOU equip in the STORE.',
+  'Other players each have their own fixed pick among the packages their handle unlocks (some stay BASIC, some go PRO or FLASHY), instead of all using the best one.']],
  ['v1.82','Dribble packages',['Dribble styles are now DRIBBLE PACKAGES: BASIC 1 & 2, PRO 1 & 2 (65 / 72), ELITE 1 & 2 (78 / 83) and FLASHY 1 & 2 (86 / 89 BALL HANDLE).',
   'Each package is a group of its own animations, one for EVERY dribble move - e.g. FLASHY 2: LEGEND CROSS, HYPNO HESI, TORNADO (a double spin), SHOWTIME STEP-BACK, SKY-TO-FLOOR BETWEEN and ORBIT LEGEND. 48 dribble animations in all.',
   'Equip ONE package in the STORE (DRIBBLING, with a preview of all six moves) and every move you make uses it - the move\'s name pops up when you do it. AI players use the best package their handle unlocks.']],
