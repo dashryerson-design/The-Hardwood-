@@ -834,7 +834,7 @@ function drbPose(p,q){const b=p.bm,S=drbA(b.v,b.k),u0=Math.min(1,b.t/b.d),u=S.tm
  if(S.hop)q.bob=(q.bob||0)+S.hop*Math.abs(Math.sin(u*2*Math.PI))*s2;
  if(S.Lg){q.Lg-=S.Lg*s2;q.Rg+=S.Lg*s2}
  if(S.ofa){const O=p.ls>0?'R':'L',sg=O=='L'?-1:1,[x,e,z]=S.ofa,sw=S.ofs?Math.sin(u*2*Math.PI):0;q[O+'x']=mx(q[O+'x'],x-1.1*sw,s2);q[O+'e']=mx(q[O+'e'],e,s2);q[O+'z']=mx(q[O+'z'],sg*z,s2)}} // (the off arm = the one without the ball)
-const MVD=.3,SPRINT=160,DRB_SLOW=1.35; // DRB_SLOW (v2.00): every dribble move plays 35% slower (same distance), so the moves and their blends read cleanly // SPRINT = top speed while Shift is held (the normal run is 120)
+const MVD=.42,SPRINT=160,DRB_SLOW=1.35; // DRB_SLOW (v2.00): every dribble move plays 35% slower (same distance), so the moves and their blends read cleanly // SPRINT = top speed while Shift is held (the normal run is 120)
  // dribble-move burst size (1 = the old, far too long glide)
 function move(p,k,nofo){
  const cmb=p.quick>0&&k!='X';if(p.mcd>0&&!cmb)return;p.chain=T-(p.mvT==null?-99:p.mvT)<.9?Math.min(3,(p.chain||0)+1):0;p.mvT=T;p.mvK=k;
@@ -857,7 +857,7 @@ function move(p,k,nofo){
   const ck=ckOn(p)?sigv(p,'check1v1'):0;if(ck){sp*=1+ck;sigFx(p,'check1v1')}const rl=sigv(p,'relentless');if(rl&&rm<1){rm=1-(1-rm)*(1-rl);sigFx(p,'relentless')}}
  if(MODE==1)p.ckT=-99;
  p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1)*DRB_SLOW,v:drbPick(p),l0:B.h===p&&p.bl?p.bl.slice():null};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)
- p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb); // (v2.03: this line had been swallowed by the comment above since v1.82 - moves never cost any momentum)
+ p.rec=du+.4;p.rm=1-(1-rm)*.4;if(hes)p.quick=.9;p.vx*=.88;p.vy*=.88;sfxWoosh(k,cmb); // (v2.05: a light momentum cost - the full one, x0.6 in and up to -45% after, was too harsh) // (v2.03: this line had been swallowed by the comment above since v1.82 - moves never cost any momentum)
  fo=d?ankleP(p,d,k,an,bn):0; // ANKLE BREAKER chance: rare, and it depends on the moment (ankleP, v2.04)
  if(!nofo&&d&&Math.random()<fo){ankleBreak(d,p,k);say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
@@ -5357,10 +5357,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.04'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.05'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.05','Dribble moves eased back',['The v2.03 dribble-move nerf was too harsh: moves now cover only about 12% less ground than they did before it (they had been cut by ~40%).','Moves still cost a little momentum (going in and just after), but much less: running or sprinting into a move now keeps ~85-90% of the ground you would have covered running straight (was ~65%).']],
  ['v2.04','Rarer, smarter ankle breakers',['Ankle breakers are rare now (they used to land on a quarter to half of all moves). Against a defender guarding you normally: about 2% of moves with no signature, 5% with ANKLE BREAKER bronze, 10% silver, 18% gold (the signature counts on crossovers, step-backs and between-the-legs).','They depend on the moment: a defender flying at you or running hard one way, when your move sends you the other way, is far more likely to go down (up to ~2.5x). A set, still defender almost never does. Catching him reaching for the ball or off his feet makes it 1.6x likelier; the closer he is, the likelier.','A better ball handle helps a little (x0.75 at 25 up to x1.25 at 100). Crossovers are the best ankle breaker, then step-backs, between-the-legs, hesitations, behind-the-back and spins.']],
  ['v2.03','Realistic dribble moves',['Dribble moves no longer work as a speed boost: each move covers about 40% less ground (from a standstill a crossover now moves you 2-3 ft, like a real one).','Moves now cost momentum, as they always should have: a bug since v1.82 had switched that off. Going into a move you slow down, and you are a beat slower for a moment after it, so running or sprinting straight is always faster than chaining moves - they are for style and for beating your man.','The hesitation-into-combo window and the move whoosh sounds work again (same bug).','Blow-bys (beating a defender in front of you at speed) are 15% less explosive.']],
  ['v2.02','Exact target FPS',['TARGET FPS is now exact: the game runs on its own frame clock instead of waiting for the screen, so 90 / 120 / 144 really are 90 / 120 / 144 frames a second (it used to stop at your screen\'s refresh rate, often 60).','New targets: 165 and 240. MAX still means one frame per screen refresh.','Note: a screen can only display as many frames as its refresh rate - extra frames still make the game update and respond more often.']],
