@@ -2443,7 +2443,7 @@ const TS={
  ICE:{c:[0x59b9ff,0xbdf2ff,0xffffff],sp:[0x59b9ff,0xbdf2ff,0xffffff],g:0x2f9bff,m:0x9fe3ff,k:0xffffff,add:1,up:-1.2,j:.5,L:0x7fd0ff,n:5,geo:1},
  BLACK:{c:[0x050508,0x1a0630,0x3b0a6a],sp:[0x8a3cff,0xb36bff,0x5a1ee0],g:0x8a3cff,m:0x4a14b0,k:0x07040c,add:0,up:1.5,j:.45,L:0x6a2aff,n:5},
  STORM:{c:[0xe8f0ff,0x8fb0ff,0xffffff],sp:[0xe8f0ff,0x8fb0ff,0xffffff],g:0x6f96ff,m:0xbcd0ff,k:0xffffff,add:1,up:0,j:.8,L:0xbcd0ff,n:6,geo:2,zig:1},
- // ss / sn = size / count of the shapes shed in flight · fx = which sound + rim-impact style the trail borrows (FIRE · ICE · BLACK · STORM · LAZER) · w = ribbon width · rb = colours cycle through the rainbow · geo can be a list (random pick)
+ // gs = ball glow size · ss / sn = size / count of the shapes shed in flight · fx = which sound + rim-impact style the trail borrows (FIRE · ICE · BLACK · STORM · LAZER) · w = ribbon width · rb = colours cycle through the rainbow · geo can be a list (random pick)
  'GREEN LAZER':{c:[0x2dff6a,0x9dffb8,0xffffff],sp:[0x2dff6a,0x6dff9a,0xd8ffe4],g:0x14ff50,m:0x7dffa0,k:0xf0fff4,add:1,up:0,j:.06,L:0x2dff6a,n:2,geo:8,fx:'LAZER',w:.45},
  'RED LAZER':{c:[0xff2030,0xff7a80,0xffffff],sp:[0xff2030,0xff5060,0xffd8dc],g:0xff1428,m:0xff7a84,k:0xfff2f3,add:1,up:0,j:.06,L:0xff2a3a,n:2,geo:8,fx:'LAZER',w:.45},
  'PINK LAZER':{c:[0xff4fb8,0xff9ad6,0xffffff],sp:[0xff4fb8,0xff7ac8,0xffe0f2],g:0xff3aae,m:0xff9ad4,k:0xfff2fa,add:1,up:0,j:.06,L:0xff5ac0,n:2,geo:8,fx:'LAZER',w:.45},
@@ -2463,12 +2463,16 @@ const TS={
  SAKURA:{ss:2.4,sn:3,c:[0xffb8d0,0xff8ab0,0xffffff],sp:[0xffc8dc,0xff9ac0,0xffffff],g:0xff7aa8,m:0xffc0d8,k:0xfff4f8,add:1,up:-1,j:.7,L:0xffa0c4,n:4,geo:7,fx:'ICE'},
  GALAXY:{ss:1.8,c:[0x2a1a8a,0x8a3cff,0xffffff],sp:[0x6a5aff,0xd88aff,0xffffff],g:0x4a2aff,m:0xb05aff,k:0xffffff,add:1,up:.3,j:.6,L:0x7a5aff,n:5,geo:[3,0],fx:'BLACK'},
  PLASMA:{c:[0xff3ad8,0x7a3aff,0xffffff],sp:[0xff5ae0,0x9a6aff,0xffd8ff],g:0xd02aff,m:0xff7ae8,k:0xfff0ff,add:1,up:.5,j:.5,L:0xe04aff,n:5,geo:1,fx:'STORM',zig:1},
+ 'SUN GOD':{c:[0xfff4c0,0xffb020,0xff5a00],sp:[0xffffff,0xffd040,0xff7a10],g:0xff8a10,m:0xffd860,k:0xffffff,add:1,up:2.5,j:1.2,L:0xffc040,n:12,geo:1,fx:'SUN',w:2.6,ss:1.6,sn:4,gs:2.6},
+ AURORA:{c:[0x3affb0,0x7a5aff,0xffffff],sp:[0x3affb0,0x9a7aff,0xd8fff0],g:0x2affa0,m:0x9a6aff,k:0xf0fff8,add:1,up:1.4,j:.7,L:0x6affc8,n:5,geo:0,fx:'ICE',w:2,rb:1,hr:[.36,.78]},
+ DRAGON:{c:[0xb00010,0xff5a00,0xffd040],sp:[0xff2a00,0xff8a10,0xffe070],g:0xd01008,m:0xff7a10,k:0xfff0c0,add:1,up:3,j:.7,L:0xff4010,n:8,geo:1,fx:'FIRE',w:1.5,rs:'roar'},
+ GLITCH:{c:[0xff2ad8,0x2af0ff,0xffffff],sp:[0xff2ad8,0x2af0ff,0xffff40],g:0xff2ad8,m:0x2af0ff,k:0xffffff,add:1,up:0,j:.35,L:0xff60e0,n:4,geo:2,fx:'LAZER',zig:1,rb:1,gl:1,ss:1.4},
  CANDY:{ss:1.8,c:[0xff5a9a,0xffffff,0x5ad8ff],sp:[0xff7ab0,0xffffff,0x7ae0ff],g:0xff5aa0,m:0xffd0e4,k:0xffffff,add:1,up:.4,j:.45,L:0xff8ab8,n:4,geo:[3,0,1],fx:'ICE'}};
 const tb=k=>TS[k].fx||k; // base style of a trail
 // whose trail a perfect release shows: a created player's own (CAREER > CUSTOMISATION), everyone else his team's laser (TEAMS order)
 const TEAM_TRL=['PINK LAZER','GREEN LAZER','YELLOW LAZER','RED LAZER','BLUE LAZER','RAINBOW LAZER'];let TRL_C='FIRE',lastH=null;
 const shTrl=p=>!p?TRL_S:p.build?(TS[p.build.trl]?p.build.trl:TRL_S):TEAM_TRL[TI[p.team]]||TRL_S;
-function rbw(st){const h=T*.45%1,c=x=>colA.setHSL((h+x)%1,1,.55).getHex();st.g=st.L=c(0);st.m=c(.12);st.sp=st.c=[c(0),c(.33),c(.66)]} // RAINBOW: hue rolls with time
+function rbw(st){const h=st.gl?(Math.floor(T*14)%3)*.33+.5:st.hr?st.hr[0]+(st.hr[1]-st.hr[0])*(.5+.5*Math.sin(T*1.6)):T*.45%1,c=x=>colA.setHSL((h+x)%1,1,.55).getHex();st.g=st.L=c(0);st.m=c(.12);st.sp=st.c=[c(0),c(.33),c(.66)]} // RAINBOW: hue rolls with time
 const shpG=(...f)=>new THREE.ShapeGeometry(f.map(fn=>{const s=new THREE.Shape();fn(s);return s}));
 const PG=[new THREE.SphereGeometry(1,8,6),new THREE.OctahedronGeometry(1,0),new THREE.BoxGeometry(.5,.5,2.4),
  shpG(s=>{for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,r=i%2?.42:1;i?s.lineTo(Math.cos(a)*r,Math.sin(a)*r):s.moveTo(Math.cos(a)*r,Math.sin(a)*r)}}),
@@ -2539,10 +2543,11 @@ function ambient(k){
  const lfo=(f,dp,param)=>{const o=a.createOscillator();o.frequency.value=f;const g=a.createGain();g.gain.value=dp;o.connect(g);g.connect(param);o.start()};
  if(b0=='FIRE'){const r=nsrc(330,'lowpass',.5,.6),h=nsrc(1900,'bandpass',.5,.07);lfo(.9,.22,r.g.gain);lfo(3.1,.12,r.g.gain);lfo(5.7,.04,h.g.gain)} // soft flame roar + hiss; crackles are scheduled events
  else if(b0=='ICE'){const w=nsrc(3500,'bandpass',1.2,.05),h=nsrc(7500,'highpass',.4,.025);lfo(.4,.03,w.g.gain);lfo(.23,900,w.fl.frequency)} // faint frozen wind; chimes are events
+ else if(b0=='SUN'){const r=nsrc(180,'lowpass',.7,.9),h=nsrc(900,'bandpass',.6,.12);osc('sine',41,.5,120);osc('sawtooth',55,.12,200);lfo(.7,.3,r.g.gain);lfo(2.3,.1,h.g.gain)} // a burning star's roar
  else if(b0=='LAZER'){const h=osc('square',440,.05,2500);osc('sine',880,.08,4000);lfo(6,.03,h.g.gain)} // high laser hum
  else if(b0=='BLACK'){const s1=osc('sine',46,.6,200),s2=osc('sine',47.6,.55,200),p=osc('sawtooth',69,.22,150),w=nsrc(1400,'bandpass',4,.045);lfo(1.1,.2,s1.g.gain);lfo(.35,60,p.fl.frequency);lfo(.2,.04,w.g.gain);lfo(.13,500,w.fl.frequency)} // sub beat + dark pad + whisper
  else{const h=osc('sawtooth',100,.14,900),h2=osc('sawtooth',200.6,.07,1400);lfo(50,.03,h.g.gain);nsrc(4500,'highpass',.5,.012)} // mains-style electric hum; zaps are events
- return AMB[k]={m,vol:{FIRE:.3,ICE:.5,BLACK:.34,STORM:.34,LAZER:.3}[b0]}}
+ return AMB[k]={m,vol:{FIRE:.3,ICE:.5,BLACK:.34,STORM:.34,LAZER:.3,SUN:.55}[b0]}}
 function sfxUpd(on,dt){
  const a=AC;if(on&&!AMB[TRL_C])ambient(TRL_C);if(!a)return;
  for(const k in AMB)AMB[k].m.gain.setTargetAtTime(on&&k==TRL_C?AMB[k].vol:0,a.currentTime,on?.05:.04);
@@ -2553,18 +2558,26 @@ function sfxUpd(on,dt){
  else if(k=='STORM'){ // electric crackle: clusters of sharp ticks and a short "zzt"
   if(r<9*dt){const n=2+Math.floor(Math.random()*4);for(let i=0;i<n;i++)click(3000+Math.random()*5000,.06+Math.random()*.16,i*Math.random()*.035,.2);
    if(Math.random()<.4)tn(2600+Math.random()*2400,350,.045,{type:'sawtooth',v:.035,at:.001})}}
+ else if(k=='SUN'){if(r<20*dt)click(600+Math.random()*3000,.12+Math.random()*.2,0,.4);if(Math.random()<3*dt)tn(90,30,.25,{v:.25,at:.01,rv:.5})} // flaring crackle
  else if(k=='LAZER'){if(r<4*dt)tn(2200+Math.random()*1200,500,.08,{type:'square',v:.025,at:.001})} // pew pew
  else if(k=='ICE'){ // sparse crystalline chimes
   if(r<3.5*dt)bell([1760,2093,2349,2637,3136,3520,4186][Math.floor(Math.random()*7)],.55,.035+Math.random()*.03,0,.6)}
  else if(r<.45*dt)tn(72,34,.35,{v:.1,at:.02,rv:.7})} // BLACK: distant low throb
 function sfxRelease(k){const rs=TS[k].rs;k=tb(k);
  if(rs=='gun'){nz(.04,{ft:'highpass',f0:1200,v:.6,at:.0005,rv:.5});tn(160,40,.3,{v:.5,at:.001,rv:.4});nz(.5,{ft:'lowpass',f0:2500,f1:200,v:.3,at:.002,rv:.6})} // gunshot
+ else if(rs=='roar'){tn(150,55,.9,{type:'sawtooth',v:.22,at:.06,rv:.5});tn(230,80,.7,{type:'sawtooth',v:.12,at:.05,rv:.4});nz(.8,{ft:'lowpass',f0:900,f1:200,v:.3,at:.1,rv:.5})} // dragon roar
+ else if(k=='SUN'){nz(1.1,{ft:'lowpass',f0:150,f1:2600,v:.55,at:.5,rv:.5});tn(55,110,1,{v:.4,at:.4,rv:.4});nz(.6,{ft:'highpass',f0:2000,f1:6000,v:.12,at:.4})} // ignition: a rising solar roar
  else if(k=='LAZER'){tn(3200,240,.22,{type:'square',v:.08,at:.001,rv:.3});tn(1600,120,.25,{type:'sawtooth',v:.05,at:.001})}
  else if(k=='FIRE'){nz(.5,{ft:'lowpass',f0:200,f1:1500,v:.3,at:.12,rv:.2});nz(.35,{ft:'bandpass',f0:600,f1:3000,q:.8,v:.12,at:.05});tn(110,60,.25,{v:.15})}
  else if(k=='ICE'){bell(2637,.6,.06,0,.5);bell(3520,.6,.05,.08,.5);bell(4186,.5,.04,.16,.5);nz(.3,{ft:'highpass',f0:6000,v:.05,at:.1})}
  else if(k=='BLACK'){nz(.55,{ft:'bandpass',f0:100,f1:700,q:2,v:.2,at:.45,rv:.5});tn(65,38,.6,{v:.2,at:.2,rv:.4})}
  else{tn(4000,300,.09,{type:'sawtooth',v:.07,at:.001});nz(.12,{ft:'bandpass',f0:3000,f1:800,v:.2,at:.002});for(let i=0;i<5;i++)click(3500+Math.random()*4000,.15,i*.012)}}
 function sfxImpact(k){k=tb(k);
+ if(k=='SUN'){ // the sun hits the earth: crack, colossal sub boom, a long fire roar, rolling rumble and falling debris
+  nz(.08,{ft:'highpass',f0:600,v:.9,at:.0005,rv:.6});tn(70,16,3.2,{v:1,at:.003,rv:.6});tn(40,14,4,{v:.8,at:.01,delay:.05,rv:.8});
+  nz(3.5,{ft:'lowpass',f0:6000,f1:60,q:.5,v:.8,at:.004,rv:.9});nz(4.5,{ft:'lowpass',f0:400,f1:40,v:.7,at:.2,delay:.1,rv:1});
+  for(let i=0;i<5;i++)tn(60-i*6,20,1.6,{v:.35,at:.05,delay:.4+i*.45,rv:.8});for(let i=0;i<30;i++)click(800+Math.random()*4000,.1+Math.random()*.2,.3+Math.random()*2.5,.5);
+  [220,277,330,440].forEach((f,i)=>tn(f,f*.97,2.6,{type:'triangle',v:.05,at:.4,delay:.15+i*.05,rv:1}));return} // (a faint chord swells over the blast)
  if(k=='LAZER'){tn(1800,60,.5,{type:'square',v:.15,at:.001,rv:.5});nz(.4,{ft:'bandpass',f0:3000,f1:400,q:1.5,v:.3,at:.002,rv:.5});tn(90,30,.7,{v:.4,at:.003})}
  else if(k=='FIRE'){ // explosion: crack + punch + blast + rolling roar + falling debris crackle
   nz(.05,{ft:'highpass',f0:800,v:.45,at:.0008,rv:.4});tn(110,28,.9,{v:.7,at:.002,rv:.3});
@@ -2592,21 +2605,24 @@ const imF=mkSp(glT),imG=mkSp(glT),imC=mkSp(glT),imR=[mkSp(ringT),mkSp(ringT),mkS
 imC.material.blending=THREE.NormalBlending;
 [imF,imG,imC,...imR].forEach((s,i)=>{s.material.depthTest=false;s.renderOrder=20+i});
 const imB=Array.from({length:8},()=>{const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({length:9},()=>new THREE.Vector3())),new THREE.LineBasicMaterial({color:0xdfe9ff,transparent:true,blending:THREE.AdditiveBlending,fog:false,depthTest:false}));l.visible=false;l.frustumCulled=false;l.renderOrder=30;sc3.add(l);return l});
-const IMS={LAZER:{F:40,R:62,rc:[0xffffff,0xffffff,0xffffff]},FIRE:{F:42,R:54,rc:[0xfff4cf,0xffa31a,0xff4d12]},ICE:{F:34,R:46,rc:[0xffffff,0xbdf2ff,0x59b9ff]},BLACK:{F:38,R:58,rc:[0xb36bff,0x8a3cff,0x5a1ee0]},STORM:{F:46,R:42,rc:[0xffffff,0xbcd0ff,0x6f96ff]}};
+const IMS={SUN:{F:150,R:170,rc:[0xffffff,0xffd040,0xff6a00]},LAZER:{F:40,R:62,rc:[0xffffff,0xffffff,0xffffff]},FIRE:{F:42,R:54,rc:[0xfff4cf,0xffa31a,0xff4d12]},ICE:{F:34,R:46,rc:[0xffffff,0xbdf2ff,0x59b9ff]},BLACK:{F:38,R:58,rc:[0xb36bff,0x8a3cff,0x5a1ee0]},STORM:{F:46,R:42,rc:[0xffffff,0xbcd0ff,0x6f96ff]}};
 function impactFx(k){
- const st=TS[k],p=IM.p;IM.t=0;IM.k=k;IM.b2=0;sfxImpact(k);k=tb(k);
+ const st=TS[k],p=IM.p;IM.t=0;IM.k=k;IM.b2=0;sfxImpact(k);k=tb(k);IM.dur=k=='SUN'?2.6:1.3;
  const burst=(n,s0,s1,l0,l1,z0,z1,dg,g)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=s0+Math.random()*(s1-s0);tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,l0+Math.random()*(l1-l0),z0+Math.random()*(z1-z0),st.sp[i%3],dg,g)}};
  const shards=(n,s0,s1)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=s0+Math.random()*(s1-s0);tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.6+Math.random()*.6,.3+Math.random()*.45)}};
  if(k=='FIRE'){burst(120,8,40,.5,1.2,.7,2.3,2.2,-9);shards(36,8,28);shake=Math.max(shake,.75)}
  else if(k=='ICE'){burst(70,6,26,.6,1.3,.5,1.4,2,-3);shards(60,8,34);shake=Math.max(shake,.45)}
  else if(k=='BLACK'){for(let i=0;i<110;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=30+Math.random()*16,dx=Math.sin(b)*Math.cos(a),dy=Math.cos(b),dz=Math.sin(b)*Math.sin(a);tmpA.set(p.x+dx*16,p.y+dy*16,p.z+dz*16);tmpB.set(-dx*sp,-dy*sp,-dz*sp);spawn(tmpA,tmpB,.42,.5+Math.random()*1.1,st.sp[i%3],3,0)}shake=Math.max(shake,.3)}
+ else if(k=='SUN'){burst(320,12,80,.8,2.4,1.2,4.5,1.4,-5);burst(160,4,24,1.5,3,2.5,6,.9,1.5);shards(110,10,60);shake=Math.max(shake,1.8)} // a solar flare: white-hot core, molten spray, rising plasma
  else if(k=='LAZER'){burst(90,14,46,.3,.6,.25,.8,4,0);shards(20,12,36);shake=Math.max(shake,.5)}
  else{burst(60,10,40,.3,.7,.3,1,3,0);shards(30,10,34);shake=Math.max(shake,.55)}
 }
+let SUNR=0;
 function impUpd(dt){
- if(IM.t<0){if(imF.visible){[imF,imG,imC,...imR,...imB].forEach(o=>o.visible=false)}return}
- IM.t+=dt;const t=IM.t,u=t/IM.dur,st=TS[IM.k],k=tb(IM.k),c=IMS[IM.k]||Object.assign({},IMS[k],{rc:[st.add?st.k:st.g,st.m,st.g]});
- if(u>=1){IM.t=-1;[imF,imG,imC,...imR,...imB].forEach(o=>o.visible=false);return}
+ if(IM.t<0){SUNR=0;if(imF.visible){[imF,imG,imC,...imR,...imB].forEach(o=>o.visible=false)}return}
+ IM.t+=dt;const t=IM.t,u=t/IM.dur,st=TS[IM.k],k=tb(IM.k);SUNR=k=='SUN'?1.6*Math.pow(Math.max(0,1-t/2.4),1.3):0;if(SUNR)shake=Math.max(shake,SUNR); // SUN GOD: the ground keeps rumbling
+ const c=IMS[IM.k]||Object.assign({},IMS[k],{rc:[st.add?st.k:st.g,st.m,st.g]});
+ if(u>=1){IM.t=-1;SUNR=0;[imF,imG,imC,...imR,...imB].forEach(o=>o.visible=false);return}
  if(k=='BLACK'&&!IM.b2&&t>.38){IM.b2=1;const p=IM.p;
   for(let i=0;i<140;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=12+Math.random()*34;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,.6+Math.random()*.7,.8+Math.random()*1.6,st.sp[i%3],3,0)}
   for(let i=0;i<40;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=10+Math.random()*28;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.6+Math.random()*.6,.3+Math.random()*.45)}
@@ -2646,11 +2662,11 @@ function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}const on=pv?pv.on
  for(let r=0;r<3;r++){const m=RB[r],dk=r==2&&!st.add;m.material.blending=dk?THREE.NormalBlending:THREE.AdditiveBlending;colA.setHex(cols[r]);ribUpd(m,pts,W[r]*(st.w||1),colA,I[r],PW[r],st.zig?.5:0,dk)}
  // ball glow
  gv+=((on?1:0)-gv)*Math.min(1,dt*(on?40:6));const pu=1+.12*Math.sin(T*38);
- for(let i=0;i<3;i++){const g=bG[i];g.visible=gv>.02;if(g.visible){g.position.copy(bp);g.material.color.setHex(i==2?0xffffff:i?st.g:st.L);g.material.opacity=gv*[.95,.4,1][i];g.scale.setScalar([4.2,8.5,1.8][i]*pu)}}
+ for(let i=0;i<3;i++){const g=bG[i];g.visible=gv>.02;if(g.visible){g.position.copy(bp);g.material.color.setHex(i==2?0xffffff:i?st.g:st.L);g.material.opacity=gv*[.95,.4,1][i];g.scale.setScalar([4.2,8.5,1.8][i]*pu*(st.gs||1))}}
  // release burst: flash + expanding shock ring
  if(bst>0){bst-=dt;const u=1-Math.max(0,bst)/.45;flS.visible=rgS.visible=true;flS.position.copy(bstP);rgS.position.copy(bstP);flS.scale.setScalar(2.4+11*Math.pow(u,.55));flS.material.opacity=Math.pow(1-u,1.6);flS.material.color.setHex(st.add?st.k:st.g);rgS.scale.setScalar(1.6+15*Math.sqrt(u));rgS.material.opacity=.9*Math.pow(1-u,1.2);rgS.material.color.setHex(st.add?st.m:st.g)}else flS.visible=rgS.visible=false;
  bolt.visible=on&&sb=='STORM'&&Math.random()<.5;if(bolt.visible){const p=bolt.geometry.attributes.position;for(let i=0;i<7;i++)p.setXYZ(i,bp.x+(Math.random()-.5)*5*(i?1:0),bp.y+(Math.random()-.5)*5*(i?1:0),bp.z+(Math.random()-.5)*5*(i?1:0));p.needsUpdate=true}
- const tg0=cool&&(on||bst>0)?(bst>.28?9:sb=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?12*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=(tg-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
+ const tg0=cool&&(on||bst>0)?(bst>.28?9:sb=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?(tb(IM.k)=='SUN'?40:12)*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=(tg-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
  ballM.material.emissive.setHex(on?st.L:0);ballM.material.emissiveIntensity=on?.85+.2*Math.sin(T*40):1}
 
 function rimKick(i,a){const h=HP[HC?0:i];if(!h)return;h.v+=2.2*a;h.va=.016*a;h.vt=0}
@@ -3399,7 +3415,8 @@ function callLabels(){for(const p of TM[0]){const t=p.callT>0?['BALL!','#ffd23f'
 function ctlabel(){if(B.mode!='held'||B.h.team!=0)return;const h=B.h,c=h.ct||0,v=new THREE.Vector3(h.x/10,0,h.y/10+1.8).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;
  g.textAlign='center';g.font='bold 14px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.75)';const t=c<.2?'OPEN':c<.45?'CONTESTED':c<.75?'HEAVY':'SMOTHERED';g.strokeText(t,x,y+8);g.fillStyle=cring.material.color.getStyle();g.fillText(t,x,y+8)}
 function draw(){
- g.clearRect(0,0,960,540);if(S=='intro')introDraw();
+ g.clearRect(0,0,960,540);if(SUNR>0&&S!='store'){const a=Math.min(.7,SUNR*.45),gr=g.createRadialGradient(480,240,40,480,240,620);gr.addColorStop(0,'rgba(255,250,220,'+a+')');gr.addColorStop(.5,'rgba(255,170,50,'+a*.6+')');gr.addColorStop(1,'rgba(255,80,0,'+a*.25+')');g.fillStyle=gr;g.fillRect(0,0,960,540)} // SUN GOD glare
+ if(S=='intro')introDraw();
  if(S=='play'||S=='qend'||S=='pause')hud();
  if(S=='play'){meter();ctlabel();callLabels();passMark();gpLabels();sigPops();shotStats()}
  if(S=='career'||S=='playnow'||S=='pnmode'||S=='slotact'||S=='create'||S=='cust'||S=='look'||S=='rosters'||S=='rteam'||S=='cpos'||S=='cbio'||S=='ctrans'||S=='cteam'||S=='cconf'||S=='archq'||S=='sigs'||S=='help'||S=='hpage'||S=='store')drawMenus();
@@ -4433,7 +4450,7 @@ addEventListener('keydown',e=>{ // name entry
 const TRL_DESC={FIRE:'Explosion impact',ICE:'Frost shatter impact',BLACK:'Void collapse impact',STORM:'Lightning strike impact',
  'GREEN LAZER':'Green laser beam','RED LAZER':'Red laser beam','BLUE LAZER':'Blue laser beam','PINK LAZER':'Pink laser beam','YELLOW LAZER':'Yellow laser beam','RAINBOW LAZER':'Laser that cycles every colour',MONEY:'Bills and gold coins',DEMONIC:'Hellfire and a blood-red void',
  STARS:'A shower of shooting stars',FAIRY:'Pink fairy dust and sparkles',BULLET:'Gunshot and a smoking round',IRISH:'Lucky clovers and gold',
- 'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs',CANDY:'Sweet pink and blue sprinkles'};
+ 'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs','SUN GOD':'The sun crashes down to earth',AURORA:'Northern lights, green to violet',DRAGON:'Dragon fire with a roar',GLITCH:'Corrupted pixels, flickering',CANDY:'Sweet pink and blue sprinkles'};
 const custRect=i=>[240,150+i*70,480,60],custRows=()=>['gfx'];
 function openCust(back){MM.back=back;MM.cs=0;S='cust'}
 function custBack(){S=MM.back||'menu';for(const k in P)P[k]=0}
@@ -5074,10 +5091,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.89'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.90'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.90','SUN GOD',['New trail SUN GOD: the ball burns like a star in flight, then hits the rim like the sun crashing down to earth: a blinding solar flare, molten spray, a screen-wide glare, a huge boom with a long rolling rumble, and the camera shakes as the ground quakes.',
+  'Also new: AURORA (northern lights swaying green to violet), DRAGON (dragon fire with a roar on release) and GLITCH (corrupted pixels flickering pink, cyan and yellow).',
+  '28 trails in STORE > COSMETICS.']],
  ['v1.89','Ball trails in the Store',['STORE > COSMETICS is open: it is where your created player picks his BALL TRAIL now. All 24 trails in one grid; the one you are on plays live: your player\'s jump shot with a perfect release, the trail, the rim impact, a 1 second pause, then again. Enter or click to equip.',
   'The CUSTOMISATION tile on the career player menu is gone (its trail picker moved to the Store).']],
  ['v1.88','Team laser trails',['Every player who is not a created player now shoots his team\'s laser on a perfect release: Pinkie Pies PINK, Green Gekos GREEN, Yellow Vikings YELLOW, Red Royals RED, Blue Crusaders BLUE and Rainbow Slayers RAINBOW.',
@@ -5698,7 +5718,7 @@ const HL_MODES=[
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
  {t:'GAME PLANS',tag:'AI TEAMS',d:'Every team has its own way of playing on offence and defence (shown on its roster page) and adjusts during the game, for example when it\'s chasing the score or a player is hot. The strip under the scoreboard shows what each team is running, and call-outs like SCREEN, POST UP, TRAP or LEAK OUT show the plan in action.'},
- {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 24 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
+ {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 28 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
  {t:'AFTER THE GAME',tag:'RESULTS',d:'The result screen shows the player of the game, what went well and what to work on, and the EXP you earned. From there: MAIN MENU, RUN IT BACK (rematch) or the BOX SCORE (M and B are shortcuts).'},
  {t:'TEAMS',tag:'6 TEAMS',d:'Pinkie Pies, Green Gekos, Yellow Vikings, Red Royals, Blue Crusaders and Rainbow Slayers. Each has its own style, strengths and weaknesses: see ROSTERS.'}];
 const HELP_T=[
@@ -5850,7 +5870,7 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
   o.m.position.set(o.x/10,o.z/10,o.y/10);o.m.rotation.y=o.ang+sp3+o.lyw+(o.spin>0?(1-o.spin/(o.sd||.5))*2*Math.PI*(o.spd||1)*(o.spn||1):0);pose(o,dt)}
  const cam=SPV.cam,cx=SPV.c=='pas'?81:SPV.c=='sht'?78:79;cam.position.set(cx-1.5,7.2,32+27);cam.lookAt(cx+.5,6.3,32);
  if(SPV.c=='drb'){cam.position.set(79,6.2,45);cam.lookAt(72,3.4,32)} // (dribble styles: closer, from the front three-quarters - the moves go side to side)
- if(SPV.trl)trlPrevUpd(dt);
+ if(SPV.trl){trlPrevUpd(dt);if(SUNR)cam.position.add(_SVB.set((Math.random()-.5)*SUNR*.5,(Math.random()-.5)*SUNR*.35,0))}
  const[x,y,w,h]=SPV_R;R.setScissorTest(true);R.setViewport(x,540-y-h,w,h);R.setScissor(x,540-y-h,w,h);R.render(SPV.sc,cam);R.setScissorTest(false);R.setViewport(0,0,960,540)}
 // ---- the screen (v1.42, 2K style): STORE home (COSMETICS · ANIMATIONS) -> ANIMATIONS: category tabs along the bottom, a vertical menu on the left
 // (category -> its groups -> that group's PACKAGES), the selected package playing on loop on the right with an EQUIP button.
@@ -5878,7 +5898,7 @@ function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
  if(!pkOn(pk)){pk.k.forEach(k=>{const i=off.indexOf(k);if(i>=0)off.splice(i,1)});beep(620,.06,'triangle');return}
  const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
  pk.k.forEach(k=>{if(!off.includes(k))off.push(k)});beep(300,.05)}
-const TRL_K=Object.keys(TS),TR_CARD=i=>[24+(i%8)*114,312+(i/8|0)*54,106,48];
+const TRL_K=Object.keys(TS),TR_CARD=i=>[24+(i%8)*114,308+(i/8|0)*42,106,38];
 function trlEquip(i){MM.cr.trl=TRL_S=TRL_K[i];beep(660,.08,'triangle')}
 function openStore(){MM.st={pg:'hub',hub:1,ts:Math.max(0,TRL_K.indexOf(MM.cr.trl||TRL_S)),cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 const ST_HUB=i=>[110+i*390,130,350,250],ST_BK=[24,482,150,40],AN_ROW=i=>[24,92+i*48,300,42],AN_TAB=i=>[480-(AN_CAT.length*90-14)/2+i*90,466,76,64],AN_EQ=[760,400,176,40];
@@ -5922,12 +5942,12 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
  if(st.pg=='cos'){title('COSMETICS  ·  BALL TRAIL');const eq=d.trl||TRL_S,hx=c=>'#'+c.toString(16).padStart(6,'0'),k=TRL_K[st.ts];
   TRL_K.forEach((kk,i)=>{const[x,y,w,h]=TR_CARD(i),t=TS[kk],on=st.ts==i,me=kk==eq;mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',me?'#4cff7a':on?'#fff':'#3a4450');
    const gr=g.createLinearGradient(x+8,0,x+w-8,0);(t.rb?[0xff3b3b,0xffe14a,0x3fd45a,0x3f8cff,0xc06aff]:[t.g,t.m,t.k]).forEach((c,j,a)=>gr.addColorStop(j/(a.length-1),hx(c)));
-   g.fillStyle=gr;g.fillRect(x+8,y+8,w-16,6);g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#fff';g.fillText((me?'✓ ':'')+kk,x+w/2,y+34)});
+   g.fillStyle=gr;g.fillRect(x+8,y+6,w-16,5);g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#fff';g.fillText((me?'✓ ':'')+kk,x+w/2,y+28)});
   // the picked trail, and the live demo: your player's jump shot with a perfect release
   g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(k,30,130);g.font='13px system-ui';g.fillStyle='#8fa3b8';g.fillText(TRL_DESC[k],30,154);
   g.font='bold 13px system-ui';g.fillStyle=k==eq?'#4cff7a':GOLD;g.fillText(k==eq?'✓ EQUIPPED':'ENTER / CLICK TO EQUIP',30,186);
   const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'#3a4450');g.clearRect(px,py,pw,ph);
-  if(SPV.tk!==k){SPV.tk=k;SPV.tw=null;trOn=0;TP.length=0;SPV.key=''} // a new trail: start its demo from the top
+  if(SPV.tk!==k){SPV.tk=k;SPV.tw=null;trOn=0;TP.length=0;SPV.key='';IM.t=-1;SUNR=0;SPR.forEach(o=>{o.l=0;o.s.visible=false});TRL.forEach(o=>o.l=0)} // a new trail: clear the last one's effects, start its demo from the top
   spvFrame('js:'+(JS_M[d.js]?d.js:'b1'));
   back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('arrows choose  ·  Enter equip  ·  Esc back',936,532);return}
  // ---- ANIMATIONS
