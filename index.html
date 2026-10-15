@@ -792,7 +792,7 @@ const RCH_D=.34;
 // BASIC 1 / 2 -> PRO 1 / 2 -> ELITE 1 / 2 -> FLASHY 1 / 2 (89 BALL HANDLE). Looks only: speed, distance and ankle-break chances are the same in every package.
 // Per animation: n name · dr crouch · tw shoulder twist · ln lean (- = back) · shk [shimmy amount, shakes] · roll body roll · hop bounce · Lg wider stance ·
 // ofa off-arm pose [x, elbow, out] (ofs: it sweeps) · ball: bz dribble height (x) · dbl double crossover · orb wrap round the body (radius) · yy push out in front
-// (- = snatched back) · spn turns on the spin (whole turns only) · tmp tempo: hangs, then snaps
+// (- = snatched back) · tmp tempo: hangs, then snaps · (v2.00: every spin is a single turn)
 const DRB=[
  {n:'BASIC 1',req:0,m:{Z:{n:'CROSSOVER'},X:{n:'HESITATION'},C:{n:'SPIN MOVE'},V:{n:'STEP-BACK'},B:{n:'BETWEEN THE LEGS'},N:{n:'BEHIND THE BACK'}}},
  {n:'BASIC 2',req:50,m:{Z:{n:'QUICK CROSS',dr:.32,tw:.35,ln:.2,bz:.8},X:{n:'UPRIGHT HESI',dr:.2,tw:.2,ln:-.05,ofa:[-.9,-1.1,.3]},C:{n:'TIGHT SPIN',dr:.35,tw:.3,ln:.2},
@@ -805,14 +805,15 @@ const DRB=[
   V:{n:'SPRING-BACK',dr:.3,tw:.5,ln:-.18,hop:.35,ofa:[-1.2,-1,.6]},B:{n:'SNAKE BETWEEN',dr:.36,tw:.55,ln:.2,dbl:1,roll:.2},N:{n:'PUSH BEHIND',dr:.3,tw:.6,ln:.22,yy:10}}},
  {n:'ELITE 2',req:83,m:{Z:{n:'YO-YO CROSS',dr:.35,tw:.55,ln:.25,yy:14,ofa:[-1,-.6,.5]},X:{n:'STUTTER HESI',dr:.25,tw:.6,ln:.15,shk:[.25,5],hop:.2},C:{n:'WRAP SPIN',dr:.35,tw:.4,ln:.2,orb:10},
   V:{n:'SHAKE-BACK',dr:.32,tw:.55,ln:-.2,shk:[.2,3],hop:.3},B:{n:'LOW DOUBLE BETWEEN',dr:.4,tw:.5,ln:.3,bz:.5,Lg:.3,dbl:1},N:{n:'ORBIT BEHIND',dr:.3,tw:.65,ln:.2,orb:12,roll:.2}}},
- {n:'FLASHY 1',req:86,m:{Z:{n:'AND1 WRAP CROSS',dr:.36,tw:.6,ln:.22,orb:12,dbl:1,hop:.25},X:{n:'HANG & WAVE',dr:.2,tw:.5,ln:-.1,bz:1.45,tmp:1,ofa:[-1.7,-.4,.6],ofs:1},C:{n:'DOUBLE SPIN',dr:.38,tw:.5,ln:.22,spn:2,hop:.2},
+ {n:'FLASHY 1',req:86,m:{Z:{n:'AND1 WRAP CROSS',dr:.36,tw:.6,ln:.22,orb:12,dbl:1,hop:.25},X:{n:'HANG & WAVE',dr:.2,tw:.5,ln:-.1,bz:1.45,tmp:1,ofa:[-1.7,-.4,.6],ofs:1},C:{n:'SHOWTIME SPIN',dr:.38,tw:.5,ln:.22,hop:.2},
   V:{n:'MIXTAPE STEP-BACK',dr:.3,tw:.6,ln:-.25,hop:.4,yy:-8,shk:[.2,3]},B:{n:'TRIPLE THREAD',dr:.36,tw:.6,ln:.25,dbl:1,orb:8,shk:[.15,4]},N:{n:'HALO BEHIND',dr:.32,tw:.7,ln:.22,orb:14,ofa:[-1.6,-.6,1],ofs:1}}},
  {n:'FLASHY 2',req:89,m:{Z:{n:'LEGEND CROSS',dr:.4,tw:.75,ln:.25,orb:16,dbl:1,hop:.4,shk:[.2,4],roll:.25},X:{n:'HYPNO HESI',dr:.25,tw:.7,ln:.1,tmp:1,shk:[.3,6],roll:.25,bz:1.3,hop:.25},
-  C:{n:'TORNADO',dr:.4,tw:.6,ln:.25,spn:2,orb:12,ofa:[-1.6,-.6,1],ofs:1},V:{n:'SHOWTIME STEP-BACK',dr:.35,tw:.7,ln:-.25,hop:.45,yy:-10,shk:[.25,4],roll:.2},
+  C:{n:'TORNADO SPIN',dr:.4,tw:.6,ln:.25,orb:12,ofa:[-1.6,-.6,1],ofs:1},V:{n:'SHOWTIME STEP-BACK',dr:.35,tw:.7,ln:-.25,hop:.45,yy:-10,shk:[.25,4],roll:.2},
   B:{n:'SKY-TO-FLOOR BETWEEN',dr:.45,tw:.6,ln:.3,bz:.5,Lg:.3,dbl:1,orb:10,hop:.3},N:{n:'ORBIT LEGEND',dr:.35,tw:.75,ln:.25,orb:16,roll:.3,hop:.3,ofa:[-1.7,-.5,1.1],ofs:1}}}];
 DRB.forEach(P=>{for(const k in P.m)P.m[k]=Object.assign({dr:.28,tw:.4,ln:.15},P.m[k]);P.d='ZXCVBN'.split('').map(k=>P.m[k].n).join(' · ')}); // (unset = the plain move) · d = its six animations
 const drbA=(v,k)=>(DRB[v|0]||DRB[0]).m[k]||DRB[0].m.Z; // package v's animation for move k
-const drbT=u=>sm3(sm3(u)); // the tempo that hangs at both ends and snaps through the middle
+const drbT=u=>sm3(sm3(u));
+const spinYaw=p=>p.spin>0?sm3(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1)*(p.spn||1):0; // a spin eases in and out (v2.00: it was a constant-speed turn) // the tempo that hangs at both ends and snaps through the middle
 // which package p uses: a CREATED player uses the one his owner equipped (only stepped down if his handle no longer reaches it); every other (AI / roster)
 // player automatically uses the highest package his handle unlocks
 function drbPick(p){const bh=(p.rt&&p.rt.bh)||50;let v=p.build?p.build.drb|0:DRB.length-1;while(v>0&&DRB[v].req>bh)v--;return v}
@@ -823,16 +824,17 @@ function drbBall(h,bm,hz0){const S=drbA(bm.v,bm.k),u=Math.min(1,bm.t/bm.d),k=bm.
   if(S.orb){const a=uu*2*Math.PI;lat+=h.side*S.orb*Math.sin(a);fw-=S.orb*(1-Math.cos(a))}} // (the orbit starts and ends where the plain path does)
  if(k=='V')fw=7-6*Math.sin(uu*Math.PI);
  if(S.yy)fw+=S.yy*Math.sin(uu*Math.PI);if(S.bz)bz=4+(bz-4)*S.bz;
+ if(bm.l0){if(!bm.o0)bm.o0=[bm.l0[0]-lat,bm.l0[1]-fw,bm.l0[2]-bz];const w=1-sm3(Math.min(1,u/.6)),o=bm.o0;lat+=o[0]*w;fw+=o[1]*w;bz+=o[2]*w} // BLEND IN (v2.00): the gap between where the ball really was (mid-dribble, mid-move) and this move's path fades out over its first 60%
  return[lat,fw,bz,u]}
 // the body during a move (from pose()): crouch, twist, lean, plus the animation's shimmy / roll / hop / stance / off arm
 function drbPose(p,q){const b=p.bm,S=drbA(b.v,b.k),u0=Math.min(1,b.t/b.d),u=S.tmp?drbT(u0):u0,s2=Math.sin(u*Math.PI),mx=(a,c,w)=>a+(c-a)*w;
- q.drop=S.dr*s2;q.tw=-p.side*S.tw*s2;q.lean+=S.ln*s2;
+ q.drop=S.dr*s2;q.tw=-p.side*S.tw*s2;q.lean+=S.ln*s2;q.r=Math.min(q.r||14,11); // (softer joint springs through a move: everything flows)
  if(S.shk)q.tw+=S.shk[0]*Math.sin(u*Math.PI*2*S.shk[1])*s2;
  if(S.roll)q.roll=(q.roll||0)+S.roll*Math.sin(u*2*Math.PI)*s2;
  if(S.hop)q.bob=(q.bob||0)+S.hop*Math.abs(Math.sin(u*2*Math.PI))*s2;
  if(S.Lg){q.Lg-=S.Lg*s2;q.Rg+=S.Lg*s2}
  if(S.ofa){const O=p.ls>0?'R':'L',sg=O=='L'?-1:1,[x,e,z]=S.ofa,sw=S.ofs?Math.sin(u*2*Math.PI):0;q[O+'x']=mx(q[O+'x'],x-1.1*sw,s2);q[O+'e']=mx(q[O+'e'],e,s2);q[O+'z']=mx(q[O+'z'],sg*z,s2)}} // (the off arm = the one without the ball)
-const MVD=.48,SPRINT=160; // SPRINT = top speed while Shift is held (the normal run is 120)
+const MVD=.48,SPRINT=160,DRB_SLOW=1.35; // DRB_SLOW (v2.00): every dribble move plays 35% slower (same distance), so the moves and their blends read cleanly // SPRINT = top speed while Shift is held (the normal run is 120)
  // dribble-move burst size (1 = the old, far too long glide)
 function move(p,k,nofo){
  const cmb=p.quick>0&&k!='X';if(p.mcd>0&&!cmb)return;p.chain=T-(p.mvT==null?-99:p.mvT)<.9?Math.min(3,(p.chain||0)+1):0;p.mvT=T;p.mvK=k;
@@ -840,21 +842,21 @@ function move(p,k,nofo){
  // BALL HANDLE rating (bn 0-1 for 25-100): fd = move duration (x1.25 at 25 -> x0.75 at 100, ~x1.0 at 60: faster animations), fx = distance covered (x0.80 -> x1.30), am = ankle-break multiplier (x0.03 at 25 -> x0.68 at 100, quadratic)
  const bn=Math.max(0,Math.min(1,((p.rt&&p.rt.bh>0?p.rt.bh:50)-25)/75)),fd=1.25-.5*bn,fx=.8+.5*bn,am=.03+.65*bn*bn;
  // the wait before the next move (v1.76, was a flat 0.6s): 0.45s at BALL HANDLE 25 -> 0.32s at 100, cut further by CRITICAL COMBOS; a chained move also plays faster with it
- const cc=sigv(p,'combos');p.mcd=(.45-.13*bn)*(1-cc);
+ const cc=sigv(p,'combos');p.mcd=(.45-.13*bn)*(1-cc)*1.2;
  if(k=='Z'){p.side*=-1;an=a+p.side*.95;n='CROSSOVER'}
- if(k=='X'){n='HESITATION';p.pause=.18*fd;sp=480;fo=.5;rm=1;hes=1}
- if(k=='C'){p.side*=-1;an=a+p.side*.5;du=.45;sp=370;p.inv=.5;p.spin=p.sd=.5*fd;p.spd=Math.cos(an)>.1?1:Math.cos(an)<-.1?-1:(p.spd||1);n='SPIN MOVE';fo=.4;rm=.62}
+ if(k=='X'){n='HESITATION';p.pause=.18*fd*DRB_SLOW;sp=480;fo=.5;rm=1;hes=1}
+ if(k=='C'){p.side*=-1;an=a+p.side*.5;du=.45;sp=370;p.inv=.5;p.spin=p.sd=.5*fd*DRB_SLOW;p.spd=Math.cos(an)>.1?1:Math.cos(an)<-.1?-1:(p.spd||1);n='SPIN MOVE';fo=.4;rm=.62}
  if(k=='V'){an=Math.atan2(HY-p.y,hx(p.team)-p.x)+Math.PI;du=.25;sp=340;p.sep=1.5;n='STEP-BACK';fo=.3;rm=.55}
  if(k=='B'){p.side*=-1;an=a+p.side*.5;du=.3;sp=400;n='BETWEEN THE LEGS';rm=.85}
  if(k=='N'){p.side*=-1;an=a+p.side*.8;du=.4;sp=380;n='BEHIND THE BACK';rm=.7;p.inv=.3}
  if(cmb){sp*=1.5;du*=.67;fo+=.2;n='COMBO '+n;p.quick=0;rm=1.2}
  if(cc&&p.chain){du*=1-.3*cc;sp/=1-.3*cc;sigFx(p,'combos')} // CRITICAL COMBOS: a chained move is quicker (same distance)
- du*=fd;sp*=MVD*fx/fd; // same distance logic, scaled: duration x fd, speed x fx/fd -> distance x fx. MVD shrinks every dribble-move burst (they used to carry players 9-15 ft at faster than sprint speed)
+ du*=fd*DRB_SLOW;sp*=MVD*fx/fd/DRB_SLOW; // same distance logic, scaled: duration x fd, speed x fx/fd -> distance x fx. MVD shrinks every dribble-move burst (they used to carry players 9-15 ft at faster than sprint speed)
  const d=near(p,TM[1-p.team],85); // the defender on him (found before the burst is set, for the Signatures below)
  if(p.sig||(d&&d.sig)){const hc=sigv(p,'handles')*p.chain;if(hc){du*=1-hc;sp/=1-hc;sigFx(p,'handles')}const cl=d?sigv(d,'clamps'):0;if(cl&&inFront(d,p)){sp*=1-cl;sigFx(d,'clamps')}
   const ck=ckOn(p)?sigv(p,'check1v1'):0;if(ck){sp*=1+ck;sigFx(p,'check1v1')}const rl=sigv(p,'relentless');if(rl&&rm<1){rm=1-(1-rm)*(1-rl);sigFx(p,'relentless')}}
  if(MODE==1)p.ckT=-99;
- p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1),v:drbPick(p)};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
+ p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1)*DRB_SLOW,v:drbPick(p),l0:B.h===p&&p.bl?p.bl.slice():null};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
  fo*=am;if(d&&d.swp>0)fo*=1.5;{const an='ZVB'.includes(k)?sigv(p,'ankle'):0;if(an)fo=Math.min(.95,fo+an)} // ankle-breaker chance now comes from the BALL HANDLE rating (was a flat 30-55%, 75% on combos)
  if(!nofo&&d&&Math.random()<fo){ankleBreak(d,p,k);say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
@@ -2049,7 +2051,7 @@ function step(dt){
   if(bm){bm.t+=dt;const r_=drbBall(h,bm,hz0);lat=r_[0];fw=r_[1];bz=r_[2]; // the ball's path through the move (its DRIBBLE STYLE)
    if(r_[3]>=1){h.bm=null;B.vz=-100}}
   h.ls=lat/9;{const bx=Math.sin(h.ang),by=Math.cos(h.ang);B.x=h.x-by*lat+bx*fw;B.y=h.y+bx*lat+by*fw}
-  if(h.dunk&&h.dunk.ph>=2)B.z=h.z+75*h.ht;else if(B.mode=='inbound')B.z=60;else if(msOf(h)&&msOf(h).on)B.z=(72+msOf(h).t*14)*h.ht+h.z;else if(bz!=null)B.z=bz;else{const hz=(36-12*(h.pst||0))*h.ht+h.z;B.vz-=G*dt;B.z+=B.vz*dt;if(B.z<=4){B.z=4;B.vz=Math.max(Math.abs(B.vz)*.88,Math.sqrt(2*G*Math.max(8,hz-4)*1.15))}if(B.z>hz&&B.vz>0){B.z=hz;B.vz=-170}} // every floor bounce comes back up at least to the hand (a dribble picked up off the floor, or a low catch, used to die out and leave the ball glued to the floor)
+  if(h.dunk&&h.dunk.ph>=2)B.z=h.z+75*h.ht;else if(B.mode=='inbound')B.z=60;else if(msOf(h)&&msOf(h).on)B.z=(72+msOf(h).t*14)*h.ht+h.z;else if(bz!=null)B.z=bz;else{const hz=(36-12*(h.pst||0))*h.ht+h.z;B.vz-=G*dt;B.z+=B.vz*dt;if(B.z<=4){B.z=4;B.vz=Math.max(Math.abs(B.vz)*.88,Math.sqrt(2*G*Math.max(8,hz-4)*1.15))}if(B.z>hz&&B.vz>0){B.z=hz;B.vz=-170}}h.bl=[lat,fw,B.z]; // (h.bl: the ball's spot, for the next move's blend) every floor bounce comes back up at least to the hand (a dribble picked up off the floor, or a low catch, used to die out and leave the ball glued to the floor)
  }
  if(B.mode=='held'&&B.h&&!B.h.dunk&&!B.h.lay&&B.h.m&&shootNow(B.h))shotBall(B.h); // (shooting: the game's ball stays on his hand, not the dribble spot)
  if(B.mode=='pass'&&B.oop)oopStep(dt); // ALLEY-OOP lob
@@ -3342,7 +3344,7 @@ function pose(p,dt){
  if(q.Ly!=null||q.Ry!=null||q.roll!=null||m.ayk){SP(m.aL.rotation,'y',14,q.Ly||0);SP(m.aR.rotation,'y',15,q.Ry||0);SP(m.body.rotation,'z',16,q.roll||0); // upper-arm swing round + torso side lean (leaning tomahawk), eased back afterwards
   m.ayk=q.Ly!=null||q.Ry!=null||q.roll!=null||Math.abs(m.aL.rotation.y)+Math.abs(m.aR.rotation.y)+Math.abs(m.body.rotation.z)>.002;if(!m.ayk)m.aL.rotation.y=m.aR.rotation.y=m.body.rotation.z=0} // dunker's eyes on the rim (eases back level afterwards)
  S(m.body,q.lean,17);SP(m.body.rotation,'y',18,q.tw);
- SP(m.L.position,'y',19,2.3-q.drop);const hy=m.L.position.y;m.R.position.y=hy;m.body.position.y=hy+((air||d)?0:q.bob||0);
+ SP(m.L.position,'y',19,2.3-q.drop);const hy=m.L.position.y;m.R.position.y=hy;if(m.bobS==null)m.bobS=0;SP(m,'bobS',20,(air||d)?0:q.bob||0);m.body.position.y=hy+m.bobS;
  if(!d&&m.wd){for(const a of [m.aL,m.aR])a.rotation.x=Math.atan2(Math.sin(a.rotation.x),Math.cos(a.rotation.x))}m.wd=!!d;
 }
 // ===== INTRO STAR POSES. Driven by REAL time at ~0.6x (reads as slow motion but still clearly moves); joints ease in from wherever the walk cycle left them.
@@ -3399,10 +3401,11 @@ function render(dt){
   else if(B.mode=='held'&&B.h===p&&!p.dunk){ // ball handler: loose hoop assist, the body stays within ~FACE_MAX of the basket whatever the move direction
    let d=Math.atan2(Math.sin(tgt-ha),Math.cos(tgt-ha));if(Math.abs(d)>2.7)d=(p.fs||1)*Math.abs(d);else p.fs=Math.sign(d)||1;
    tgt=ha+FACE_MAX*Math.tanh(d/FACE_MAX);if((p.pst||0)>.05)tgt=Math.atan2(p.fx,p.fy)}
-  let da=tgt-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.sqd=sqz?da:0;p.sq=1-Math.min(1,Math.abs(da));p.angv=p.angv||0;smdA(p,'ang',tgt,1.1/(sqz?9:12),dt); // (turning is a spring too: he swings round and settles, never whips)
+  let da=tgt-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.sqd=sqz?da:0;p.sq=1-Math.min(1,Math.abs(da));p.angv=p.angv||0;smdA(p,'ang',tgt,1.1/(sqz?9:p.bm&&B.h===p?7:12),dt); // (turning is a spring too: he swings round and settles, never whips - softer still through a dribble move, v2.00)
   const sp3=p.dunk&&p.dunk.sty==3?sm3(Math.max(0,Math.min(1,(p.dunk.t-p.dunk.f0)/((1-p.dunk.f0)*.8))))*2*Math.PI:0;
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
-  m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1)*(p.spn||1):0)+sp3+p.lyw+bbYaw(p)+akYaw(p);
+  {const yr=p.ang+spinYaw(p)+sp3+p.lyw+bbYaw(p)+akYaw(p);if(p.yr!=null){const j=Math.atan2(Math.sin(yr-p.yr),Math.cos(yr-p.yr));if(Math.abs(j)>.45)p.yo=(p.yo||0)-j}p.yr=yr; // YAW BLEND (v2.00): a jump in his facing (a spin cut short, an animation ending early) is never shown - it is absorbed
+   p.yo=(p.yo||0)*Math.exp(-dt*9);if(Math.abs(p.yo)<1e-4)p.yo=0;m.rotation.y=yr+p.yo} // ...into an offset that eases away over ~0.3s
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
   if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=p.rbx||0;p.rbxv=p.rbxv||0;const akb=p.akk?akBody(p):null;smd(p,'rbx',akb?akb[0]:p.stun>0?(p.stb?-.14*p.stb:-1.2):0,akb?.09:.13,dt);p.rbz=ex(p.rbz||0,akb?akb[1]:0,dt,akb?9:10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
@@ -5319,10 +5322,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.99'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.00'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.00','Smoother dribble moves',['The DOUBLE SPIN is gone: FLASHY 1\'s spin is now the SHOWTIME SPIN and FLASHY 2\'s is the TORNADO SPIN, both a single turn.','Every dribble move plays 35% slower (it still covers the same ground), and there is a little more time before the next one.','Ultra-smooth blending: when a move starts (even cutting into another one) the ball glides from wherever it really is onto the new move\'s path - no more ball teleporting.','Spins ease in and out instead of turning at one constant speed, and a spin or move that gets cut short no longer snaps the body round - the turn is absorbed and eased away.','The body\'s joints are softer through a move, the player turns less sharply mid-move, and the bounce in his stride is smoothed too.']],
  ['v1.99','Realistic hoop and ball',['NEW BALL: pebbled leather grain, proper 8-panel channels (with the curved seams), a stamped logo and a bump map, so the grain and the grooves catch the light.','BACKBOARD COLLISION: the ball can no longer go into or through the glass. Loose balls and rebounds bounce off the front, the back, the sides and the bottom edge; a long miss bounces off the board; a shot from behind the backboard hits the back of it (no basket). The glass has its own thud.','NEW NET: a real diamond-mesh net hung from 12 hooks and simulated with physics. It sags under its own weight, stretches around the ball as it drops through, swings after a swish and shudders with the rim.','NEW RIM AND BACKBOARD: a painted steel rim with wear, a bracket and net hooks; tempered glass with the white border and shooter\'s square, an aluminium frame, a padded bottom edge and a padded pole. The STORE trail preview uses the new hoop too.']],
  ['v1.98','New menu music',['3 new songs in the menu music rotation: NIGHTBALL, NIGHTBALL 2 and BLACKTOP COURT (5 songs now, they take turns).','Menu music now plays on every menu screen outside a match (career, play now, rosters, online lobbies...), not only once you have been on the main menu. It still stops when a match starts.','In the career STORE the music drops right down so you can hear the ball trail previews, and comes back up when you leave the store.']],
  ['v1.97','Audio and visual settings',['PAUSE MENU is now RESUME · AUDIO · VISUALS · QUIT (mouse or keys). The same AUDIO and VISUALS pages are under CUSTOMISATION on the main menu.','AUDIO: MASTER, CROWD, COURT SOUNDS (bounces, footsteps, squeaks), SOUND EFFECTS, BALL TRAILS and MENU MUSIC volume sliders, plus MUTE IN BACKGROUND. Changing a slider plays a sample at the new level.','VISUALS: GRAPHICS PRESET (LOW / COOL / SUPER), RESOLUTION (AUTO, 480p, 720p, 1080p, 1440p, 4K), TARGET FPS (30, 60, 90, 120, 144, MAX), TRAILS LIGHT THE COURT on / off, CAMERA SHAKE (OFF / LOW / FULL), BRIGHTNESS and SHOW FPS.','RESET puts a page back to its defaults. Every setting applies live and is saved on this device.']],
@@ -6067,7 +6071,7 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
     else if(!p.lay&&!SPV.bf){const a=SPV.ball.position.clone();spvFly(a,new THREE.Vector3(88.8,10.3,32),.45,3)}}
    else{vert(p,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.exp(-dt*3);p.vy*=Math.exp(-dt*3);SPV.done+=dt}}}
  else if(c=='drb'){SPV.mt-=dt;if(p.bm)p.bm.t+=dt;if(p.spin>0){p.spin=Math.max(0,p.spin-dt)}
-  if(SPV.mt<=0&&!p.bm){const k='ZBNCXV'[SPV.mi++%6];if('ZCBN'.includes(k))p.side*=-1;p.bm={k,t:0,d:k=='X'?.5:k=='C'||k=='N'?.55:.42,v:+SPV.v};if(k=='C'){p.spin=p.sd=.5;p.spd=1;p.spn=drbA(+SPV.v,'C').spn||1}SPV.mn=drbA(+SPV.v,k).n;SPV.mt=.35}
+  if(SPV.mt<=0&&!p.bm){const k='ZBNCXV'[SPV.mi++%6];if('ZCBN'.includes(k))p.side*=-1;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*DRB_SLOW,v:+SPV.v};if(k=='C'){p.spin=p.sd=.5*DRB_SLOW;p.spd=1;p.spn=drbA(+SPV.v,'C').spn||1}SPV.mn=drbA(+SPV.v,k).n;SPV.mt=.35}
   if(p.bm&&p.bm.t>=p.bm.d)p.bm=null}
  else if(c=='pas'){const ty=SPV.v,P=PASS_T[ty]||PASS_T.chest;p.x+=p.vx*dt;
   if(SPV.ph=='set'&&SPV.t>=.45){p.ps={ty,k:['btb','elbow','behead','legs'].includes(ty)?-1:1,t:0,wu:P.wu,d:P.wu+.38,go:0,fa:null};SPV.ph='wind'}
@@ -6112,7 +6116,7 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
   if(o===SPV.p){let tg=Math.atan2(o.fx,o.fy);if(SPV.c=='sht'&&SPV.ph=='set'&&SPV.v=='pfade')tg=-Math.PI/2;let da=tg-o.ang;da=Math.atan2(Math.sin(da),Math.cos(da));o.ang+=da*(1-Math.exp(-14*dt))}
   const d0=o.dunk,sp3=d0&&d0.sty==3?sm3(Math.max(0,Math.min(1,(d0.t-d0.f0)/((1-d0.f0)*.8))))*2*Math.PI:0;
   o.lyw=ex(o.lyw||0,d0?dkYaw(o,d0):o.lay?layYaw(o,o.lay):0,dt,o.lay&&o.lay.rv?(o.lay.rv==2?60:22):14);
-  o.m.position.set(o.x/10,o.z/10,(o.y/10-ZO));o.m.rotation.y=o.ang+sp3+o.lyw+(o.spin>0?(1-o.spin/(o.sd||.5))*2*Math.PI*(o.spd||1)*(o.spn||1):0);pose(o,dt)}
+  o.m.position.set(o.x/10,o.z/10,(o.y/10-ZO));o.m.rotation.y=o.ang+sp3+o.lyw+spinYaw(o);pose(o,dt)}
  const cam=SPV.cam,cx=SPV.c=='pas'?81:SPV.c=='sht'?78:79;cam.position.set(cx-1.5,7.2,32+27);cam.lookAt(cx+.5,6.3,32);
  if(SPV.c=='drb'){cam.position.set(79,6.2,45);cam.lookAt(72,3.4,32)} // (dribble styles: closer, from the front three-quarters - the moves go side to side)
  if(SPV.trl){trlPrevUpd(dt);if(SUNR)cam.position.add(_SVB.set((Math.random()-.5)*SUNR*.5,(Math.random()-.5)*SUNR*.35,0))}
