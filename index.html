@@ -122,7 +122,7 @@ function jsOf(p){if(p.jsO&&JS_M[p.jsO])return JS_M[p.jsO];if(p._js&&p._jsB===p.b
  else{const nm=(tmOf(p).pl||[])[p.i];if(JS_PL[nm])id=JS_PL[nm];else{const ok=JS.filter(j=>!j.sig&&jsRt(p,JS_M[j.id])>=JS_M[j.id].req);let h=0;for(const c of String(nm||p.i))h=(h*31+c.charCodeAt(0))>>>0;id=ok[Math.max(0,ok.length-1-h%Math.min(4,ok.length))].id}} // AI: one of the best few he qualifies for
  p._jsB=p.build;return p._js=JS_M[id]}
 function jsApply(p){p._js=null;p.st=.55*jsOf(p).ms} // (the shot meter's speed follows his jumper)
-const SF=['x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs','clk','clt'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
+const SF=['x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
 let AC;function beep(f,d=.1,t='sine',v=.05){try{AC=AC||new AudioContext();const o=AC.createOscillator(),a=AC.createGain();o.type=t;o.frequency.value=f;a.gain.value=v;o.connect(a);a.connect(AC.destination);o.start();a.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
 const say=(s,c='#fff')=>{msg={s,t:1.5,c}};
 const widFor=(t,i)=>{const w=TEAMS[TI[t]].wd;return w&&w[i]||1}; // (no team uses wd any more - body shape comes from body types, see BODY) // per-player body-width override: A.Sanad is built much wider (1.4) than anyone else (created players top out at ~1.19)
@@ -147,7 +147,7 @@ function cont(p){let c=0,cb=null,nb=null,nl=1e9;const H=hx(p.team),hxv=H-p.x,hyv
  for(const d of TM[1-p.team]){{const l0=Math.hypot(d.x-p.x,d.y-p.y);if(l0<nl){nl=l0;nb=d}}if(d.stun>0)continue;const dx=d.x-p.x,dy=d.y-p.y,l=Math.hypot(dx,dy),n=dfN(d,wp),R=95*dfRng(n)*(1+sigv(d,'spoiler'))*(1+GUARD.rng*(d.grd||0));if(l>R||l<.1)continue;
   const al=(dx*hxv+dy*hyv)/hl/l;let k=(1-l/R)*(.45+.55*Math.max(0,al));const lane=Math.abs(dx*hyv-dy*hxv)/hl;if(al>0&&lane<14)k+=.2*(1-lane/14);if(d.jump>0)k+=.3;{const v=k*dfEff(n)*cBoost(d,p)*(1+GUARD.eff*(d.grd||0));if(v>c){c=v;cb=d}}}
  CBY=cb||nb;if(p.sep>0)c*=.3;if(p.fdk)c*=1-FADE.cont*p.fdk;return Math.max(0,Math.min(1,c))}
-function post(kind,h,next){if(kind=='make')celStart();ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:Math.max(kind=='make'?2.4:1.2,...TM.flat().map(q=>q.kd?(q.kd.T||KD.T)-q.kd.t+.2:0));B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
+function post(kind,h,next){ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:Math.max(1.2,...TM.flat().map(q=>q.kd?(q.kd.T||KD.T)-q.kd.t+.2:0));B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
 function finRP(){if(RP.mk){RP.clip=RP.fr.filter(f=>f.t>=RP.rel-5&&f.t<=RP.rel+2);RP.mk=0;RP.has=RP.clip.length>5?1:0}}
 const CHK={t:0},SC1=15;
 function checkBall(team){if(PR&&PR<4)team=0;off=team;const o=team==0&&TM[0].length>1&&myP()?myP():TM[team][0],d=TM[1-team][o.k]||TM[1-team][0],H=hx(team),D=dr(team);
@@ -164,43 +164,12 @@ function prFix(){if(!PR||PR>3||!TM[1][0])return;const d=TM[1][0]; // the practic
 function oneDone(){if(MODE==1&&!PR&&(sc[0]>=ONE_WIN||sc[1]>=ONE_WIN)){S='over';finishGame();endInit();return true}return false}
 function calm(p){rdOff(p);Object.assign(p,{vx:0,vy:0,stun:0,burst:0,pause:0,z:0,dunk:null,lay:null,jump:0,inv:0,sep:0,spin:0,air:0,vz:0,cr:0,jph:0,pu:0,sj:0,fire:null,avx:0,avy:0,pst:0,pg:0,sd:0,stb:0,kd:null,hg:0,hgx:null,rbx:0,rbz:0,lock:0,lyw:0,gs:1});
  if(p.m){const m=p.m;m.rotation.x=m.rotation.z=0;m.position.y=0;m.sh.rotation.set(-Math.PI/2,0,0);m.sh.position.set(0,.03,0);m.body.rotation.z=0;for(const b of [m.L,m.R,m.aL,m.aR])b.rotation.y=0}} // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
-// ===== CELEBRATIONS (v1.78): after a basket the scorer hits a flashy celebration that fits how he scored, his team-mates do subtle ones (the nearest jogs over
-// for a high five). They play in the extra beat before the inbound (the clock is stopped then) and show in replays and online. p.clk = which one (index into CEL,
-// 0 = none), p.clt = how long it has been playing. Each pose is drawn on top of whatever the body was doing (w = blend in over 0.25s).
-// ctx: d = after a dunk, 3 = after a three, o = anything else (layups, mid-range). mv = the scorer's drift while he does it (backpedal speed, 0 = stands his ground).
-const CEL=[null,
- {n:'FLEX',ctx:'d',mv:0,p:(S,t)=>{S({Lx:-1.25,Rx:-1.25,Lz:-.95,Rz:.95,Le:-2.35,Re:-2.35,Lw:-.3,Rw:-.3,lean:-.08+.05*Math.sin(t*9),drop:.22,Lg:-.3,Rg:.3})}},
- {n:'ROAR',ctx:'d',mv:0,p:(S,t)=>{S({lean:.32+.08*Math.sin(t*11),drop:.26,Lx:.15,Rx:.15,Lz:-.95,Rz:.95,Le:-.75,Re:-.75,Lg:-.32,Rg:.32})}},
- {n:'TOO SMALL',ctx:'d',mv:55,p:(S,t)=>{S({Rx:-.85,Re:-.35,Rz:.25,Rw:.9,Lx:-.25,Le:-.5,lean:-.06,tw:-.25})}},
- {n:'POINT TO THE SKY',ctx:'do',mv:35,p:(S,t)=>{S({Lx:-2.85,Rx:-2.85,Le:-.15,Re:-.15,Lz:-.22,Rz:.22,lean:-.22})}},
- {n:'THREE UP',ctx:'3',mv:70,p:(S,t)=>{S({Rx:-2.9,Re:-.1,Rz:.12,Rw:.4,Lx:-.3,Le:-.6,lean:-.1})}},
- {n:'GOGGLES',ctx:'3',mv:0,p:(S,t)=>{S({Lx:-2.35,Rx:-2.35,Le:-2.7,Re:-2.7,Lz:.3,Rz:-.3,Lw:-.5,Rw:-.5,lean:-.04,drop:.1})}},
- {n:'NIGHT NIGHT',ctx:'3o',mv:0,p:(S,t)=>{S({Lx:-1.55,Le:-2.6,Lz:.75,Rx:-1.5,Re:-2.5,Rz:-.15,tw:.3,roll:.18,lean:.02})}},
- {n:'SHIMMY',ctx:'3o',mv:40,p:(S,t)=>{const s=Math.sin(t*24);S({tw:.32*s,Lx:-.45,Rx:-.45,Le:-1.55,Re:-1.55,Lz:-.35,Rz:.35,lean:.12,drop:.1})}},
- {n:'SILENCER',ctx:'3o',mv:60,p:(S,t)=>{S({Rx:-2.05,Re:-2.65,Rz:-.55,Rw:-.2,Lx:-.4,Le:-.25,Lz:-1.15,lean:-.05})}},
- // team-mates (subtle)
- {n:'CLAP',tm:1,p:(S,t)=>{const c=.5+.5*Math.sin(t*15);S({Lx:-1.15,Rx:-1.15,Le:-1.3,Re:-1.3,Lz:.15+.35*c,Rz:-.15-.35*c})}},
- {n:'FIST PUMP',tm:1,p:(S,t)=>{const c=Math.max(0,Math.sin(t*9));S({Rx:-.7-.6*c,Re:-2.2,Rz:.1,lean:.06})}},
- {n:'POINT',tm:1,p:(S,t)=>{S({Rx:-1.55,Re:-.1,Rz:.1,Rw:.2})}},
- {n:'HIGH FIVE',tm:1,p:(S,t)=>{const u=Math.min(1,t/.35);S({Rx:-2.7*u-.3*(1-u),Re:-.25,Rz:-.15,lean:-.05})}}];
-const CEL_HF=CEL.findIndex(c=>c&&c.n=='HIGH FIVE');
-function celStart(){const w=RP.who;if(!w||!w.m)return;const dk=!!(w.dunk||w.hg>0||(w.dkd)),c=dk?'d':B.pts==3?'3':'o',ok=[];CEL.forEach((x,i)=>{if(x&&!x.tm&&x.ctx.includes(c))ok.push(i)});
- w.clk=ok[Math.random()*ok.length|0];w.clt=0;w.clS=1;gpLbl(w,CEL[w.clk].n);
- const tms=TM[w.team].filter(q=>q!==w&&q.m),nr=tms.slice().sort((a,b)=>Math.hypot(a.x-w.x,a.y-w.y)-Math.hypot(b.x-w.x,b.y-w.y))[0],sub=CEL.map((x,i)=>x&&x.tm&&i!==CEL_HF?i:0).filter(i=>i);
- for(const q of tms){q.clS=0;q.clt=-Math.random()*.4;q.clH=q===nr&&Math.hypot(q.x-w.x,q.y-w.y)<220?w:null;q.clk=q.clH?CEL_HF:sub[Math.random()*sub.length|0]}}
-// a celebrating player's movement (the whole post-basket beat; everyone stops at the inbound)
-function celStep(p,dt){p.clt+=dt;let tx=p.x,ty=p.y,sp=0;const H=hx(p.team);
- if(p.clS){const c=CEL[p.clk];if(c&&c.mv){const gx=p.x-H,gy=p.y-HY,gl=Math.hypot(gx,gy)||1;tx=p.x+gx/gl*40;ty=p.y+gy/gl*40;sp=c.mv}const fx=H-p.x,fy=HY-p.y,fl=Math.hypot(fx,fy)||1;if(c&&c.mv){p.fx=fx/fl;p.fy=fy/fl}} // backpedals away from the rim, still facing it
- else if(p.clH){const w=p.clH,dx=w.x-p.x,dy=w.y-p.y,l=Math.hypot(dx,dy)||1;if(l>26){tx=w.x-dx/l*22;ty=w.y-dy/l*22;sp=105}p.fx=dx/l;p.fy=dy/l;if(l>34)p.clt=Math.min(p.clt,0)} // the high five: jog over first, the hand goes up when he gets there
- const dx=tx-p.x,dy=ty-p.y,dl=Math.hypot(dx,dy),v=dl>3?Math.min(sp*spdM(p),dl*4):0,a=Math.min(1,dt*6);p.vx+=((dx/dl||0)*v-p.vx)*a;p.vy+=((dy/dl||0)*v-p.vy)*a}
-// the pose (from pose()): S(o) blends each joint target in o in with weight w
-function celPose(p,q,mx){const c=CEL[p.clk];if(!c||p.clt<=0)return;const w=Math.min(1,p.clt/.25),S=o=>{for(const k in o)q[k]=mx(q[k]==null?0:q[k],o[k],w)};c.p(S,p.clt);q.r=Math.max(q.r,16)}
 function reset(next){
  if(HC){finRP();if(oneDone())return;checkBall(next);return}
  finRP();
  off=next;ms.on=false;
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
-  calm(p);p.clk=0;p.clt=0;p.clH=null; // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
+  calm(p); // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
   if(t==off){const s=[[860,320],[950,320],[780,150],[700,490],[640,320]][i];p.x=fr(s[0]);p.y=s[1]}
   else{p.x=fr(SPOT[i][0]-40);p.y=SPOT[i][1]}
   p.fx=-dr(off)*-1;p.fy=0;
@@ -397,7 +366,7 @@ function repPlan(){const c=RP.clip,w=RP.who,wt=w.team,wk=w.k,n=SF.length,c0=c[0]
  else{add((tBall||rel)+.12,'shotFront',.3,{who:w,pre:.9,ts:(tBall||rel)-.32});add(fin+.2,'flight',.62,{who:w});add(te,'react',1,{who:w})}
  if(!segs.length)segs.push({a:t0,b:te,ty:'react',sp:1,who:w});
  return{t0,te:segs[segs.length-1].b,segs,kind}}
-const REP_DISC=new Set(['jph','air','side','ls','sfs','clk']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
+const REP_DISC=new Set(['jph','air','side','ls','sfs']),REP_LERP=['t','pt','ta','pf','g','pre','age','tr'];
 function repLo(a,b,u){if(!a)return a;const o=Object.assign({},a);if(b&&b.ph===a.ph&&b.sty===a.sty)for(const k of REP_LERP)if(typeof a[k]=='number'&&typeof b[k]=='number')o[k]=a[k]+(b[k]-a[k])*u;return o} // (a move's own clock, smoothed between frames)
 function repStep(dt){const c=RP.clip,D=RP.dir;RP.rdt=dt;let st=0;
  if(RP.ct==null){RP.ct=D.t0;st=1}
@@ -1306,7 +1275,7 @@ function perfW(p,d,c){const n=shN(p,d),w3=.016+.074*n;let w;
  else{const g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));w=Math.max(.004,w3/(1+g*g));const lg=sigv(p,'logo');if(lg&&d>R3+60)w=Math.max(w,w3*lg);if(pastHalf(p))w=halfW(p,w)}
  return w*(1-contK(p,d)*cwin(c))*pwMul(p,d)*(p.fdk?1-(1-FADE.win-(1-FADE.win)*n)*p.fdk:1)} // (fadeaway: x0.8 window at rating 25 -> x1.0 at 100)
 const qpick=(c,p)=>{const r=Math.random(),d=p?Math.hypot(hx(p.team)-p.x,HY-p.y):0;if(p){shotPrep(p);c=shotC(p,d,c)}const a=.3*(1-c)*Math.min(1.6,perfW(p,d,0)/.05)*(1-contK(p,d)*c)/(1-.4*c);return r<a?2:r<a+.35?1:0};
-function release(p,qq){
+function release(p,qq){p.shT=T; // (after the shot he keeps facing the rim for a while, see render)
  ms.on=false;ms.gb=null;if(ms===MS2&&NET.prt>0)ms.t=NET.prt; // online: the guest's release uses the meter value HIS page measured
  const d=Math.hypot(hx(p.team)-p.x,HY-p.y),three=d>R3,c0=cont(p),c=shotC(p,d,c0),e=ms.t-1,ae=Math.abs(e);p.cby=CBY;
  let q=qq,txt='';
@@ -1951,7 +1920,6 @@ function step(dt){
   if(p.bb){const b=p.bb;b.t+=dt;if(b.t>=b.d||p.stun>0||p.lock>0)p.bb=null;else if(b.lk){bbStep(p,b);return}}
   if(p.lock>0){p.lock-=dt;p.vx=p.vy=0;p.avx=p.avy=0;return}
   if(p.stun>0){p.stun-=dt;if(p.stun<=0)p.stb=0;p.vx*=.8;p.vy*=.8;if(p.z>0||p.air){p.vz=(p.vz||0)-G*dt;p.z=Math.max(0,p.z+p.vz*dt);if(!p.z){p.vz=0;p.air=0;p.avx*=.3;p.avy*=.3}}return} // (hit in the air: he still comes down)
-  if(B.mode=='post'&&B.kind=='make'&&p.clk){celStep(p,dt);return} // CELEBRATING (the beat after a basket: everyone's controls wait for the inbound)
   if((t==0&&i==ctl&&!AUTO||NET.host&&t==1)&&B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt); // a pass is on its way to you: you're steered onto it (control comes back on the catch)
   else if(t==0&&i==ctl&&!AUTO)ctrl(p,dt);
   else if(NET.host&&t==1)netCtrl(p,dt); // online: the guest's player, on his own keys
@@ -3086,7 +3054,6 @@ function pose(p,dt){
   else if(t<.82)Object.assign(q,{Lh:-.9,Rh:-.6,Lk:1,Rk:.7,Lx:sd>0?-.4:-2.4,Rx:sd<0?-.4:-2.4,Le:-.5,Re:-.5,Lz:sd>0?-1.5:-1,Rz:sd<0?1.5:1,lean:-.35,drop:.1,tw:0,r:12}); // going down: legs fold, the arm on the falling side reaches for the floor
   else Object.assign(q,{Lh:-.6,Rh:-.25,Lk:.8,Rk:.3,Lx:-1.4,Rx:-1.6,Le:-.3,Re:-.5,Lz:-1.3,Rz:1.3,lean:-.1,drop:.05,tw:0,r:8})} // down: limbs splayed, one knee up (getting up: the normal pose eases back in)
  else if(p.bb&&!d&&!air&&!shoot&&!p.lay)bbPose(p,q); // BLOW-BY / CUT-OFF pair
- if(p.clk&&!d&&!air&&!p.lay&&!shoot&&!(p.hg>0))celPose(p,q,mx); // CELEBRATION
  if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
  // ANIMATION BLENDING (v1.70): every joint is a critically damped spring (it keeps its own velocity), so going from one action into the next - a crossover into a
@@ -3156,6 +3123,7 @@ function render(dt){
   const sqz=shootNow(p);let tgt=Math.atan2(p.fx,p.fy);
   const ha=Math.atan2(hx(p.team)-p.x,HY-p.y);
   if(sqz||p.lay)tgt=p.lay&&p.lay.ha0!=null?p.lay.ha0:ha; // (a reverse keeps the facing he took off with; its twist is added below)
+  else if(T-(p.shT==null?-99:p.shT)<1.8&&!(B.h===p&&(B.mode=='held'||B.mode=='inbound'))&&!p.dunk&&Math.hypot(p.vx,p.vy)<110)tgt=ha; // AFTER HIS SHOT: soft-locked to face the rim (drifting / backpedalling after a step-back or fade) until he runs off properly
   else if(p.ps&&p.ps.fa!=null&&!p.dunk)tgt=p.ps.fa; // passing: square to the target (not for behind the back)
   else if(B.mode=='held'&&B.h===p&&!p.dunk){ // ball handler: loose hoop assist, the body stays within ~FACE_MAX of the basket whatever the move direction
    let d=Math.atan2(Math.sin(tgt-ha),Math.cos(tgt-ha));if(Math.abs(d)>2.7)d=(p.fs||1)*Math.abs(d);else p.fs=Math.sign(d)||1;
@@ -4670,7 +4638,7 @@ function netGuestStep(dt){T+=dt;msg.t-=dt;ms.show-=dt;shake=Math.max(0,shake-dt*
  NET.dly=Math.max(35,Math.min(450,Math.max(jt+18,gp*1.4+15)));NET.dl=NET.dl==null?NET.dly:NET.dl+(NET.dly-NET.dl)*Math.min(1,(NET.dly>NET.dl?.2:.02)); // (grows fast, shrinks slowly)
  const rt=now-off_-(NET.via=='p2p'?NET.dl:NET_DELAY);let a=S_[S_.length-1],b=a,u=0;for(let i=0;i<S_.length-1;i++)if(S_[i].t<=rt&&S_[i+1].t>rt){a=S_[i];b=S_[i+1];u=(rt-a.t)/Math.max(1,b.t-a.t);break}
  netApply(a.f,b.f,u)}
-const NET_DISC=new Set(['jph','air','side','sfs','clk']);
+const NET_DISC=new Set(['jph','air','side','sfs']);
 function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen;
  for(let lt=0;lt<2;lt++){const p=TM[lt][0],oa=a.p[1-lt][0],ob=b.p[1-lt][0];if(!p||!oa||!ob)continue;
   SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side'||k=='sfs')v=-v;p[k]=v});
@@ -4830,10 +4798,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.79'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.80'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.80','Facing after a shot',['After a jump shot the shooter now keeps facing the basket while he lands and drifts (step-backs, fadeaways, shooting while moving back) instead of turning his back to it. Once he runs off properly he turns where he is going again.',
+  'Celebrations removed.']],
  ['v1.79','Admin camera controls',['ADMIN CAMERA: hold Space to raise the camera straight up.','ADMIN CAMERA: T plays / pauses the replay (at the current speed - slow motion works too; from the very end it starts again from the beginning); the arrow keys still scrub while it plays.']],
  ['v1.78','Celebrations',['After a basket the scorer celebrates, picked to fit the bucket: after a dunk FLEX, ROAR, TOO SMALL or POINT TO THE SKY; after a three THREE UP, GOGGLES, NIGHT NIGHT, SHIMMY or SILENCER; after anything else NIGHT NIGHT, SHIMMY, SILENCER or POINT TO THE SKY. Its name pops up over him.',
   'His team-mates celebrate more quietly: clapping, a fist pump, pointing at him, and the nearest one jogs over for a HIGH FIVE.',
