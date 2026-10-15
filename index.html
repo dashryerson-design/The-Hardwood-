@@ -349,26 +349,27 @@ function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o
 function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};
  RP.dir=repPlan();RP.ct=null;RP.loop=0;RP.seg=-1;S='replay';{let k;do k=Math.random()*REP_CAMS.length|0;while(k===RP.sty&&REP_CAMS.length>1);RP.sty=k;RP.k=null}ms.on=false;beep(400,.1)}
 // ===== ADMIN CAMERA (v1.77): paused, press 1 three times within 2 s. A free camera over the last ~12 s of play (the replay buffer):
-// W A S D fly (where you look; hold Shift to go faster) · mouse = look (click the game to lock the mouse) · → / ← hold = time forward / backward ·
-// ↓ = slow motion (x0.25) · ↑ = normal speed · K / Esc = back to the pause menu (the game picks up exactly where it was)
-const AD={n:0,t0:0,clip:null,t:0,sp:1,x:0,y:0,z:0,yaw:0,pit:0,mv:0};
+// W A S D fly (where you look; hold Shift to go faster) · hold Space = straight up · mouse = look (click the game to lock the mouse) · → / ← hold = time forward /
+// backward · T = play / pause the replay · ↓ = slow motion (x0.25) · ↑ = normal speed · K / Esc = back to the pause menu (the game picks up exactly where it was)
+const AD={n:0,t0:0,clip:null,t:0,sp:1,play:0,x:0,y:0,z:0,yaw:0,pit:0,mv:0};
 function adStart(){const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};
- AD.clip=RP.fr.length>1?RP.fr.slice():null;AD.t=AD.clip?AD.clip[AD.clip.length-1].t:0;AD.sp=1;AD.st=1;
+ AD.clip=RP.fr.length>1?RP.fr.slice():null;AD.t=AD.clip?AD.clip[AD.clip.length-1].t:0;AD.sp=1;AD.st=1;AD.play=0;
  const d=_CD.set(0,0,-1).applyQuaternion(cam.quaternion);AD.x=cam.position.x;AD.y=cam.position.y;AD.z=cam.position.z;AD.yaw=Math.atan2(d.x,d.z);AD.pit=Math.asin(Math.max(-1,Math.min(1,d.y)));
  if(AD.clip)repApply(AD.clip,AD.t,1);S='admin';beep(880,.08,'triangle')}
 function adEnd(){try{if(document.pointerLockElement)document.exitPointerLock()}catch(e){}endRep();S='pause'}
-function adStep(dt){if(P.ArrowDown)AD.sp=.25;if(P.ArrowUp)AD.sp=1;
+function adStep(dt){if(P.ArrowDown)AD.sp=.25;if(P.ArrowUp)AD.sp=1;if(P.KeyT){AD.play=AD.play?0:1;const c=AD.clip;if(AD.play&&c&&AD.t>=c[c.length-1].t-.01){AD.t=c[0].t;repApply(c,AD.t,1)}} // (T at the very end: play it from the start)
  const f=_CV.set(Math.sin(AD.yaw)*Math.cos(AD.pit),Math.sin(AD.pit),Math.cos(AD.yaw)*Math.cos(AD.pit)),rx=-Math.cos(AD.yaw),rz=Math.sin(AD.yaw), // (right = forward x up)
   v=(K.ShiftLeft||K.ShiftRight?60:24)*dt,fw=(K.KeyW?1:0)-(K.KeyS?1:0),sd=(K.KeyD?1:0)-(K.KeyA?1:0);
- AD.x=Math.max(-40,Math.min(134,AD.x+(f.x*fw+rx*sd)*v));AD.y=Math.max(.5,Math.min(90,AD.y+f.y*fw*v));AD.z=Math.max(-40,Math.min(104,AD.z+(f.z*fw+rz*sd)*v));
- const c=AD.clip;AD.mv=0;if(!c)return;const tm=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0);
+ AD.x=Math.max(-40,Math.min(134,AD.x+(f.x*fw+rx*sd)*v));AD.y=Math.max(.5,Math.min(90,AD.y+f.y*fw*v+(K.Space?v:0))); // (Space: straight up)AD.z=Math.max(-40,Math.min(104,AD.z+(f.z*fw+rz*sd)*v));
+ const c=AD.clip;AD.mv=0;if(!c)return;const tm=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0)||AD.play; // (an arrow held wins over play)
+ if(AD.play&&!K.ArrowRight&&!K.ArrowLeft&&AD.t>=c[c.length-1].t)AD.play=0; // played to the end: stop there
  if(tm){const t2=Math.max(c[0].t,Math.min(c[c.length-1].t,AD.t+tm*dt*AD.sp));AD.mv=t2!==AD.t?tm:0;repApply(c,t2,tm<0||AD.st);AD.t=t2;AD.st=0}}
 function adCam(){cam.position.set(AD.x,AD.y,AD.z);cam.lookAt(AD.x+Math.sin(AD.yaw)*Math.cos(AD.pit),AD.y+Math.sin(AD.pit),AD.z+Math.cos(AD.yaw)*Math.cos(AD.pit));if(cam.fov!==55){cam.fov=55;cam.updateProjectionMatrix()}}
 function adDraw(){const c=AD.clip;g.save();g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,0,960,34);g.fillRect(0,506,960,34);g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle='#ff4d4d';g.fillText('● ADMIN CAM',16,22);
- g.font='12px system-ui';g.fillStyle='#e8e8e8';g.fillText('WASD fly (Shift faster) · mouse look (click to lock) · ←/→ time · ↓ slow mo · ↑ normal · K exit',140,22);
+ g.font='12px system-ui';g.fillStyle='#e8e8e8';g.fillText('WASD fly (Shift faster) · Space up · mouse look (click to lock) · ←/→ time · T play/pause · ↓ slow · ↑ normal · K exit',140,22);
  g.textAlign='right';g.fillStyle=AD.sp<1?'#ffd23f':'#9ef0a6';g.font='bold 13px system-ui';g.fillText(AD.sp<1?'SLOW MO x0.25':'SPEED x1',944,22);
  if(c){const a=c[0].t,b=c[c.length-1].t,u=b>a?(AD.t-a)/(b-a):1;g.fillStyle='rgba(255,255,255,.18)';g.fillRect(120,518,720,8);g.fillStyle='#ff4d4d';g.fillRect(120,518,720*u,8);g.beginPath();g.arc(120+720*u,522,7,0,6.283);g.fill();
-  g.textAlign='left';g.fillStyle='#e8e8e8';g.font='12px system-ui';g.fillText((AD.t-b).toFixed(1)+'s',16,527);g.textAlign='right';g.fillText(AD.mv>0?'▶▶':AD.mv<0?'◀◀':'❚❚',944,527)}
+  g.textAlign='left';g.fillStyle='#e8e8e8';g.font='12px system-ui';g.fillText((AD.t-b).toFixed(1)+'s',16,527);g.textAlign='right';g.fillText(AD.mv<0?'◀◀':AD.play&&!K.ArrowRight?'▶ PLAYING':AD.mv>0?'▶▶':'❚❚',944,527)}
  else{g.textAlign='center';g.fillStyle='#e8e8e8';g.font='12px system-ui';g.fillText('No recorded play to scrub here (1v1 keeps no replay buffer) - free camera only',480,527)}g.restore()}
 addEventListener('mousemove',e=>{if(S!='admin')return;AD.yaw-=(e.movementX||0)*.0035;AD.pit=Math.max(-1.45,Math.min(1.45,AD.pit-(e.movementY||0)*.0035))});
 addEventListener('mousedown',()=>{if(S=='admin'&&!document.pointerLockElement){try{document.getElementById('w').requestPointerLock()}catch(e){}}});
@@ -4829,10 +4830,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.78'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.79'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.79','Admin camera controls',['ADMIN CAMERA: hold Space to raise the camera straight up.','ADMIN CAMERA: T plays / pauses the replay (at the current speed - slow motion works too; from the very end it starts again from the beginning); the arrow keys still scrub while it plays.']],
  ['v1.78','Celebrations',['After a basket the scorer celebrates, picked to fit the bucket: after a dunk FLEX, ROAR, TOO SMALL or POINT TO THE SKY; after a three THREE UP, GOGGLES, NIGHT NIGHT, SHIMMY or SILENCER; after anything else NIGHT NIGHT, SHIMMY, SILENCER or POINT TO THE SKY. Its name pops up over him.',
   'His team-mates celebrate more quietly: clapping, a fist pump, pointing at him, and the nearest one jogs over for a HIGH FIVE.',
   'There is a short extra beat after every make for it (the clock is stopped). Celebrations show in replays and online.']],
