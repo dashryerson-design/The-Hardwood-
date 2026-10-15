@@ -317,6 +317,30 @@ const shootNow=p=>(B.h===p&&!!msOf(p)&&msOf(p).on)||p.sj>0; // (holding the shot
 function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);o.push(p.kd?Object.assign({},p.kd):null);o.push(p.rdh||null);return o})),/* (kd: a posterized man's knockdown, so replays show it) */b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
 function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};
  RP.dir=repPlan();RP.ct=null;RP.loop=0;RP.seg=-1;S='replay';{let k;do k=Math.random()*REP_CAMS.length|0;while(k===RP.sty&&REP_CAMS.length>1);RP.sty=k;RP.k=null}ms.on=false;beep(400,.1)}
+// ===== ADMIN CAMERA (v1.77): paused, press 1 three times within 2 s. A free camera over the last ~12 s of play (the replay buffer):
+// W A S D fly (where you look; hold Shift to go faster) · mouse = look (click the game to lock the mouse) · → / ← hold = time forward / backward ·
+// ↓ = slow motion (x0.25) · ↑ = normal speed · K / Esc = back to the pause menu (the game picks up exactly where it was)
+const AD={n:0,t0:0,clip:null,t:0,sp:1,x:0,y:0,z:0,yaw:0,pit:0,mv:0};
+function adStart(){const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};
+ AD.clip=RP.fr.length>1?RP.fr.slice():null;AD.t=AD.clip?AD.clip[AD.clip.length-1].t:0;AD.sp=1;AD.st=1;
+ const d=_CD.set(0,0,-1).applyQuaternion(cam.quaternion);AD.x=cam.position.x;AD.y=cam.position.y;AD.z=cam.position.z;AD.yaw=Math.atan2(d.x,d.z);AD.pit=Math.asin(Math.max(-1,Math.min(1,d.y)));
+ if(AD.clip)repApply(AD.clip,AD.t,1);S='admin';beep(880,.08,'triangle')}
+function adEnd(){try{if(document.pointerLockElement)document.exitPointerLock()}catch(e){}endRep();S='pause'}
+function adStep(dt){if(P.ArrowDown)AD.sp=.25;if(P.ArrowUp)AD.sp=1;
+ const f=_CV.set(Math.sin(AD.yaw)*Math.cos(AD.pit),Math.sin(AD.pit),Math.cos(AD.yaw)*Math.cos(AD.pit)),rx=-Math.cos(AD.yaw),rz=Math.sin(AD.yaw), // (right = forward x up)
+  v=(K.ShiftLeft||K.ShiftRight?60:24)*dt,fw=(K.KeyW?1:0)-(K.KeyS?1:0),sd=(K.KeyD?1:0)-(K.KeyA?1:0);
+ AD.x=Math.max(-40,Math.min(134,AD.x+(f.x*fw+rx*sd)*v));AD.y=Math.max(.5,Math.min(90,AD.y+f.y*fw*v));AD.z=Math.max(-40,Math.min(104,AD.z+(f.z*fw+rz*sd)*v));
+ const c=AD.clip;AD.mv=0;if(!c)return;const tm=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0);
+ if(tm){const t2=Math.max(c[0].t,Math.min(c[c.length-1].t,AD.t+tm*dt*AD.sp));AD.mv=t2!==AD.t?tm:0;repApply(c,t2,tm<0||AD.st);AD.t=t2;AD.st=0}}
+function adCam(){cam.position.set(AD.x,AD.y,AD.z);cam.lookAt(AD.x+Math.sin(AD.yaw)*Math.cos(AD.pit),AD.y+Math.sin(AD.pit),AD.z+Math.cos(AD.yaw)*Math.cos(AD.pit));if(cam.fov!==55){cam.fov=55;cam.updateProjectionMatrix()}}
+function adDraw(){const c=AD.clip;g.save();g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,0,960,34);g.fillRect(0,506,960,34);g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle='#ff4d4d';g.fillText('● ADMIN CAM',16,22);
+ g.font='12px system-ui';g.fillStyle='#e8e8e8';g.fillText('WASD fly (Shift faster) · mouse look (click to lock) · ←/→ time · ↓ slow mo · ↑ normal · K exit',140,22);
+ g.textAlign='right';g.fillStyle=AD.sp<1?'#ffd23f':'#9ef0a6';g.font='bold 13px system-ui';g.fillText(AD.sp<1?'SLOW MO x0.25':'SPEED x1',944,22);
+ if(c){const a=c[0].t,b=c[c.length-1].t,u=b>a?(AD.t-a)/(b-a):1;g.fillStyle='rgba(255,255,255,.18)';g.fillRect(120,518,720,8);g.fillStyle='#ff4d4d';g.fillRect(120,518,720*u,8);g.beginPath();g.arc(120+720*u,522,7,0,6.283);g.fill();
+  g.textAlign='left';g.fillStyle='#e8e8e8';g.font='12px system-ui';g.fillText((AD.t-b).toFixed(1)+'s',16,527);g.textAlign='right';g.fillText(AD.mv>0?'▶▶':AD.mv<0?'◀◀':'❚❚',944,527)}
+ else{g.textAlign='center';g.fillStyle='#e8e8e8';g.font='12px system-ui';g.fillText('No recorded play to scrub here (1v1 keeps no replay buffer) - free camera only',480,527)}g.restore()}
+addEventListener('mousemove',e=>{if(S!='admin')return;AD.yaw-=(e.movementX||0)*.0035;AD.pit=Math.max(-1.45,Math.min(1.45,AD.pit-(e.movementY||0)*.0035))});
+addEventListener('mousedown',()=>{if(S=='admin'&&!document.pointerLockElement){try{document.getElementById('w').requestPointerLock()}catch(e){}}});
 function endRep(){TM.flat().forEach(rdOff);TM.forEach((t,a)=>t.forEach((p,b)=>Object.assign(p,RS.P[a][b],{rd:RS.RD?RS.RD[a][b]:null})));Object.assign(B,RS.B);Object.assign(ms,RS.ms);ctl=RS.ctl;S='play'}
 // ===== CINEMATIC REPLAY: the clip is read like a story (who passed, who caught, how it was finished) and cut into shots, each with its own angle and speed.
 // repPlan -> {t0, te, segs:[{a, b, ty, sp, who, from}]} in clip time. ty = the shot (see repCam), sp = playback speed (slow motion at the big moments).
@@ -348,7 +372,9 @@ function repStep(dt){const c=RP.clip,D=RP.dir;RP.rdt=dt;let st=0;
  else if(RP.ct>=D.te){RP.hold=(RP.hold||0)+dt;if(RP.hold>.7){RP.ct=D.t0;RP.hold=0;RP.loop++;st=1}} // (a beat on the last frame, then it runs again)
  else{const sg=D.segs.find(q=>RP.ct<q.b)||D.segs[D.segs.length-1];const ts_=sg.ts!=null&&RP.ct<sg.ts?sg.pre:sg.sp;RP.sp+=(ts_-RP.sp)*Math.min(1,dt*8);RP.ct=Math.min(D.te,RP.ct+dt*RP.sp)} // speed ramps in and out of the slow motion
  if(st){RP.sp=D.segs[0].ts!=null?D.segs[0].pre:D.segs[0].sp;RP.seg=-1;RP.hold=0}
- const tt=RP.ct;let i=0;while(i<c.length-2&&c[i+1].t<=tt)i++;const fa=c[i],fb=c[Math.min(i+1,c.length-1)],u=fb.t>fa.t?Math.max(0,Math.min(1,(tt-fa.t)/(fb.t-fa.t))):0,n=SF.length; // between two recorded frames: smooth at any speed
+ repApply(c,RP.ct,st)}
+// put the court into the recorded state at clip time tt (between two recorded frames: smooth at any speed). st = a fresh start (ragdolls reset)
+function repApply(c,tt,st){let i=0;while(i<c.length-2&&c[i+1].t<=tt)i++;const fa=c[i],fb=c[Math.min(i+1,c.length-1)],u=fb.t>fa.t?Math.max(0,Math.min(1,(tt-fa.t)/(fb.t-fa.t))):0,n=SF.length; // between two recorded frames: smooth at any speed
  TM.forEach((t,a)=>t.forEach((p,b)=>{const o=fa.p[a][b],q=fb.p[a][b]||o;SF.forEach((k,j)=>{const x=o[j],y=q[j];p[k]=typeof x=='number'&&typeof y=='number'&&!REP_DISC.has(k)?x+(y-x)*u:x});
   p.dunk=repLo(o[n],q[n],u);p.lay=repLo(o[n+1]||null,q[n+1],u);p.ps=o[n+2]?repLo(o[n+2],q[n+2],u):null;p.kd=o[n+3]?repLo(o[n+3],q[n+3],u):null;
   const h=o[n+4];if(st){if(p.rd)rdOff(p);p.rdN=h&&h.n}else if(h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,h.dx,h.dz,h.mag,h.tone,h.full)}})); // the ragdoll hits replay too
@@ -3133,10 +3159,11 @@ function render(dt){
  ballM.rotation.x+=dt*6;ballS.position.set(ballM.position.x,.04,ballM.position.z);
  flash.visible=FX.t>0;if(FX.t>0){FX.t-=dt;flash.position.set(FX.x,FX.y,FX.z);const u=1-FX.t/.4;flash.scale.setScalar(.6+u*3);flash.material.opacity=.85*(1-u)}
  netUpd(dt);
- cring.visible=cglow.visible=!!hb&&S!='intro'&&S!='replay';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,hb.y/10);cglow.position.set(hb.x/10,.07,hb.y/10);ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
+ cring.visible=cglow.visible=!!hb&&S!='intro'&&S!='replay'&&S!='admin';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,hb.y/10);cglow.position.set(hb.x/10,.07,hb.y/10);ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
  const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play';arrow.visible=S=='play';ring.position.set(me.x/10,.06,me.y/10);arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,me.y/10);
  {const m=S=='play'&&CLK()&&off==1?myMark():null;markArrow.visible=!!m;if(m)markArrow.position.set(m.x/10,m.ht*6.2+2+Math.sin(T*6)*.3+m.z/10,m.y/10)}
  if(S=='replay')repCam(); // CINEMATIC replay camera (see repCam)
+ else if(S=='admin')adCam(); // ADMIN free camera
  else if(S=='over'&&ES)endCam();
  else if(S=='intro'&&IN.rt<IN.b0)introCam();
  else{let dp,dl,fv;const sk=shake*1.5;
@@ -3276,6 +3303,7 @@ function draw(){
  if(ONL_S.has(S))onlDraw();if(NET.on&&S=='play')netOverlay();
  if(S=='cdebut'){renderDebut();drawDebut()}
  if(S=='menu'){renderMainMenu();drawMainMenu();updDraw();pnBtnDraw();profBtnDraw();lbMiniDraw();if(PN.on)pnDraw();if(PF.on)profDraw();if(LB.on)lbDraw();g.save();g.textAlign='right';g.textBaseline='top';g.font='10px system-ui';g.fillStyle='#fff';g.fillText(GAME_VER,952,7);g.restore()} // build number, main menu only
+ if(S=='admin')adDraw();
  if(S=='pause'){g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle='#ffd23f';g.font='bold 54px Georgia';g.fillText('PAUSED',480,112);
   ['RESUME','CUSTOMISATION','MAIN MENU'].forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText(t,480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · K to close',480,462);g.fillText('Graphics, ball trail and court live under CUSTOMISATION',480,486)}
@@ -3295,12 +3323,14 @@ function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one fra
  if(S=='replay'&&(P.Digit1||P.Numpad1)){RP.sty=(RP.sty+1)%REP_CAMS.length;RP.k=null;RP.c=null}
  if(S=='play'&&(P.Digit1||P.Numpad1)){CAMM=(CAMM+1)%CAM_N.length;camT=1;say('CAMERA:  '+CAM_N[CAMM],'#7fffa0');savePrefs()}
  menuStep(dt);onlStep(dt);if(S=='over')endStep(dt);
+ if(S=='pause'&&(P.Digit1||P.Numpad1)){const n_=performance.now()/1000;if(n_-AD.t0>2){AD.t0=n_;AD.n=0}if(++AD.n>=3){AD.n=0;AD.t0=0;adStart();for(const k in P)delete P[k]}} // ADMIN CAMERA: 1 x3 within 2 s
+ if(S=='admin'&&(P.KeyK||P.Escape)){adEnd();for(const k in P)delete P[k]}
  if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+2)%3;if(P.ArrowDown||P.KeyS)PM=(PM+1)%3;const dd=(P.ArrowRight||P.KeyD||P.Enter?1:0)-(P.ArrowLeft||P.KeyA?1:0);
   if(dd){if(PM==0){if(P.Enter)S='play'}else if(PM==1){if(P.Enter)openCust('pause')}else if(P.Enter)toMenu()}
   if(P.KeyK||P.Escape)S='play'}else if(P.KeyK&&S=='play'&&!NET.on)S='pause'; // (online there is no pause: K asks to leave, see onlStep)
  if(P.KeyT&&!HC){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
  if(RP.want&&RP.has&&S=='play'){RP.want=0;startRep()}
- musUpd();navBlip();crowdUpd();if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S))blankGL();else render(S=='intro'?dt*IN.ts:S=='replay'?dt*(RP.sp||1):dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
+ musUpd();navBlip();crowdUpd();if(S=='admin')adStep(dt);else if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S))blankGL();else render(S=='intro'?dt*IN.ts:S=='replay'?dt*(RP.sp||1):S=='admin'&&AD.mv?dt*AD.sp:dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
 const floorL=floor.material,floorS=new THREE.MeshStandardMaterial({map:floorL.map,roughness:.28,metalness:.08}),hemi=new THREE.HemisphereLight(0xdde8ff,0x3a2a1a,.55),spots=[7,87].map(x=>{const l=new THREE.SpotLight(0xfff1dc,1.1,160,.9,.6,1);l.position.set(x,45,32);l.target.position.set(x,0,32);sc3.add(l,l.target);l.visible=false;return l});
 hemi.visible=false;sc3.add(hemi,dl.target);
 // ===== SUPER graphics: planar ray-style reflections (mirrored-camera pass), 4K sun shadows + two cross-lighting shadow-casting arena lights, warm floor bounce light, contact darkening =====
@@ -4766,10 +4796,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.76'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.77'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.77','Admin camera',['Hidden ADMIN CAMERA: pause the game and press 1 three times within 2 seconds. A free camera over the last ~12 seconds of play.',
+  'W A S D fly where you are looking (hold Shift to go faster), the mouse aims the camera (click to lock the mouse), hold → / ← to move time forward / backward, ↓ for slow motion, ↑ for normal speed. K or Esc goes back to the pause menu and the game carries on exactly where it was.']],
  ['v1.76','Quicker combos',['The wait between dribble moves is shorter: it was a flat 0.6s, now 0.45s at BALL HANDLE 25 down to 0.32s at 100.',
   'New Playmaking Signature CRITICAL COMBOS (BALL HANDLE 70 / 79 / 87): cuts that wait by 20% / 35% / 50%, and the moves you chain together play faster (up to 15% at Gold). Chain crossovers, spins, behind-the-backs and step-backs into real combos.']],
  ['v1.75','Six more set plays',['New plays in the AI playbook: HORNS (both bigs at the elbows, ball screen, roll and pop), FLOPPY (the shooter comes off a down screen from under the rim), HAMMER (baseline drive and a back screen for the corner shooter\'s skip pass), ELEVATOR DOORS (two bigs close the gap behind a shooter), UCLA CUT (pass and cut off the high post\'s back screen) and PRINCETON BACKDOOR (high-post entry and a backdoor cut).',
