@@ -53,7 +53,7 @@ let TI=[4,3],CAMM=0,camT=0,lowA=0,lowV=0,lowT=0,lowC=0,lowBx=47;const CAM_N=['CO
 const AL=new THREE.AmbientLight(0xffffff,.75);sc3.add(AL);const dl=new THREE.DirectionalLight(0xffffff,.55);dl.position.set(30,60,40);sc3.add(dl);
 let MODE=5; // game mode (5 / 3 / 1) - declared first: in 1v1 both players use the same basket, so hx()/dr() depend on it
 let PR=0,HC=0; // PRACTICE drill (0 none · 1 shootaround · 2 1v1 defender · 3 rim protector · 4 3v3 half court) · HC = half-court rules (1v1 and the 3v3 drill: one basket, check ball up top)
-const CW=640,HY=320,RZ=100,R3=237,QL=60,hx=t=>t&&!HC?52:888,dr=t=>t&&!HC?-1:1,G=330,HT=[.93,.98,1.03,1.08,1.14],ST=[.55,.55,.55,.55,.55];
+const CW=736,HY=368,ZO=(HY-320)/10,RZ=100,R3=237,QL=60,hx=t=>t&&!HC?52:888,dr=t=>t&&!HC?-1:1,G=330,HT=[.93,.98,1.03,1.08,1.14],ST=[.55,.55,.55,.55,.55];
 const K={},P={},Rl={},KEY_K=K,KEY_P=P,KEY_R=Rl; // (KEY_K / KEY_P / KEY_R: the local keys, for ctrl()'s default input - online, the guest's player is driven with his own)
 // (iPad keyboards have no Esc key: the ` key in its place works as Esc)
 addEventListener('keydown',e=>{if(gateHit())return;if(e.code=='Space'||e.code.startsWith('Arrow'))e.preventDefault();const c=e.code=='Backquote'?'Escape':e.code;if(!K[c])P[c]=1;K[c]=1});
@@ -82,7 +82,7 @@ const CALL={n:0,t:0,last:-9},PASS_REACH=70; // PASS_REACH: how far (units, 10 = 
 // TRANSITION BOOST: after a DEFENSIVE rebound the team that just lost the ball gets +30% speed for ~3.8s (fading in the last 1.2s) so it can get back on defence. tbk(p) = that team's speed multiplier.
 const TRB={team:-1,t:0},tbk=p=>(TRB.t>0&&p.team==TRB.team?1+.3*Math.min(1,TRB.t/1.2):1)*trk(p);
 function callBall(p){if(T-CALL.last<.3||p.stun>0||p.dunk||p.lay)return;CALL.last=T;CALL.n=Math.min(CALL.n+1,9);CALL.t=7;p.callT=1.1;beep(700+60*Math.min(CALL.n,5),.07,'triangle',.04);{const v=sigv(p,'callshot'),h=B.h;if(v&&h&&B.mode=='held'&&h.team==p.team&&h!==p){h.think=Math.max(0,(h.think||0)-v);sigFx(p,'callshot')}}}
-const SPOT=[[300,320],[240,110],[240,530],[170,230],[110,420]];
+const SPOT=[[300,320],[240,110],[240,530],[170,230],[110,420]].map(([x,y])=>[x,y-320+HY]); // (hoop-relative: kept the same distance from the rim on the wider court)
 // ===== JUMP SHOTS: every player has his own jumper. Each one is a set of numbers driving the shooting animation (see pose) and the shot meter:
 //  ms meter time (x0.55 s - lower = quicker release) · sx / se arm pitch / elbow bend at the SET POINT (more negative = higher set, tighter elbow)
 //  xe / ee arm pitch / elbow at the RELEASE (-3.1 = straight up, -2.3 = pushed out in front) · fa / ft wrist flick angle / time · et arm extension time (release speed)
@@ -170,7 +170,7 @@ function reset(next){
  off=next;ms.on=false;
  TM.forEach((tm,t)=>tm.forEach((p,i)=>{
   calm(p); // a new possession: EVERYONE back to normal (no knockdown, ragdoll, hang or tilt carries over)
-  if(t==off){const s=[[860,320],[950,320],[780,150],[700,490],[640,320]][i];p.x=fr(s[0]);p.y=s[1]}
+  if(t==off){const s=[[860,320],[950,320],[780,150],[700,490],[640,320]][i];p.x=fr(s[0]);p.y=s[1]-320+HY}
   else{p.x=fr(SPOT[i][0]-40);p.y=SPOT[i][1]}
   p.fx=-dr(off)*-1;p.fy=0;
  }));
@@ -213,7 +213,7 @@ function introStep(dt){
  IN.rt+=dt;IN.rdt=dt;IN.ts=inTs(IN.rt);const gd=dt*IN.ts;IN.t+=gd;const sm=u=>u*u*(3-2*u);
  { // STAR SPOTLIGHT: active from the push-in, through the slow-mo, to the end of the whip-out
   const[k]=inSeg(IN.rt),y=IN_TY[k][0],sd=y=='sl'?IN_TY[k][1]:y=='tr'&&IN_TY[k+1][0]=='sl'?IN_TY[k+1][1]:y=='tr'&&IN_TY[k-1][0]=='sl'?IN_TY[k-1][1]:-1;
-  if(sd>=0&&(!IN.pz||IN.pz.sd!=sd)){if(IN.pz)poseReset(IN.pz);const p=IN.st[sd],cp=cam.position,dx=cp.x-p.x/10,dz=cp.z-p.y/10,l=Math.hypot(dx,dz)||1;
+  if(sd>=0&&(!IN.pz||IN.pz.sd!=sd)){if(IN.pz)poseReset(IN.pz);const p=IN.st[sd],cp=cam.position,dx=cp.x-p.x/10,dz=cp.z-(p.y/10-ZO),l=Math.hypot(dx,dz)||1;
    IN.pz={sd,p,kind:IN.pk[sd],t0:IN.rt,wx:-dz/l,wy:dx/l}}
   else if(sd<0&&IN.pz){poseReset(IN.pz);IN.pz=null}}
  TM.forEach(tm=>tm.forEach(p=>{const q=p.in,act=IN.pz&&IN.pz.p===p,d=Math.max(gd,.0005);if(act)q.lag+=gd; // the star pauses his walk-on while he poses
@@ -237,10 +237,10 @@ function inPose(k,u){const y=IN_TY[k][0],sd=IN_TY[k][1],V=(x,y,z)=>new THREE.Vec
   const a=L(-.95,-.35,u*u*(3-2*u));return{p:V(47+52*Math.sin(a),L(40,17,u),30+52*Math.cos(a)),l:V(47,L(0,2,u),30),f:L(46,52,u),r:L(-.04,0,u)}}
  if(y=='hr'){ // HERO shot: very low, in front of the team as they stride towards the lens, the camera drifting back and across; slight dutch tilt
   const tm=TM[sd],cx=tm.reduce((a,p)=>a+p.x,0)/50,cz=tm.reduce((a,p)=>a+p.y,0)/50;let dx=0,dz=0;tm.forEach(p=>{dx+=p.in.tx-p.in.sx;dz+=p.in.ty-p.in.sy});
-  const l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,lead=Math.max(...tm.map(p=>(p.x/10-cx)*ux+(p.y/10-cz)*uz)),dist=lead+L(11,8,u),lat=L(-5,4,u*u*(3-2*u)); // stays ahead of the LEADING player
+  const l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,lead=Math.max(...tm.map(p=>(p.x/10-cx)*ux+((p.y/10-ZO)-cz)*uz)),dist=lead+L(11,8,u),lat=L(-5,4,u*u*(3-2*u)); // stays ahead of the LEADING player
   return{p:V(cx+ux*dist-uz*lat,L(1.1,1.6,u),cz+uz*dist+ux*lat),l:V(cx-ux*1.5,L(4.4,4,u),cz-uz*1.5),f:L(56,50,u),r:sd?.07:-.07}}
  if(y=='sl'){ // slow orbit + push-in on the star, framed right of centre so the card fits on the left (side-on for the side-walk)
-  const p=IN.st[sd],h=p.ht,a=Math.atan2(p.fx,p.fy)+(IN.pk[sd]=='WALK'?1.25:.5)+.28*u,r=L(14,11.8,u),px=p.x/10,pz=p.y/10;
+  const p=IN.st[sd],h=p.ht,a=Math.atan2(p.fx,p.fy)+(IN.pk[sd]=='WALK'?1.25:.5)+.28*u,r=L(14,11.8,u),px=p.x/10,pz=(p.y/10-ZO);
   return{p:V(px+r*Math.sin(a),5.3*h,pz+r*Math.cos(a)),l:V(px-2.3*Math.cos(a),4.85*h,pz+2.3*Math.sin(a)),f:30}}
  if(y=='wd')return{p:V(L(22,38,u),L(26,34,u),L(100,90,u)),l:V(47,1,L(34,30,u)),f:50}; // wide crane rising over the near sideline (same side as the gameplay camera)
  const a=inPose(k-1,1),b=inPose(k+1,0),e=IN_TY[k-1][0]=='sl'?u*u*u:u*u*(3-2*u); // transition: whip (accelerating) out of slow-mo, eased into it
@@ -248,7 +248,7 @@ function inPose(k,u){const y=IN_TY[k][0],sd=IN_TY[k][1],V=(x,y,z)=>new THREE.Vec
 function introCam(){
  const[k,u]=inSeg(IN.rt),P0=inPose(k,u);
 if(CF[COURT].fence){const e=c01((P0.p.y-11.6)/3),w=1-e*e*(3-2*e); // Street court: never leave the chain-link fence while below its top
-  if(w>0){const qx=Math.max(-6.5,Math.min(100.5,P0.p.x)),qz=Math.max(-5.5,Math.min(69.5,P0.p.z));P0.p.x+=(qx-P0.p.x)*w;P0.p.z+=(qz-P0.p.z)*w}}
+  if(w>0){const qx=Math.max(-6.5,Math.min(100.5,P0.p.x)),qz=Math.max(-10.3,Math.min(74.3,P0.p.z));P0.p.x+=(qx-P0.p.x)*w;P0.p.z+=(qz-P0.p.z)*w}}
  if(k!=IN.k){if(IN.k>=0)beep(IN_TY[k][0]=='tr'?120:170,.12,'triangle',.03);IN.k=k}
  cam.position.copy(P0.p);if(cam.fov!=P0.f){cam.fov=P0.f;cam.updateProjectionMatrix()}
  cam.lookAt(P0.l);if(P0.r)cam.rotateZ(P0.r);IN.fp.copy(P0.p);IN.lk.copy(P0.l);IN.ff=P0.f;
@@ -260,7 +260,7 @@ function introBlend(){ // runs after the normal gameplay camera has been compute
 const c01=x=>Math.max(0,Math.min(1,x));
 // depth-of-field look for the slow-mo shots: the whole frame is drawn blurred (cheap downscale/upscale), then the sharp frame is laid back on top through a soft circle around the star
 const INB=[240,60].map(w=>{const c=document.createElement('canvas');c.width=w;c.height=w*9/16|0;return c}),INF=document.createElement('canvas');INF.width=960;INF.height=540;
-function inFocus(p,amt){const gl=R.domElement,v=new THREE.Vector3(p.x/10,3.3*p.ht,p.y/10).project(cam),t=new THREE.Vector3(p.x/10,6.4*p.ht,p.y/10).project(cam),
+function inFocus(p,amt){const gl=R.domElement,v=new THREE.Vector3(p.x/10,3.3*p.ht,(p.y/10-ZO)).project(cam),t=new THREE.Vector3(p.x/10,6.4*p.ht,(p.y/10-ZO)).project(cam),
   sx=(v.x*.5+.5)*960,sy=(-v.y*.5+.5)*540,rad=Math.max(80,Math.abs(v.y-t.y)*270*1.05);
  INB[0].getContext('2d').drawImage(gl,0,0,INB[0].width,INB[0].height);INB[1].getContext('2d').drawImage(INB[0],0,0,INB[1].width,INB[1].height);
  g.save();g.globalAlpha=amt;g.imageSmoothingEnabled=true;g.drawImage(INB[1],0,0,960,540);g.globalAlpha=amt*.35;g.fillStyle='#05060a';g.fillRect(0,0,960,540);g.restore();
@@ -389,10 +389,10 @@ const azOf=(x,z)=>Math.atan2(x,z),nearOpp=(p,r)=>{let b=null,bd=r;for(const q of
 function camRoom(c,az,el){const dx=Math.cos(el)*Math.sin(az),dz=Math.cos(el)*Math.cos(az);let t=1e9;
  if(dx>1e-6)t=Math.min(t,(REP_BX[1]-c.x)/dx);else if(dx<-1e-6)t=Math.min(t,(REP_BX[0]-c.x)/dx);if(dz>1e-6)t=Math.min(t,(REP_BX[3]-c.z)/dz);else if(dz<-1e-6)t=Math.min(t,(REP_BX[2]-c.z)/dz);return t}
 const REP_BX=[-5.8,99.8,-4.8,68.8]; // inside the chain-link fence (never shoots through it) // how far the camera can back off before leaving the arena
-function repClear(pos,subs,rim){const T_=[];for(const p of subs){const m=p.m;if(!m)continue;T_.push([p.x/10,p.z/10+3.2*p.ht,p.y/10],[p.x/10,p.z/10+5.6*p.ht,p.y/10])} // aim points: chest + head of each subject
+function repClear(pos,subs,rim){const T_=[];for(const p of subs){const m=p.m;if(!m)continue;T_.push([p.x/10,p.z/10+3.2*p.ht,(p.y/10-ZO)],[p.x/10,p.z/10+5.6*p.ht,(p.y/10-ZO)])} // aim points: chest + head of each subject
  let n=0;if(Math.abs(pos.x-rim[0])<4.8&&Math.abs(pos.z-rim[2])<5.5&&pos.y>2.5)return 1e9; // (rim, backboard) -> a SCORE: 0 = clear, more = more of the view blocked, 1e9 = impossible
  for(const px of [97,-3]){if(Math.hypot(pos.x-px,pos.z-32)<1.6)return 1e9;for(const t of T_)for(let i=1;i<16;i++){const u=i/16,x=pos.x+(t[0]-pos.x)*u,y=pos.y+(t[1]-pos.y)*u,z=pos.z+(t[2]-pos.z)*u;if(y<13.2&&Math.hypot(x-px,z-32)<.8)n+=3}} // the hoop stanchions
- for(const q of TM.flat()){if(!q.m||!q.m.visible)continue;const qx=q.x/10,qz=q.y/10,qb=q.z/10,qt=qb+6.9*q.ht;
+ for(const q of TM.flat()){if(!q.m||!q.m.visible)continue;const qx=q.x/10,qz=(q.y/10-ZO),qb=q.z/10,qt=qb+6.9*q.ht;
   const hd=Math.hypot(pos.x-qx,pos.z-qz);if(hd<2.4&&pos.y<qt+1)return 1e9;if(hd<6.5&&pos.y<qt+.5)n+=6;if(subs.includes(q))continue; // (never inside anyone, and nobody filling the lens from right in front of it)
   for(const t of T_)for(let i=1;i<11;i++){const u=i/13,x=pos.x+(t[0]-pos.x)*u,y=pos.y+(t[1]-pos.y)*u,z=pos.z+(t[2]-pos.z)*u;if(y>qb-.2&&y<qt&&Math.hypot(x-qx,z-qz)<1.35)n++}} // (someone brushing right up against him doesn't count)
  return n}
@@ -429,16 +429,16 @@ function repAlt(st,dt,Hx,subs,RM){const s=Hx>47?1:-1,k=RP.sty,t=(RP.ct||0)-RP.di
  if(Math.abs(cam.fov-K.f)>.01){cam.fov=K.f;cam.updateProjectionMatrix()}}
 function repCam(){const D=RP.dir,dt=Math.min(.05,RP.rdt||1/60),ct=RP.ct==null?D.t0:RP.ct;let si=D.segs.findIndex(q=>ct<q.b);if(si<0)si=D.segs.length-1;
  const sg=D.segs[si],u=Math.max(0,Math.min(1,(ct-sg.a)/Math.max(.01,sg.b-sg.a))),st=RP.seg===-1,w=sg.who||RP.who,sc_=RP.who,Hx=hx(sc_.team)/10,RM=[Hx,10,32];RP.seg=si;
- const wx=w.x/10,wz=w.y/10,bp=ballM.position;
+ const wx=w.x/10,wz=(w.y/10-ZO),bp=ballM.position;
  _CB.makeEmpty();const subs=[];
  const addS=g=>{const p=g.who||RP.who;cbP(p);subs.push(p);
   if(g.ty=='catch'&&g.from&&Math.hypot(g.from.x-p.x,g.from.y-p.y)<200){cbP(g.from);subs.push(g.from)}
-  if(g.ty=='catch'&&Math.hypot(bp.x-p.x/10,bp.z-p.y/10)<18)cbV(bp.x,bp.y,bp.z,.5);
+  if(g.ty=='catch'&&Math.hypot(bp.x-p.x/10,bp.z-(p.y/10-ZO))<18)cbV(bp.x,bp.y,bp.z,.5);
   if(g.vic&&g.vic.m&&g.vic.m.visible){cbP(g.vic);subs.push(g.vic)}
   if(/dunk|lay|flight/.test(g.ty))cbV(RM[0],RM[1],RM[2],.9);if(g.ty=='flight')cbV(bp.x,bp.y,bp.z,.6)};
  addS(sg);const nx=D.segs[si+1];if(nx&&sg.b-ct<.9*Math.max(.3,RP.sp||1))addS(nx); // (the next beat's players come into the frame a moment early, so the camera eases out instead of jumping)
  if(st){ // the side of the play the camera keeps all replay: side-on to his line to the rim, on whichever side has more room
-  const sx=sc_.x/10,sz=sc_.y/10,ln=azOf(RM[0]-sx,RM[2]-sz);_CB.getCenter(_CC);RP.side=camRoom(_CC,ln+Math.PI/2,.2)>=camRoom(_CC,ln-Math.PI/2,.2)?1:-1;RP.ln=ln}
+  const sx=sc_.x/10,sz=(sc_.y/10-ZO),ln=azOf(RM[0]-sx,RM[2]-sz);_CB.getCenter(_CC);RP.side=camRoom(_CC,ln+Math.PI/2,.2)>=camRoom(_CC,ln-Math.PI/2,.2)?1:-1;RP.ln=ln}
  {const K_=['x','y','z'];if(st||!RP.bx)RP.bx={};for(const k of K_)for(const [m_,v_] of [['n'+k,_CB.min[k]],['x'+k,_CB.max[k]]]){if(st||RP.bx[m_]==null){RP.bx[m_]=v_;RP.bx[m_+'v']=0}else smd(RP.bx,m_,v_,.7,dt)}
   for(const k of K_){_CB.min[k]=RP.bx['n'+k];_CB.max[k]=RP.bx['x'+k]}} // the framed area itself grows / shrinks smoothly (a player joining the shot never yanks the camera)
  if(RP.sty){repAlt(st,dt,Hx,subs,RM);return} // one of the other replay angles (see REP_CAMS)
@@ -721,7 +721,7 @@ function passHand(p,out){const ps=p.ps,m=p.m;if(!ps||!m||!m.aL.h)return false;
  out.x+=Math.sin(p.ang)*.25;out.z+=Math.cos(p.ang)*.25;return true} // (the ball sits just in front of the fingers)
 function passGo(p){const ps=p.ps,tg=ps.tg,P=PASS_T[ps.ty];ps.go=1;
  if(sigv(p,'needle'))sigFx(p,'needle');B.bail=0;B.mode='pass';B.from=p;B.to=tg;B.t=0;
- if(passHand(p,_PSA)&&_PSA.y>0){B.x=_PSA.x*10;B.y=_PSA.z*10;B.z=_PSA.y*10}else B.z=Math.max(B.z,45);B.sx=B.x;B.sy=B.y;
+ if(passHand(p,_PSA)&&_PSA.y>0){B.x=_PSA.x*10;B.y=(_PSA.z+ZO)*10;B.z=_PSA.y*10}else B.z=Math.max(B.z,45);B.sx=B.x;B.sy=B.y;
  {const f=passSpd(p)*(1+sigv(p,'needle'))*P.sp,du=L=>Math.max(.16/f,L/((480+L*.5)*f));B.dur=du(Math.hypot(tg.x-p.x,tg.y-p.y));B.lx=tg.x;B.ly=tg.y;
   // LEAD PASS: thrown to where a moving receiver will be when it arrives (his velocity x the flight time, refined twice since the flight time depends on the distance)
   if(Math.hypot(tg.vx,tg.vy)>20)for(let i=0;i<2;i++){B.lx=mClamp(tg.x+tg.vx*B.dur,15,925);B.ly=mClamp(tg.y+tg.vy*B.dur,15,625);B.dur=du(Math.hypot(B.lx-B.sx,B.ly-B.sy))}}TM.forEach(t=>t.forEach(d=>d.chk=0));
@@ -942,13 +942,13 @@ function segDist(p,a,b){const abx=b.x-a.x,aby=b.y-a.y,abz=b.z-a.z,l2=abx*abx+aby
 // contact check (once a frame, after everyone has moved): the ball is where render() last put it (in the hand), the arms are the rig's last pose
 function physBlocks(){const h=B.mode=='held'?B.h:null;if(!bkInHand(h))return;const bp=ballM.position,k=h.dunk;
  if(h.z<1||bp.y<(k?BLK.minZ:BLK.minZL)*h.ht)return; // a block needs him off the floor with the ball up high (at his waist it would be a strip, not a block)
- for(const d of TM[1-h.team]){if(d.stun>0||!(d.z>1||d.jump>0))continue;if(Math.hypot(d.x/10-bp.x,d.y/10-bp.z)>BLK.near/10)continue;
+ for(const d of TM[1-h.team]){if(d.stun>0||!(d.z>1||d.jump>0))continue;if(Math.hypot(d.x/10-bp.x,(d.y/10-ZO)-bp.z)>BLK.near/10)continue;
   const m=d.m;m.updateMatrixWorld(true);
   for(const a of [m.aL,m.aR]){a.e.getWorldPosition(_BKA);a.h.getWorldPosition(_BKB);if(segDist(bp,_BKA,_BKB)<BLK.rad*m.scale.y*(1+.5*(sigBehind(d,h)?sigv(d,'chase'):0))){bkHit(h,d);return}}}} // (Chase-Down Artist: a little more reach from behind)
 // a hand got on the ball
 function bkHit(h,d){const k=h.dunk,L=h.lay,ev=k||L;if(d.bkT===ev||pzOf(k)&&d===k.by)return; // (a Posterizer dunk's man goes up for it, but he can't stop it)d.bkT=ev; // one contact per defender per attempt
  if(k){const keep=sigv(h,'rattle')+(T-(h.ct0==null?-99:h.ct0)<1.5?sigv(h,'lob'):0);if(keep&&Math.random()<keep){sigFx(h,sigv(h,'rattle')?'rattle':'lob');beep(160,.08,'square');return}} // held on through it
- const bp=ballM.position;B.mode='loose';B.h=null;B.age=0;B.so=h.team;B.bd=dr(h.team);B.x=bp.x*10;B.y=bp.z*10;B.z=bp.y*10;
+ const bp=ballM.position;B.mode='loose';B.h=null;B.age=0;B.so=h.team;B.bd=dr(h.team);B.x=bp.x*10;B.y=(bp.z+ZO)*10;B.z=bp.y*10;
  const dx=B.x-d.x,dy=B.y-d.y,l=Math.hypot(dx,dy)||1,sp=150+Math.random()*120;B.vx=dx/l*sp+.5*(d.air?d.avx:d.vx);B.vy=dy/l*sp+.5*(d.air?d.avy:d.vy);B.vz=Math.random()<.35?-60:40+Math.random()*120; // smacked away (sometimes spiked down)
  if(k)k.lost=1;else{L.lost=1;h.fire=null}
  h.hot=0;ccBlock(d);shotAtt(h,false);gpShot(h.team,'I',0);say('BLOCKED!','#ff6b6b');shake=.5;beep(100,.2,'square');beep(70,.15,'sawtooth');
@@ -1150,7 +1150,7 @@ function oopStep(dt){const r=B.to,k=r&&r.dunk;
  const rem=oopRem(r,k);B.ou=Math.min(1,B.ou+(1-B.ou)*Math.min(1,dt/Math.max(dt,rem)));
  const H=hx(r.team),D=dr(r.team);let tx=H-D*22,ty=HY+(r.y-HY)*.15,tz=RZ+16; // predicted catch point (just in front of the rim, above it)
  if(k.ph>=3){const m=r.m;m.updateMatrixWorld(true);(k.mir?m.aR:m.aL).h.getWorldPosition(_OPH);const w=sm3(Math.min(1,k.ta/Math.max(.01,k.cf*k.tA)));
-  tx+=(_OPH.x*10-tx)*w;ty+=(_OPH.z*10-ty)*w;tz+=(_OPH.y*10+2-tz)*w}
+  tx+=(_OPH.x*10-tx)*w;ty+=((_OPH.z+ZO)*10-ty)*w;tz+=(_OPH.y*10+2-tz)*w}
  const u=B.ou;B.x=B.sx+(tx-B.sx)*u;B.y=B.sy+(ty-B.sy)*u;B.z=B.z0+(tz-B.z0)*u+B.arc*4*u*(1-u);
  // a defender who gets a hand up to the lob can tip it (once each)
  for(const d of TM[1-r.team]){if(d.ochk||d.stun>0)continue;const l=Math.hypot(d.x-B.x,d.y-B.y);if(l>16)continue;const reach=d.z+87*(d.ht||1)+(d.air?6:0);if(reach<B.z)continue;d.ochk=1;
@@ -1167,7 +1167,7 @@ function dunkStep(p,dt){
  if(k.ph>0||k.pre>0)k.g=Math.min(1,(k.g||0)+dt/(k.ph?.12:.2)); // both hands gather the ball (render() moves it into them)
  if(dd&&(k.pst||k.blk)&&!k.hit&&k.ph<4){const fx_=k.sx-Tx,fy_=k.sy-Ty,fl=Math.hypot(fx_,fy_)||1,gx=Tx+fx_/fl*30,gy=Ty+fy_/fl*30;dd.x+=(gx-dd.x)*Math.min(1,dt*6);dd.y+=(gy-dd.y)*Math.min(1,dt*6);dd.lock=.1} // (he keeps facing the way he was: how he is caught decides which way he falls)
  // POSTERIZED: at the slam, any defender in contact with the dunker (within KD.r, not already down) is knocked over - whatever the dunk
- const mv=(vx,vy)=>{p.vx=vx;p.vy=vy;p.x=Math.max(8,Math.min(932,p.x+vx*dt));p.y=Math.max(8,Math.min(632,p.y+vy*dt))};
+ const mv=(vx,vy)=>{p.vx=vx;p.vy=vy;p.x=Math.max(8,Math.min(932,p.x+vx*dt));p.y=Math.max(8,Math.min(CW-8,p.y+vy*dt))};
  if(k.ph==0){
   const dx=Tx-p.x,dy=Ty-p.y,Dr=Math.hypot(dx,dy)||1,ux=dx/Dr,uy=dy/Dr,vr=p.vx*ux+p.vy*uy;p.fx=ux;p.fy=uy;
   const pl=dunkPlan(k,Math.max(vr,60),Dr),vcap=Dr/(pl.tl/2+k.cmin*(pl.tl/2+pl.tp+pl.tA)),vt=k.td?Math.max(k.vt*spdM(p),Math.hypot(p.vx,p.vy)):Math.min(k.vt*spdM(p),vcap),a=Math.min(1,dt*(vt<vr?7:3.4));
@@ -1362,7 +1362,7 @@ function ctrl(p,dt,I){const K=I?I.K:KEY_K,P=I?I.P:KEY_P,Rl=I?I.Rl:KEY_R; // I: w
  if(CAMM==1){const d=Math.cos(lowA)>=0?1:-1,a=ix;ix=-iy*d;iy=a*d} // screen-relative: W = toward the way the camera faces
  const m=Math.hypot(ix,iy);if(m){ix/=m;iy/=m;p.fx=ix;p.fy=iy}
  // INBOUNDING (your player has the ball out of bounds): stuck on the baseline - he can only slide along it, faces the court, and E throws the pass
- if(B.mode=='inbound'&&B.h===p&&off==p.team){let vy=m?iy*95:0;if((p.y<80&&vy<0)||(p.y>560&&vy>0))vy=0;p.vx=0;p.vy+=(vy-p.vy)*Math.min(1,dt*8);p.fx=-dr(off);p.fy=0;if(P.KeyE)pass(B.h,primaryPM(p.team));return}
+ if(B.mode=='inbound'&&B.h===p&&off==p.team){let vy=m?iy*95:0;if((p.y<80&&vy<0)||(p.y>CW-80&&vy>0))vy=0;p.vx=0;p.vy+=(vy-p.vy)*Math.min(1,dt*8);p.fx=-dr(off);p.fy=0;if(P.KeyE)pass(B.h,primaryPM(p.team));return}
  // POST UP (hold G with the ball): back to the defender, slow, low secure dribble, ball shielded and cannot be stolen
  const pb=B.mode=='held'&&B.h===p&&!p.fire&&!p.dunk,pu=pb&&!!K.KeyG&&!ms.on&&p.burst<=0&&p.pause<=0&&!p.air&&!p.jph&&p.jump<=0,pw=p.pst||0;
  p.pst=Math.max(0,Math.min(1,pw+(pu?1:-1)*dt*4.5));let ex_=0,ey_=0;if(pu&&p.pst>.8){p.postT=(p.postT||0)+dt;if(p.postT>=1.5)p.phT=T}else p.postT=0;
@@ -1674,7 +1674,7 @@ function offBall(p,i,dt){
    else if(sp_>=.5&&midV(p)>=80)C.push([175,-60],[175,0],[175,60],[150,-78],[150,78]) // ...one who shoots the mid-range works the elbows / top
    else C.push([66,50*side],[66,-50*side],[140,0],[150,78],[150,-78],[48,-95*side],[48,95*side],[96,165*side],[96,-165*side]); // blocks, high post, elbows, dunker spots, short corners
    let best=null,bs=-1e9;const SR=115+50*sp_,sP=gp?GP[p.team].who.star:null,stk=gp?gk(p.team,'star'):0,CR=bh&&bh===sP?100+130*stk:100;
-   for(const c of C){const[x,y]=lc(p,c[0],c[1]);if(y<40||y>600)continue;
+   for(const c of C){const[x,y]=lc(p,c[0],c[1]);if(y<40||y>CW-40)continue;
     let sc=openness(p.team,x,y)-.12*Math.hypot(x-p.x,y-p.y);
     for(const q of TM[p.team]){if(q===p)continue;const tq=q.ai&&q!==bh?[q.ai.tx,q.ai.ty]:[q.x,q.y],dd=Math.hypot(tq[0]-x,tq[1]-y);if(dd<SR)sc-=(SR-dd)*1.4} // spacing: don't crowd a teammate (wider when the plan spreads the floor)
     if(bh){sc+=laneClr(p.team,bh.x,bh.y,x,y)*.6;const dh=Math.hypot(bh.x-x,bh.y-y);if(dh<CR)sc-=(CR-dh)*1.2} // (clear out further for the star's isolation)
@@ -1975,7 +1975,7 @@ function step(dt){
  }));
  scrStep(dt); // SCREENS: a defender who runs into a set screen is held / slides round it
  const ib=B.mode=='inbound'?B.h:null;
- for(const p of TM[0].concat(TM[1])){if(!p.dunk){if(p.air){p.vx=p.avx;p.vy=p.avy}p.x+=p.vx*dt;p.y+=p.vy*dt}if(p!==ib){p.x=Math.max(8,Math.min(932,p.x));p.y=Math.max(8,Math.min(632,p.y))}}
+ for(const p of TM[0].concat(TM[1])){if(!p.dunk){if(p.air){p.vx=p.avx;p.vy=p.avy}p.x+=p.vx*dt;p.y+=p.vy*dt}if(p!==ib){p.x=Math.max(8,Math.min(932,p.x));p.y=Math.max(8,Math.min(CW-8,p.y))}}
  // BODY CONTACT between opponents: nobody runs through anybody. The one driving into the contact can only move the other at bumpRate (set by
  // the STRENGTH ratio); the rest of the overlap is taken back off the driver, so a dribbler stalls on a set defender and has to go round
  // (or slowly back him off), and a strong player holds his ground when bumped. With nobody driving, the overlap is split by mass.
@@ -2026,7 +2026,7 @@ function step(dt){
  }else if(B.mode=='loose'){B.age+=dt;B.vx*=1-.25*dt;B.vy*=1-.25*dt;B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;
   {const pl=hx(B.so)+B.bd*12;if((B.x-pl)*B.bd>0&&Math.abs(B.y-HY)<32&&B.z>88&&B.z<135){B.x=pl;B.vx*=-.6;B.vy*=.8;B.vz*=.9;beep(210,.08,'square');rimKick(B.so,.5)}}
   if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.66;B.vx*=.88;B.vy*=.88;if(B.vz<25)B.vz=0}
-  B.x=Math.max(10,Math.min(930,B.x));B.y=Math.max(10,Math.min(630,B.y));
+  B.x=Math.max(10,Math.min(930,B.x));B.y=Math.max(10,Math.min(CW-10,B.y));
   if(HC){if(B.age>=1)checkBall(1-B.so)} // 1v1 (and half-court 3v3): nobody rebounds - after 1s the other player gets it at the top of the key
   else if(B.age>.3){let b=null,bs=1e9;for(const p of TM[0].concat(TM[1])){if(p.stun>0||p.dunk)continue;const dd=Math.hypot(p.x-B.x,p.y-B.y),re=rbEdge(p);if(dd<rbR(p)*re.r&&B.z<95*p.ht+p.z){const k=dd-p.ht*10-8*rbN(p)+Math.random()*14-re.k;if(k<bs){bs=k;b=p}}}if(b)grab(b)}
  }else if(B.mode=='post'){
@@ -2052,47 +2052,47 @@ const CTX={
  HEAVEN:{base:'#fbf2d2',line:'#d49a1c',a:'rgba(160,200,255,.65)',b:'rgba(255,196,186,.65)',txt:'rgba(212,154,28,.7)'}},CTC={};
 const rnd=(s=>()=>(s=(s*1664525+1013904223)>>>0)/4294967296)(20271);
 function courtTex(k){
- const C=CTX[k],c=document.createElement('canvas');c.width=1880;c.height=1280;const x=c.getContext('2d');x.scale(2,2);
- x.fillStyle=C.base;x.fillRect(0,0,940,640);
+ const C=CTX[k],c=document.createElement('canvas');c.width=1880;c.height=CW*2;const x=c.getContext('2d');x.scale(2,2);
+ x.fillStyle=C.base;x.fillRect(0,0,940,CW);
  if(k=='STREET'){
-  for(let i=0;i<8000;i++){x.fillStyle=rnd()<.5?'rgba(0,0,0,'+rnd()*.13+')':'rgba(255,255,255,'+rnd()*.08+')';x.fillRect(rnd()*940,rnd()*640,1+rnd()*2,1+rnd()*2)}
-  for(let i=0;i<9;i++){x.fillStyle='rgba(0,0,0,.09)';x.fillRect(rnd()*880,rnd()*580,30+rnd()*90,20+rnd()*60)}
+  for(let i=0;i<8000;i++){x.fillStyle=rnd()<.5?'rgba(0,0,0,'+rnd()*.13+')':'rgba(255,255,255,'+rnd()*.08+')';x.fillRect(rnd()*940,rnd()*CW,1+rnd()*2,1+rnd()*2)}
+  for(let i=0;i<9;i++){x.fillStyle='rgba(0,0,0,.09)';x.fillRect(rnd()*880,rnd()*(CW-60),30+rnd()*90,20+rnd()*60)}
   x.strokeStyle='rgba(12,12,16,.55)';x.lineWidth=1;
-  for(let i=0;i<30;i++){let px=rnd()*940,py=rnd()*640;x.beginPath();x.moveTo(px,py);for(let j=0;j<7;j++){px+=(rnd()-.5)*40;py+=(rnd()-.5)*40;x.lineTo(px,py)}x.stroke()}
+  for(let i=0;i<30;i++){let px=rnd()*940,py=rnd()*CW;x.beginPath();x.moveTo(px,py);for(let j=0;j<7;j++){px+=(rnd()-.5)*40;py+=(rnd()-.5)*40;x.lineTo(px,py)}x.stroke()}
  }else if(k=='HEAVEN'){
-  const rg=x.createRadialGradient(470,320,20,470,320,560);rg.addColorStop(0,'rgba(255,255,255,.75)');rg.addColorStop(1,'rgba(255,225,150,.1)');x.fillStyle=rg;x.fillRect(0,0,940,640);
-  for(let i=0;i<46;i++){let px=rnd()*940,py=rnd()*640;x.strokeStyle=i%3?'rgba(214,160,60,.2)':'rgba(150,190,240,.2)';x.lineWidth=1+rnd()*2;x.beginPath();x.moveTo(px,py);for(let j=0;j<6;j++){px+=(rnd()-.3)*70;py+=(rnd()-.5)*50;x.lineTo(px,py)}x.stroke()}
-  for(let i=0;i<260;i++){x.fillStyle='rgba(255,215,120,'+rnd()*.5+')';x.fillRect(rnd()*940,rnd()*640,1.5,1.5)}
+  const rg=x.createRadialGradient(470,HY,20,470,HY,560);rg.addColorStop(0,'rgba(255,255,255,.75)');rg.addColorStop(1,'rgba(255,225,150,.1)');x.fillStyle=rg;x.fillRect(0,0,940,CW);
+  for(let i=0;i<46;i++){let px=rnd()*940,py=rnd()*CW;x.strokeStyle=i%3?'rgba(214,160,60,.2)':'rgba(150,190,240,.2)';x.lineWidth=1+rnd()*2;x.beginPath();x.moveTo(px,py);for(let j=0;j<6;j++){px+=(rnd()-.3)*70;py+=(rnd()-.5)*50;x.lineTo(px,py)}x.stroke()}
+  for(let i=0;i<260;i++){x.fillStyle='rgba(255,215,120,'+rnd()*.5+')';x.fillRect(rnd()*940,rnd()*CW,1.5,1.5)}
  }else if(k=='GYM'){ // maple boards
-  for(let y=0;y<640;y+=8){x.fillStyle='rgba(90,50,20,'+rnd()*.12+')';x.fillRect(0,y,940,8);for(let u=rnd()*120;u<940;u+=80+rnd()*120){x.fillStyle='rgba(60,30,10,.35)';x.fillRect(u,y,1,8)}x.fillStyle='rgba(60,30,10,.3)';x.fillRect(0,y,940,.6)}
+  for(let y=0;y<CW;y+=8){x.fillStyle='rgba(90,50,20,'+rnd()*.12+')';x.fillRect(0,y,940,8);for(let u=rnd()*120;u<940;u+=80+rnd()*120){x.fillStyle='rgba(60,30,10,.35)';x.fillRect(u,y,1,8)}x.fillStyle='rgba(60,30,10,.3)';x.fillRect(0,y,940,.6)}
  }else if(k=='NEON'){
-  x.strokeStyle='rgba(120,60,255,.25)';x.lineWidth=1;for(let u=0;u<940;u+=20){x.beginPath();x.moveTo(u,0);x.lineTo(u,640);x.stroke()}for(let y=0;y<640;y+=20){x.beginPath();x.moveTo(0,y);x.lineTo(940,y);x.stroke()}
+  x.strokeStyle='rgba(120,60,255,.25)';x.lineWidth=1;for(let u=0;u<940;u+=20){x.beginPath();x.moveTo(u,0);x.lineTo(u,CW);x.stroke()}for(let y=0;y<CW;y+=20){x.beginPath();x.moveTo(0,y);x.lineTo(940,y);x.stroke()}
  }else if(k=='ROOFTOP'){ // interlocking sports tiles
-  x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=1;for(let u=0;u<940;u+=12){x.beginPath();x.moveTo(u,0);x.lineTo(u,640);x.stroke()}for(let y=0;y<640;y+=12){x.beginPath();x.moveTo(0,y);x.lineTo(940,y);x.stroke()}
+  x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=1;for(let u=0;u<940;u+=12){x.beginPath();x.moveTo(u,0);x.lineTo(u,CW);x.stroke()}for(let y=0;y<CW;y+=12){x.beginPath();x.moveTo(0,y);x.lineTo(940,y);x.stroke()}
  }else if(k!='HELL'){ // weathered outdoor surfaces: grit, patches, cracks, and sand / snow / dust blown on at the edges
   const dust={VENICE:'226,204,152',DESERT:'214,170,110',ALPINE:'250,252,255'}[k]||'0,0,0';
-  for(let i=0;i<7000;i++){x.fillStyle=rnd()<.5?'rgba(0,0,0,'+rnd()*.12+')':'rgba(255,255,255,'+rnd()*.07+')';x.fillRect(rnd()*940,rnd()*640,1+rnd()*2,1+rnd()*2)}
-  for(let i=0;i<3500;i++){const ex=rnd()<.5,px=ex?(rnd()<.5?rnd()*90:940-rnd()*90):rnd()*940,py=ex?rnd()*640:(rnd()<.5?rnd()*70:640-rnd()*70);x.fillStyle='rgba('+dust+','+rnd()*.5+')';x.fillRect(px,py,1+rnd()*3,1+rnd()*3)}
+  for(let i=0;i<7000;i++){x.fillStyle=rnd()<.5?'rgba(0,0,0,'+rnd()*.12+')':'rgba(255,255,255,'+rnd()*.07+')';x.fillRect(rnd()*940,rnd()*CW,1+rnd()*2,1+rnd()*2)}
+  for(let i=0;i<3500;i++){const ex=rnd()<.5,px=ex?(rnd()<.5?rnd()*90:940-rnd()*90):rnd()*940,py=ex?rnd()*CW:(rnd()<.5?rnd()*70:CW-rnd()*70);x.fillStyle='rgba('+dust+','+rnd()*.5+')';x.fillRect(px,py,1+rnd()*3,1+rnd()*3)}
   x.strokeStyle='rgba(12,12,16,'+(k=='DESERT'?.6:.4)+')';x.lineWidth=1;
-  for(let i=0;i<(k=='DESERT'?60:22);i++){let px=rnd()*940,py=rnd()*640;x.beginPath();x.moveTo(px,py);for(let j=0;j<7;j++){px+=(rnd()-.5)*40;py+=(rnd()-.5)*40;x.lineTo(px,py)}x.stroke()}
+  for(let i=0;i<(k=='DESERT'?60:22);i++){let px=rnd()*940,py=rnd()*CW;x.beginPath();x.moveTo(px,py);for(let j=0;j<7;j++){px+=(rnd()-.5)*40;py+=(rnd()-.5)*40;x.lineTo(px,py)}x.stroke()}
  }else{
-  for(let i=0;i<9000;i++){x.fillStyle=rnd()<.6?'rgba(0,0,0,'+rnd()*.3+')':'rgba(140,80,60,'+rnd()*.1+')';x.fillRect(rnd()*940,rnd()*640,1+rnd()*6,1+rnd()*6)}
+  for(let i=0;i<9000;i++){x.fillStyle=rnd()<.6?'rgba(0,0,0,'+rnd()*.3+')':'rgba(140,80,60,'+rnd()*.1+')';x.fillRect(rnd()*940,rnd()*CW,1+rnd()*6,1+rnd()*6)}
   x.lineCap='round';
-  for(let i=0;i<46;i++){let px=rnd()*940,py=rnd()*640;x.strokeStyle='rgba(255,'+(70+rnd()*90|0)+',20,'+(.55+rnd()*.45)+')';x.lineWidth=1+rnd()*2.5;x.shadowColor='#ff4a10';x.shadowBlur=9;x.beginPath();x.moveTo(px,py);for(let j=0;j<9;j++){px+=(rnd()-.5)*60;py+=(rnd()-.5)*60;x.lineTo(px,py)}x.stroke()}
+  for(let i=0;i<46;i++){let px=rnd()*940,py=rnd()*CW;x.strokeStyle='rgba(255,'+(70+rnd()*90|0)+',20,'+(.55+rnd()*.45)+')';x.lineWidth=1+rnd()*2.5;x.shadowColor='#ff4a10';x.shadowBlur=9;x.beginPath();x.moveTo(px,py);for(let j=0;j<9;j++){px+=(rnd()-.5)*60;py+=(rnd()-.5)*60;x.lineTo(px,py)}x.stroke()}
   x.shadowBlur=0;
  }
- const half=col=>{x.fillStyle=col;x.fillRect(750,240,190,160);x.strokeStyle=C.line;x.lineWidth=3;x.strokeRect(750,240,190,160);
-  x.beginPath();x.arc(750,320,60,0,7);x.stroke();x.beginPath();x.arc(888,320,237,Math.PI/2,Math.PI*1.5);x.moveTo(888,83);x.lineTo(940,83);x.moveTo(888,557);x.lineTo(940,557);x.stroke();
-  x.beginPath();x.arc(888,320,40,Math.PI/2,Math.PI*1.5);x.stroke()};
+ const half=col=>{x.fillStyle=col;x.fillRect(750,HY-80,190,160);x.strokeStyle=C.line;x.lineWidth=3;x.strokeRect(750,HY-80,190,160);
+  x.beginPath();x.arc(750,HY,60,0,7);x.stroke();x.beginPath();x.arc(888,HY,237,Math.PI/2,Math.PI*1.5);x.moveTo(888,HY-237);x.lineTo(940,HY-237);x.moveTo(888,HY+237);x.lineTo(940,HY+237);x.stroke();
+  x.beginPath();x.arc(888,HY,40,Math.PI/2,Math.PI*1.5);x.stroke()};
  if(C.glow){x.shadowColor=C.glow;x.shadowBlur=8}
  half(C.a);x.save();x.translate(940,0);x.scale(-1,1);half(C.b);x.restore();
- x.strokeStyle=C.line;x.lineWidth=3;x.strokeRect(2,2,936,636);x.beginPath();x.moveTo(470,2);x.lineTo(470,638);x.stroke();x.beginPath();x.arc(470,320,60,0,7);x.stroke();
- x.shadowBlur=0;x.fillStyle=C.txt;x.font='bold 40px Georgia';x.textAlign='center';x.fillText('27',470,334);
+ x.strokeStyle=C.line;x.lineWidth=3;x.strokeRect(2,2,936,CW-4);x.beginPath();x.moveTo(470,2);x.lineTo(470,CW-2);x.stroke();x.beginPath();x.arc(470,HY,60,0,7);x.stroke();
+ x.shadowBlur=0;x.fillStyle=C.txt;x.font='bold 40px Georgia';x.textAlign='center';x.fillText('27',470,HY+14);
  const t=new THREE.CanvasTexture(c);t.anisotropy=R.capabilities.getMaxAnisotropy();return t;
 }
 const ctex=k=>CTC[k]||(CTC[k]=courtTex(k));
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(94,64),new THREE.MeshLambertMaterial({map:ctex('STREET')}));floor.rotation.x=-Math.PI/2;floor.position.set(47,0,32);sc3.add(floor);
-const apron=new THREE.Mesh(new THREE.PlaneGeometry(180,110),M(0x232733));apron.rotation.x=-Math.PI/2;apron.position.set(47,-.05,32);sc3.add(apron);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(94,CW/10),new THREE.MeshLambertMaterial({map:ctex('STREET')}));floor.rotation.x=-Math.PI/2;floor.position.set(47,0,32);sc3.add(floor);
+const apron=new THREE.Mesh(new THREE.PlaneGeometry(180,120),M(0x232733));apron.rotation.x=-Math.PI/2;apron.position.set(47,-.05,32);sc3.add(apron);
 const wall=new THREE.Mesh(new THREE.PlaneGeometry(200,40),M(0x1a1d27));wall.position.set(47,20,-14);wall.visible=false;sc3.add(wall);
 const rimG=new THREE.Group();sc3.add(rimG);
 const HP=[];function hoop3(s){
@@ -3203,7 +3203,7 @@ function starPose(p,gdt){const P=IN.pz,m=p.m,rdt=IN.rdt||.016,k=1-Math.exp(-6*rd
  if(P.kind=='WALK'){pose(p,gdt);headTo(m,rdt,.06);return}
  m.jv=null; // (posed directly here: the joint springs restart from this pose afterwards) // legs + arm swing from the normal walk cycle (slowed), head locked on the camera
  // square up to the camera
- const ty=Math.atan2(cam.position.x-p.x/10,cam.position.z-p.y/10);let da=ty-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.ang+=da*(1-Math.exp(-3*rdt));m.rotation.y=p.ang;
+ const ty=Math.atan2(cam.position.x-p.x/10,cam.position.z-(p.y/10-ZO));let da=ty-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.ang+=da*(1-Math.exp(-3*rdt));m.rotation.y=p.ang;
  // stand: legs straight, slightly apart
  const st=P.kind=='FLEX'?.16:.09;E(m.L.rotation,'x',0);E(m.R.rotation,'x',0);E(m.L.k.rotation,'x',.05);E(m.R.k.rotation,'x',.05);E(m.L.rotation,'z',-st);E(m.R.rotation,'z',st);
  E(m.L.k.f.rotation,'x',-.05);E(m.R.k.f.rotation,'x',-.05);m.L.position.y=m.R.position.y=2.3;
@@ -3230,13 +3230,13 @@ function shotBall(sh){const a=_SBA;sh.m.updateMatrixWorld(true);sh.m.aL.h.getWor
   const go=sh.sj>0,tr=go?sh.sjm+sh.sjp-sh.sj-sh.sjm:-1,e=go?sm3(Math.max(0,Math.min(1,(tr+.05)/.05))):0; // ball sits between both hands until the last 0.05s, then rolls onto the right hand for the flick
   // the ball sits ON the right palm (hand behind the ball, between the face and the ball): palm point = wrist + fingers * pa, ball centre = palm + palm-normal * pr; at the flick it rolls up off the fingertips
   const hq=sh.m.aL.h.getWorldQuaternion(_SBQ),fing=_SBF.set(0,-1,0).applyQuaternion(hq),palm=_SBP.set(0,0,-1).applyQuaternion(hq),sc_=sh.m.scale.y;
-  ballM.position.copy(a).addScaledVector(fing,(SHK.pa+.22*e)*sc_).addScaledVector(palm,SHK.pr*sc_);B.x=ballM.position.x*10;B.y=ballM.position.z*10;B.z=ballM.position.y*10}
+  ballM.position.copy(a).addScaledVector(fing,(SHK.pa+.22*e)*sc_).addScaledVector(palm,SHK.pr*sc_);B.x=ballM.position.x*10;B.y=(ballM.position.z+ZO)*10;B.z=ballM.position.y*10}
 const _SBA=new THREE.Vector3(),_SBF=new THREE.Vector3(),_SBP=new THREE.Vector3(),_SBQ=new THREE.Quaternion();
 const _BLB={h:null,x:0,y:0,z:0,o:{x:0,y:0,z:0,xv:0,yv:0,zv:0}};
 function render(dt){
  const hb=(B.mode=='held'||B.mode=='inbound')?B.h:null;if(hb)hb.ct=ex(hb.ct||0,cont(hb),dt,10);
  TM.forEach(tm=>tm.forEach(p=>{
-  const m=p.m;m.position.set(p.x/10,p.z/10,p.y/10);
+  const m=p.m;m.position.set(p.x/10,p.z/10,(p.y/10-ZO));
   const sqz=shootNow(p);let tgt=Math.atan2(p.fx,p.fy);
   const ha=Math.atan2(hx(p.team)-p.x,HY-p.y);
   if(sqz||p.lay)tgt=p.lay&&p.lay.ha0!=null?p.lay.ha0:ha; // (a reverse keeps the facing he took off with; its twist is added below)
@@ -3257,30 +3257,30 @@ function render(dt){
   if(p.rd){rdStep(p,dt);if(p.rd){m.sh.quaternion.copy(m.quaternion).invert().multiply(_KQ.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2));m.sh.position.set(0,0,0);m.updateMatrixWorld(true);m.worldToLocal(m.sh.position.set(m.position.x,.03,m.position.z))}else{m.sh.quaternion.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2);m.sh.position.x=m.sh.position.z=0}} // RAGDOLL physics on top of the animation (the shadow stays flat on the floor)
   const hl=S!='intro'&&(B.mode=='held'||B.mode=='inbound')&&B.h===p;p.gl=ex(p.gl,hl?1:0,dt,9); // (no handler glow in the intro cutscene)m.olM.forEach(q=>q.uniforms.o.value=p.gl*.4*q.k);{const v=p.gl>.01;if(m.ol[0].visible!=v)m.ol.forEach(o=>o.visible=v)}m.gd.material.opacity=0;m.gd.position.y=.05-p.z/10;
  }));
- ballM.position.set(B.x/10,B.z/10,B.y/10);{const h=B.h;if((B.mode=='held'||B.mode=='inbound')&&h&&h.ps&&!h.ps.go&&passHand(h,_PSR))ballM.position.copy(_PSR)} // pass wind-up: the ball in his handsballM.visible=ballS.visible=S!='intro'&&S!='over';
+ ballM.position.set(B.x/10,B.z/10,(B.y/10-ZO));{const h=B.h;if((B.mode=='held'||B.mode=='inbound')&&h&&h.ps&&!h.ps.go&&passHand(h,_PSR))ballM.position.copy(_PSR)} // pass wind-up: the ball in his handsballM.visible=ballS.visible=S!='intro'&&S!='over';
  const h=B.mode=='held'&&B.h.dunk&&(B.h.dunk.ph>=1||B.h.dunk.g>0)?B.h:null;
  if(h){const m=h.m,a=new THREE.Vector3(),b=new THREE.Vector3(),k=h.dunk,f=Math.min(1,k.t),H=hx(h.team)/10;m.updateMatrixWorld(true);(k.mir?m.aR:m.aL).h.getWorldPosition(a);
   {const sw=dkSep(k);if(sw<1){(k.mir?m.aL:m.aR).h.getWorldPosition(b);b.add(a).multiplyScalar(.5);b.y+=.3;a.lerp(b,1-sw)}} // ball between both hands until the dunking hand takes it alone
-  const w=sm3(Math.max(0,Math.min(1,(f-.86)/.14)));a.x+=(H-a.x)*w;a.y+=(10.1-a.y)*w;a.z+=(HY/10-a.z)*w;
+  const w=sm3(Math.max(0,Math.min(1,(f-.86)/.14)));a.x+=(H-a.x)*w;a.y+=(10.1-a.y)*w;a.z+=(HY/10-ZO-a.z)*w;
   const gb=k.g!=null?sm3(k.g):k.ph==1?sm3(k.pt):1;
-  if(gb<1)ballM.position.lerp(a,gb);else{ballM.position.copy(a);B.x=a.x*10;B.y=a.z*10;B.z=a.y*10}}
+  if(gb<1)ballM.position.lerp(a,gb);else{ballM.position.copy(a);B.x=a.x*10;B.y=(a.z+ZO)*10;B.z=a.y*10}}
  const sh=!h&&B.mode=='held'&&shootNow(B.h)?B.h:null;
  if(sh)shotBall(sh);
  const ly=!h&&!sh&&B.mode=='held'&&B.h&&B.h.lay&&B.h.lay.t<B.h.lay.tr?B.h:null;
  if(ly){const L=ly.lay,a=new THREE.Vector3(),l=new THREE.Vector3();ly.m.updateMatrixWorld(true);(L.M?ly.m.aR:ly.m.aL).h.getWorldPosition(a);(L.M?ly.m.aL:ly.m.aR).h.getWorldPosition(l);
   const w=L.v!=null?laySep(L,layTau(ly,L)):1,mid=l.clone().add(a).multiplyScalar(.5);a.y+=.38;mid.y+=.15; // ball between both hands, then on the shooting hand
-  ballM.position.copy(mid.lerp(a,w));B.x=ballM.position.x*10;B.y=ballM.position.z*10;B.z=ballM.position.y*10}
+  ballM.position.copy(mid.lerp(a,w));B.x=ballM.position.x*10;B.y=(ballM.position.z+ZO)*10;B.z=ballM.position.y*10}
  {const bh=B.mode=='held'||B.mode=='inbound'?B.h:null,L=_BLB; // BALL BLEND: when the held ball jumps between frames (dribble -> shot pocket, -> pass wind-up, -> layup / dunk gather) it glides there in ~0.1s instead (only what you see: the game's ball is untouched)
-  const rx=ballM.position.x-(bh?bh.x/10:0),ry=ballM.position.y-(bh?bh.z/10:0),rz=ballM.position.z-(bh?bh.y/10:0); // (measured against the holder, so him moving fast never counts as a jump)
+  const rx=ballM.position.x-(bh?bh.x/10:0),ry=ballM.position.y-(bh?bh.z/10:0),rz=ballM.position.z-(bh?(bh.y/10-ZO):0); // (measured against the holder, so him moving fast never counts as a jump)
   if(bh&&bh===L.h){const jx=L.x-rx,jy=L.y-ry,jz=L.z-rz;if(jx*jx+jy*jy+jz*jz>1.44){L.o.x+=jx;L.o.y+=jy;L.o.z+=jz}}
   L.h=bh;L.x=rx;L.y=ry;L.z=rz;const sht=bh&&shootNow(bh);for(const k of ['x','y','z'])smd(L.o,k,0,sht?.05:.1,dt);ballM.position.x+=L.o.x;ballM.position.y+=L.o.y;ballM.position.z+=L.o.z} // (into the shooting hand: 0.05s, so it's in his palm before he rises)
  trailUpd(dt);
  ballM.rotation.x+=dt*6;ballS.position.set(ballM.position.x,.04,ballM.position.z);
  flash.visible=FX.t>0;if(FX.t>0){FX.t-=dt;flash.position.set(FX.x,FX.y,FX.z);const u=1-FX.t/.4;flash.scale.setScalar(.6+u*3);flash.material.opacity=.85*(1-u)}
  netUpd(dt);
- cring.visible=cglow.visible=!!hb&&S!='intro'&&S!='replay'&&S!='admin';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,hb.y/10);cglow.position.set(hb.x/10,.07,hb.y/10);ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
- const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play';arrow.visible=S=='play';ring.position.set(me.x/10,.06,me.y/10);arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,me.y/10);
- {const m=S=='play'&&CLK()&&off==1?myMark():null;markArrow.visible=!!m;if(m)markArrow.position.set(m.x/10,m.ht*6.2+2+Math.sin(T*6)*.3+m.z/10,m.y/10)}
+ cring.visible=cglow.visible=!!hb&&S!='intro'&&S!='replay'&&S!='admin';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,(hb.y/10-ZO));cglow.position.set(hb.x/10,.07,(hb.y/10-ZO));ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
+ const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play';arrow.visible=S=='play';ring.position.set(me.x/10,.06,(me.y/10-ZO));arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,(me.y/10-ZO));
+ {const m=S=='play'&&CLK()&&off==1?myMark():null;markArrow.visible=!!m;if(m)markArrow.position.set(m.x/10,m.ht*6.2+2+Math.sin(T*6)*.3+m.z/10,(m.y/10-ZO))}
  if(S=='replay')repCam(); // CINEMATIC replay camera (see repCam)
  else if(S=='admin')adCam(); // ADMIN free camera
  else if(S=='over'&&ES)endCam();
@@ -3294,8 +3294,8 @@ function render(dt){
    if(CAMM!=1){lowA=ta;lowV=0}else{lowV+=(24*(ta-lowA)-9.8*lowV)*dt;lowA=Math.max(0,Math.min(Math.PI,lowA+lowV*dt))} // critically damped spring: eases in and out
    {const h2=B.h&&B.mode=='held'?B.h:null,vx=h2?h2.vx:B.mode=='loose'?(B.vx||0):0,lead=Math.max(-9,Math.min(9,vx/10*.45)),tg=B.x/10+lead,gap=Math.abs(tg-lowBx); // follow the play up the court: tight, leading a little in the direction the ball is moving, and catching up faster the further behind it is
     lowBx+=(tg-lowBx)*(1-Math.exp(-dt*(4.5+gap*.3)))}}
-  if(CAMM==0){fv=48;dp=[cx+(Math.random()-.5)*sk,40,80];dl=[cx,0,26]}
-  else{const w=(1-Math.cos(lowA))/2,sa=Math.sin(lowA),bz=B.y/10-32,xp=Math.max(-17,Math.min(64,lowBx-30)),xm=Math.max(30,Math.min(111,lowBx+30)),H0=hx(0)/10,H1=hx(1)/10;
+  if(CAMM==0){fv=48;dp=[cx+(Math.random()-.5)*sk,40,80+ZO];dl=[cx,0,26+ZO]} // (+ZO: the near sideline moved out with the wider court)
+  else{const w=(1-Math.cos(lowA))/2,sa=Math.sin(lowA),bz=(B.y/10-ZO)-32,xp=Math.max(-17,Math.min(64,lowBx-30)),xm=Math.max(30,Math.min(111,lowBx+30)),H0=hx(0)/10,H1=hx(1)/10;
    fv=60;dp=[xp+(xm-xp)*w+(Math.random()-.5)*sk*.5,14+(Math.random()-.5)*sk*.5,32+bz*.25+28*sa]; // swings round the near sideline while turning
    dl=[(H0+(H1-H0)*w)*(1-.75*sa)+lowBx*.75*sa,5,32+bz*(.1+.5*sa)]} // mid-swing it aims at the play, not centre court
   if(camT>0){camT-=dt;const k=1-Math.exp(-dt*5);cam.position.x+=(dp[0]-cam.position.x)*k;cam.position.y+=(dp[1]-cam.position.y)*k;cam.position.z+=(dp[2]-cam.position.z)*k;
@@ -3311,7 +3311,7 @@ function render(dt){
 function meter(){
  const ly=ms.lyT>0&&ms.lyP&&ms.lyP.lay&&ms.lyP.lay.q==null?ms.lyP:null; // layup meter running
  const p=ly||(ms.on?TM[0][ctl]:ms.who);if(!p||(!ly&&!ms.on&&ms.show<=0))return;
- const v=new THREE.Vector3(p.x/10+2.4,7+p.z/10,p.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540-40,h=80,t=ly?ms.lyT:ms.on?ms.t:ms.last;
+ const v=new THREE.Vector3(p.x/10+2.4,7+p.z/10,(p.y/10-ZO)).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540-40,h=80,t=ly?ms.lyT:ms.on?ms.t:ms.last;
  g.fillStyle='rgba(0,0,0,.65)';g.beginPath();g.roundRect(x-2,y-2,16,h+4,5);g.fill();
  const pw=ly?layW(p,p.lay,cont(p)):ms.on?perfW(p,hoopD(p),shotC(p,hoopD(p),cont(p))):(ms.pw||.05),gh=Math.max(1.5,h*pw),gb=ly?pw+.12:ms.on?.11:(ms.gb||.11);
  g.fillStyle='#4cff7a';g.fillRect(x,y,12,gh);
@@ -3396,12 +3396,12 @@ function overlay(a,b,c){
 function passMark(){ // small circle over the teammate your pass (E) would go to
  const h=B.h,me=TM[0][ctl];if(!h||h!==me||h.team!=0||AUTO||ms.on||h.fire||h.dunk||h.lay)return;
  let tg=null;if(B.mode=='held')tg=passTarget(h);else if(B.mode=='inbound'&&off==0)tg=primaryPM(0);if(!tg)return;
- const v=new THREE.Vector3(tg.x/10,7.5*tg.ht+tg.z/10,tg.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540-Math.sin(T*6)*2;
+ const v=new THREE.Vector3(tg.x/10,7.5*tg.ht+tg.z/10,(tg.y/10-ZO)).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540-Math.sin(T*6)*2;
  g.save();g.beginPath();g.arc(x,y,7,0,6.283);g.fillStyle='rgba(76,255,122,.25)';g.fill();g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.6)';g.stroke();g.lineWidth=2;g.strokeStyle='#4cff7a';g.stroke();g.beginPath();g.arc(x,y,2.4,0,6.283);g.fillStyle='#fff';g.fill();g.restore();
  const fv=B.mode=='held'?sigv(h,'vision'):0;if(fv)for(const q of TM[0]){if(q===h||q===tg||Math.hypot(q.x-h.x,q.y-h.y)>fv*10||openness(0,q.x,q.y)<85)continue; // Floor Vision: every open teammate in range gets a ring
-  const w=new THREE.Vector3(q.x/10,7.5*q.ht+q.z/10,q.y/10).project(cam),qx=(w.x*.5+.5)*960,qy=(-w.y*.5+.5)*540;g.save();g.beginPath();g.arc(qx,qy,7,0,6.283);g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.6)';g.stroke();g.lineWidth=2;g.strokeStyle='#5ce1ff';g.stroke();g.restore()}}
+  const w=new THREE.Vector3(q.x/10,7.5*q.ht+q.z/10,(q.y/10-ZO)).project(cam),qx=(w.x*.5+.5)*960,qy=(-w.y*.5+.5)*540;g.save();g.beginPath();g.arc(qx,qy,7,0,6.283);g.lineWidth=3;g.strokeStyle='rgba(0,0,0,.6)';g.stroke();g.lineWidth=2;g.strokeStyle='#5ce1ff';g.stroke();g.restore()}}
 // the Signature pops over players' heads: tier-coloured badge in a ring of the player's team colour (Silver pulses, Gold shines); frequent ones small and faint
-function sigPops(){for(const p of TM[0].concat(TM[1])){const g_=p.sgp;if(!g_||g_.a<=0)continue;const age=1.2-g_.a,v=new THREE.Vector3(p.x/10,9.6*p.ht+p.z/10,p.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;
+function sigPops(){for(const p of TM[0].concat(TM[1])){const g_=p.sgp;if(!g_||g_.a<=0)continue;const age=1.2-g_.a,v=new THREE.Vector3(p.x/10,9.6*p.ht+p.z/10,(p.y/10-ZO)).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;
   const al=Math.min(1,g_.a/.3,age/.08)*(g_.fq?.32:1),pop=1+.35*Math.max(0,1-age/.15),sz=(g_.fq?17:[0,22,25,29][g_.t])*pop,col=tcol(p.team);
   g.save();g.globalAlpha=al;g.lineWidth=g_.fq?1.5:2.5;g.strokeStyle=col;g.beginPath();g.arc(x,y,sz*.62,0,6.283);g.stroke();
   if(!g_.fq&&g_.t>=2){const u=Math.min(1,age/.5);g.globalAlpha=al*(1-u)*.8;g.lineWidth=2;g.strokeStyle=SG_TCOL[g_.t];g.beginPath();g.arc(x,y,sz*(.62+.5*u),0,6.283);g.stroke();g.globalAlpha=al}
@@ -3409,10 +3409,10 @@ function sigPops(){for(const p of TM[0].concat(TM[1])){const g_=p.sgp;if(!g_||g_
   if(!g_.fq&&g_.t==3){const sh=Math.min(1,age/.45);if(sh<1){g.globalAlpha=al*.55*Math.sin(sh*Math.PI);g.fillStyle='#fff';g.beginPath();g.arc(x,y,sz*.42,0,6.283);g.fill();g.globalAlpha=al}}
   g.restore()}}
 function gpLabels(){for(const p of TM[0].concat(TM[1])){const l=p.gpl;if(!l||l.t<=0)continue;
-  const v=new THREE.Vector3(p.x/10,8.3*p.ht+p.z/10,p.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;g.save();g.globalAlpha=Math.min(1,l.t*2.5);g.textAlign='center';g.font='bold 12px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.8)';g.strokeText(l.s,x,y);g.fillStyle=tcol(p.team);g.fillText(l.s,x,y);g.restore()}}
+  const v=new THREE.Vector3(p.x/10,8.3*p.ht+p.z/10,(p.y/10-ZO)).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;g.save();g.globalAlpha=Math.min(1,l.t*2.5);g.textAlign='center';g.font='bold 12px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.8)';g.strokeText(l.s,x,y);g.fillStyle=tcol(p.team);g.fillText(l.s,x,y);g.restore()}}
 function callLabels(){for(const p of TM[0]){const t=p.callT>0?['BALL!','#ffd23f',p.callT]:p.shrug>0?['NOT NOW','#cfd3dc',p.shrug]:null;if(!t)continue;
-  const v=new THREE.Vector3(p.x/10,7.6*p.ht,p.y/10).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;g.save();g.globalAlpha=Math.min(1,t[2]*2.2);g.textAlign='center';g.font='bold 15px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t[0],x,y);g.fillStyle=t[1];g.fillText(t[0],x,y);g.restore()}}
-function ctlabel(){if(B.mode!='held'||B.h.team!=0)return;const h=B.h,c=h.ct||0,v=new THREE.Vector3(h.x/10,0,h.y/10+1.8).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;
+  const v=new THREE.Vector3(p.x/10,7.6*p.ht,(p.y/10-ZO)).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;g.save();g.globalAlpha=Math.min(1,t[2]*2.2);g.textAlign='center';g.font='bold 15px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t[0],x,y);g.fillStyle=t[1];g.fillText(t[0],x,y);g.restore()}}
+function ctlabel(){if(B.mode!='held'||B.h.team!=0)return;const h=B.h,c=h.ct||0,v=new THREE.Vector3(h.x/10,0,(h.y/10-ZO)+1.8).project(cam),x=(v.x*.5+.5)*960,y=(-v.y*.5+.5)*540;
  g.textAlign='center';g.font='bold 14px system-ui';g.lineWidth=4;g.strokeStyle='rgba(0,0,0,.75)';const t=c<.2?'OPEN':c<.45?'CONTESTED':c<.75?'HEAVY':'SMOTHERED';g.strokeText(t,x,y+8);g.fillStyle=cring.material.color.getStyle();g.fillText(t,x,y+8)}
 function draw(){
  g.clearRect(0,0,960,540);if(SUNR>0&&S!='store'){const a=Math.min(.7,SUNR*.45),gr=g.createRadialGradient(480,240,40,480,240,620);gr.addColorStop(0,'rgba(255,250,220,'+a+')');gr.addColorStop(.5,'rgba(255,170,50,'+a*.6+')');gr.addColorStop(1,'rgba(255,80,0,'+a*.25+')');g.fillStyle=gr;g.fillRect(0,0,960,540)} // SUN GOD glare
@@ -3513,7 +3513,7 @@ function mkHell(){const g=new THREE.Group();
  // lava lake
  const lt=RW(lavaCv(),12,12),lava=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new THREE.MeshBasicMaterial({map:lt}));lava.rotation.x=-Math.PI/2;lava.position.set(47,-9,32);g.add(NS(lava));
  // basalt platform the court sits on
- const rt=RW(rockCv(30,512,512,0),5,1),pl=new THREE.Mesh(new THREE.BoxGeometry(186,10,116),new THREE.MeshLambertMaterial({map:rt}));pl.position.set(47,-5.35,32);g.add(NS(pl));
+ const rt=RW(rockCv(30,512,512,0),5,1),pl=new THREE.Mesh(new THREE.BoxGeometry(186,10,126),new THREE.MeshLambertMaterial({map:rt}));pl.position.set(47,-5.35,32);g.add(NS(pl));
  // jagged rock spires around the lava
  const L=[];for(let i=0;i<22;i++){const a=rnd()*6.283,d=70+rnd()*46,h=14+rnd()*30,r=4+rnd()*6,c=new THREE.Color().setHSL(.03,.35,.06+rnd()*.05);L.push({g:new THREE.ConeGeometry(r,h,7,1),m:m4(47+Math.cos(a)*d*1.15,-9+h/2-1,32+Math.sin(a)*d,1,1,1,rnd()*3),c})}
  g.add(NS(new THREE.Mesh(mg(L),rockMat())));
@@ -3532,7 +3532,7 @@ function mkHeaven(){const g=new THREE.Group();
  // cloud mass: everything merged into a single mesh
  const L=[],cc=()=>new THREE.Color().setHSL(.12+rnd()*.5*.12,.25*rnd(),.93+rnd()*.07),puff=(x,top,z,r,sy)=>L.push({g:USPH,m:m4(x,top-sy*r,z,r,r*sy,r),c:cc()});
  // billowy rim around the court
- for(let i=0;i<54;i++){const t=i/54,W=134,Hh=100,per=2*(W+Hh),u=t*per;let x,z;if(u<W){x=-20+u;z=-18}else if(u<W+Hh){x=114;z=-18+(u-W)}else if(u<2*W+Hh){x=114-(u-W-Hh);z=82}else{x=-20;z=82-(u-2*W-Hh)}
+ for(let i=0;i<54;i++){const t=i/54,W=134,Hh=109.6,per=2*(W+Hh),u=t*per;let x,z;if(u<W){x=-20+u;z=-22.8}else if(u<W+Hh){x=114;z=-22.8+(u-W)}else if(u<2*W+Hh){x=114-(u-W-Hh);z=86.8}else{x=-20;z=86.8-(u-2*W-Hh)}
   puff(x+(rnd()-.5)*4,.3+rnd()*1.1,z+(rnd()-.5)*4,6+rnd()*5,.6)}
  // heavy underbelly
  for(let i=0;i<30;i++)puff(-50+rnd()*195,-3-rnd()*9,-40+rnd()*145,15+rnd()*12,.6);
@@ -3552,12 +3552,12 @@ function chainFence(g,P){const dk=new THREE.Color(0x20252c);
  const ft=new THREE.CanvasTexture(fc);ft.wrapS=ft.wrapT=THREE.RepeatWrapping;ft.anisotropy=R.capabilities.getMaxAnisotropy();
  const fence=(len,x,z,ry)=>{const gm=new THREE.PlaneGeometry(len,11),uv=gm.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*len/4,uv.getY(i)*11/4);
   const m=new THREE.Mesh(gm,new THREE.MeshBasicMaterial({map:ft,color:0x8c98aa,alphaTest:.12,side:THREE.DoubleSide,fog:false}));m.position.set(x,5.5,z);m.rotation.y=ry;g.add(NS(m))};
- fence(112,47,-8,0);fence(112,47,72,0);fence(80,-9,32,Math.PI/2);fence(80,103,32,Math.PI/2);
+ fence(112,47,-12.8,0);fence(112,47,76.8,0);fence(89.6,-9,32,Math.PI/2);fence(89.6,103,32,Math.PI/2);
  // solid rails (top, middle, bottom) on all four sides so the fence line always reads, even where the mesh thins out with distance
- {const rm=new THREE.MeshBasicMaterial({color:0x56606e,fog:false});for(const y of[.15,5.5,11.1]){for(const z of[-8,72]){const r=new THREE.Mesh(new THREE.BoxGeometry(112,.3,.3),rm);r.position.set(47,y,z);g.add(NS(r))}for(const x of[-9,103]){const r=new THREE.Mesh(new THREE.BoxGeometry(.3,.3,80),rm);r.position.set(x,y,32);g.add(NS(r))}}}
- for(let x=-9;x<=103;x+=14){P.push({g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(x,5.7,-8,1,1,1),c:dk},{g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(x,5.7,72,1,1,1),c:dk})}
- for(let z=-8;z<=72;z+=16){P.push({g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(-9,5.7,z,1,1,1),c:dk});P.push({g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(103,5.7,z,1,1,1),c:dk})}
- P.push({g:new THREE.BoxGeometry(112,.3,.3),m:m4(47,11.1,-8,1,1,1),c:dk},{g:new THREE.BoxGeometry(112,.3,.3),m:m4(47,11.1,72,1,1,1),c:dk},{g:new THREE.BoxGeometry(.3,.3,80),m:m4(-9,11.1,32,1,1,1),c:dk},{g:new THREE.BoxGeometry(.3,.3,80),m:m4(103,11.1,32,1,1,1),c:dk});
+ {const rm=new THREE.MeshBasicMaterial({color:0x56606e,fog:false});for(const y of[.15,5.5,11.1]){for(const z of[-12.8,76.8]){const r=new THREE.Mesh(new THREE.BoxGeometry(112,.3,.3),rm);r.position.set(47,y,z);g.add(NS(r))}for(const x of[-9,103]){const r=new THREE.Mesh(new THREE.BoxGeometry(.3,.3,89.6),rm);r.position.set(x,y,32);g.add(NS(r))}}}
+ for(let x=-9;x<=103;x+=14){P.push({g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(x,5.7,-12.8,1,1,1),c:dk},{g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(x,5.7,76.8,1,1,1),c:dk})}
+ for(let z=-12.8;z<=76.8;z+=17.92){P.push({g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(-9,5.7,z,1,1,1),c:dk});P.push({g:new THREE.CylinderGeometry(.2,.2,11.4,6),m:m4(103,5.7,z,1,1,1),c:dk})}
+ P.push({g:new THREE.BoxGeometry(112,.3,.3),m:m4(47,11.1,-12.8,1,1,1),c:dk},{g:new THREE.BoxGeometry(112,.3,.3),m:m4(47,11.1,76.8,1,1,1),c:dk},{g:new THREE.BoxGeometry(.3,.3,89.6),m:m4(-9,11.1,32,1,1,1),c:dk},{g:new THREE.BoxGeometry(.3,.3,89.6),m:m4(103,11.1,32,1,1,1),c:dk});
 }
 function mkStreet(){const g=new THREE.Group();
  {const[c,x]=cv(1024,512),gr=x.createLinearGradient(0,0,0,512);gr.addColorStop(0,'#01020a');gr.addColorStop(.35,'#060b1c');gr.addColorStop(.49,'#16203a');gr.addColorStop(.5,'#0a0e1a');gr.addColorStop(1,'#05070d');x.fillStyle=gr;x.fillRect(0,0,1024,512);
@@ -3570,18 +3570,18 @@ function mkStreet(){const g=new THREE.Group();
  const gm=new THREE.Mesh(new THREE.PlaneGeometry(700,700),new THREE.MeshLambertMaterial({color:0x0b150e}));gm.rotation.x=-Math.PI/2;gm.position.set(47,-.2,32);g.add(NS(gm));
  const P=[],dk=new THREE.Color(0x20252c);chainFence(g,P);
  // lamp posts, benches, bins
- const lamps=[[23,-11,1],[71,-11,1],[-13,76,0],[107,76,0]],bulb=new THREE.Color(0xffe0a0);
+ const lamps=[[23,-15.8,1],[71,-15.8,1],[-13,80.8,0],[107,80.8,0]],bulb=new THREE.Color(0xffe0a0);
  for(const[lx,lz,lit]of lamps){const ax=lx<47?1:-1,az=lz<30?1:-1,bxp=lx+ax*4,bzp=lz+az*(lz<30?5:-5);
   P.push({g:new THREE.CylinderGeometry(.3,.4,24,8),m:m4(lx,12,lz,1,1,1),c:dk},{g:new THREE.BoxGeometry(.3,.3,6),m:m4(lx,24,lz+(lz<30?3:-3),1,1,1),c:dk},{g:new THREE.BoxGeometry(1.8,.4,1.2),m:m4(lx,23.7,lz+(lz<30?6:-6),1,1,1),c:dk});
   const sp=glowSprite(0xffd890,lit?20:11);sp.position.set(lx,23.2,lz+(lz<30?6:-6));g.add(sp)}
- const wd=new THREE.Color(0x3a2a1c);for(const bx2 of[14,80]){P.push({g:new THREE.BoxGeometry(7,.4,1.6),m:m4(bx2,1.5,69,1,1,1),c:wd},{g:new THREE.BoxGeometry(7,1.3,.3),m:m4(bx2,2.4,69.8,1,1,1),c:wd},{g:new THREE.BoxGeometry(.4,1.5,1.4),m:m4(bx2-3,.75,69,1,1,1),c:dk},{g:new THREE.BoxGeometry(.4,1.5,1.4),m:m4(bx2+3,.75,69,1,1,1),c:dk})}
- P.push({g:new THREE.CylinderGeometry(.9,.8,2.6,10),m:m4(40,1.3,69.5,1,1,1),c:new THREE.Color(0x2a3a30)});
+ const wd=new THREE.Color(0x3a2a1c);for(const bx2 of[14,80]){P.push({g:new THREE.BoxGeometry(7,.4,1.6),m:m4(bx2,1.5,73.8,1,1,1),c:wd},{g:new THREE.BoxGeometry(7,1.3,.3),m:m4(bx2,2.4,74.6,1,1,1),c:wd},{g:new THREE.BoxGeometry(.4,1.5,1.4),m:m4(bx2-3,.75,73.8,1,1,1),c:dk},{g:new THREE.BoxGeometry(.4,1.5,1.4),m:m4(bx2+3,.75,73.8,1,1,1),c:dk})}
+ P.push({g:new THREE.CylinderGeometry(.9,.8,2.6,10),m:m4(40,1.3,74.3,1,1,1),c:new THREE.Color(0x2a3a30)});
  // trees ringing the park
  for(let i=0;i<38;i++){const a=rnd()*6.283,rx=92+rnd()*80,rz=72+rnd()*70,x=47+Math.cos(a)*rx,z=32+Math.sin(a)*rz,s=.8+rnd()*.7;
   P.push({g:new THREE.CylinderGeometry(.6*s,.8*s,8*s,6),m:m4(x,4*s,z,1,1,1),c:new THREE.Color(0x1b130d)});
   for(let k=0;k<3;k++)P.push({g:USPH,m:m4(x+(rnd()-.5)*4*s,9*s+k*2.6*s,z+(rnd()-.5)*4*s,(5.6-k*1.2)*s,(5-k)*s,(5.6-k*1.2)*s),c:new THREE.Color().setHSL(.33,.45,.04+rnd()*.04)})}
  g.add(NS(new THREE.Mesh(mg(P),new THREE.MeshLambertMaterial({vertexColors:true}))));
- const l1=new THREE.PointLight(0xffd9a0,.95,115,1.5);l1.position.set(23,22,-4);const l2=new THREE.PointLight(0xffd9a0,.95,115,1.5);l2.position.set(71,22,-4);g.add(l1,l2);
+ const l1=new THREE.PointLight(0xffd9a0,.95,115,1.5);l1.position.set(23,22,-8.8);const l2=new THREE.PointLight(0xffd9a0,.95,115,1.5);l2.position.set(71,22,-8.8);g.add(l1,l2);
  ENV.STREET={g}}
 
 
@@ -3616,16 +3616,16 @@ function mkRucker(){const g=new THREE.Group(),P=[];
  g.add(skyMesh(skyCv([[0,'#3f86d8'],[.38,'#86bcec'],[.5,'#dcecf6'],[.5,'#c6dcef'],[1,'#8a8f94']],x=>{sunCv(x,760,90,150,'rgba(255,250,225,0)');cloudCv(x,34,.6)})));
  gnd(g,0x6c7076);chainFence(g,P);
  // aluminium bleachers packed with fans along the far fence
- for(let r=0;r<6;r++){bx(P,47,.6+r*1.5,-11-r*2,90,.35,2,0xb8bec6);bx(P,47,r*1.5,-12-r*2,90,1.2,.2,0x8a9098);people(P,3,91,.8+r*1.5,-11.2-r*2,26)}
- for(const x of[2,92])bx(P,x,4.5,-16,.3,9,12,0x8a9098);
+ for(let r=0;r<6;r++){bx(P,47,.6+r*1.5,-15.8-r*2,90,.35,2,0xb8bec6);bx(P,47,r*1.5,-16.8-r*2,90,1.2,.2,0x8a9098);people(P,3,91,.8+r*1.5,-16-r*2,26)}
+ for(const x of[2,92])bx(P,x,4.5,-20.8,.3,9,12,0x8a9098);
  // fans standing along both ends
- for(const x of[-11.5,105.5])for(let z=-4;z<70;z+=5+rnd()*5)people(P,x,x+.01,-.2,z,1);
+ for(const x of[-11.5,105.5])for(let z=-9;z<75;z+=5+rnd()*5)people(P,x,x+.01,-.2,z,1);
  // Harlem: tall brick housing towers behind, walk-ups along the side streets
  const brick=new THREE.MeshLambertMaterial({map:winTex('#8a4a36','#2a3440',.08,1)}),walk=new THREE.MeshLambertMaterial({map:winTex('#6a4030','#283038',.1,1)});
  for(const[x,z,h]of[[-30,-130,150],[30,-150,165],[100,-125,150],[165,-145,160],[-95,-90,120]])bld(g,brick,P,34,h,34,x,z);
  for(let x=-70;x<170;x+=26)bld(g,walk,P,24,34+rnd()*24,30,x,-62-rnd()*8);
  for(let z=-40;z<120;z+=28){bld(g,walk,P,30,30+rnd()*20,24,-62,z);bld(g,walk,P,30,30+rnd()*20,24,158,z)}
- for(let i=0;i<26;i++){const x=-40+rnd()*175,z=rnd()<.5?-30-rnd()*14:110+rnd()*20;treeP(P,x,z,.9+rnd()*.5,[.3,.5,.18])}
+ for(let i=0;i<26;i++){const x=-40+rnd()*175,z=rnd()<.5?-34-rnd()*14:110+rnd()*20;treeP(P,x,z,.9+rnd()*.5,[.3,.5,.18])}
  for(const x of[-30,124])for(let z=-10;z<80;z+=18)treeP(P,x+(rnd()-.5)*8,z,.9+rnd()*.4,[.3,.5,.18]);
  g.add(NS(new THREE.Mesh(mg(P),VC)));ENV.RUCKER={g}}
 
@@ -3645,7 +3645,7 @@ function mkVenice(){const g=new THREE.Group(),P=[];
  {const lx=70,lz=-70;for(const[a,b]of[[-2,-2],[2,-2],[-2,2],[2,2]])bx(P,lx+a,3,lz+b,.4,6,.4,0xeeeeee);bx(P,lx,6.3,lz,5.6,.4,5.6,0xdddddd);bx(P,lx,8.3,lz,5,3.6,5,0x3a7ac0);bx(P,lx,10.4,lz,6,.5,6,0xf4f4f4);bx(P,lx+1.5,3.4,lz+4.2,1.6,.2,6,0xdddddd,0)}
  for(let i=0;i<16;i++){const x=-80+rnd()*240,z=-58-rnd()*20,c=[0xe84a3a,0xf0c030,0x2f8fd0,0xf4f4f4][i%4];cyl(P,x,3,z,.08,6,0xdddddd);P.push({g:UCONE,m:m4(x,6.2,z,3.4,1.3,3.4),c:C3(c)})}
  // low benches and a few spectators watching from the sand
- for(const x of[14,47,80]){bx(P,x,1.2,-10,9,.35,1.4,0xd8d2c4);people(P,x-4,x+4,.2,-10,3)}
+ for(const x of[14,47,80]){bx(P,x,1.2,-13,9,.35,1.4,0xd8d2c4);people(P,x-4,x+4,.2,-13,3)}
  g.add(NS(new THREE.Mesh(mg(P),VC)));ENV.VENICE={g,wt}}
 
 function mkDesert(){const g=new THREE.Group(),P=[];
@@ -3662,7 +3662,7 @@ function mkDesert(){const g=new THREE.Group(),P=[];
  for(let i=0;i<60;i++){const a=rnd()*6.283,d=60+rnd()*120,s=1+rnd()*4;P.push({g:UROCK,m:m4(47+Math.cos(a)*d*1.2,s*.3,32+Math.sin(a)*d,s*1.4,s,s,rnd()*3),c:new THREE.Color().setHSL(.05,.4,.3+rnd()*.12)})}
  for(let i=0;i<50;i++){const a=rnd()*6.283,d=58+rnd()*60;P.push({g:USPH,m:m4(47+Math.cos(a)*d*1.2,.6,32+Math.sin(a)*d,1.6,1,1.6),c:new THREE.Color().setHSL(.16,.3,.3+rnd()*.1)})}
  // weathered timber posts round the slab
- for(let x=-9;x<=103;x+=16)for(const z of[-8,72])bx(P,x,2.5,z,.6,5,.6,0x6a4a30);
+ for(let x=-9;x<=103;x+=16)for(const z of[-12.8,76.8])bx(P,x,2.5,z,.6,5,.6,0x6a4a30);
  g.add(NS(new THREE.Mesh(mg(P),VCF)));const D=parts(g,260,0xe8c89a,1.1,.5);ENV.DESERT={g,D}}
 
 function mkAlpine(){const g=new THREE.Group(),P=[];
@@ -3675,7 +3675,7 @@ function mkAlpine(){const g=new THREE.Group(),P=[];
  for(let i=0;i<120;i++){const a=rnd()*6.283,d=80+rnd()*110,x=47+Math.cos(a)*d*1.15,z=32+Math.sin(a)*d,s=.8+rnd()*.9;cyl(P,x,2*s,z,.5*s,4*s,0x3a2a1c);
   for(let k=0;k<3;k++){const y=4*s+k*4*s,r=(5-k*1.4)*s;P.push({g:UCONE,m:m4(x,y+3*s,z,r,6*s,r),c:new THREE.Color().setHSL(.38,.4,.12+rnd()*.05)},{g:UCONE,m:m4(x,y+4.6*s,z,r*.55,2.8*s,r*.55),c:C3(0xf2f6fa)})}}
  // banks of shovelled snow round the court and a log cabin
- for(let i=0;i<70;i++){const t=i/70,per=2*(116+90),u=t*per;let x,z;if(u<116){x=-11+u;z=-10}else if(u<206){x=105;z=-10+u-116}else if(u<322){x=105-(u-206);z=80}else{x=-11;z=80-(u-322)}
+ for(let i=0;i<70;i++){const t=i/70,D=99.6,per=2*(116+D),u=t*per;let x,z;if(u<116){x=-11+u;z=-14.8}else if(u<116+D){x=105;z=-14.8+u-116}else if(u<232+D){x=105-(u-116-D);z=84.8}else{x=-11;z=84.8-(u-232-D)}
   P.push({g:USPH,m:m4(x,-.3,z,4+rnd()*3,1.6+rnd()*1.6,4+rnd()*3),c:C3(0xf6f9fc)})}
  {const cx=-40,cz=-40;bx(P,cx,5,cz,24,10,16,0x6a4428);for(let y=1;y<10;y+=1.4)bx(P,cx,y,cz+8.1,24.4,.5,.4,0x4a2e1a);
   bx(P,cx,12.2,cz-4.4,26,.8,10,0xf4f8fc,0);P.push({g:UBOX,m:m4(cx,12.6,cz-4,26,.8,10.5,0,-.55),c:C3(0xf4f8fc)},{g:UBOX,m:m4(cx,12.6,cz+4,26,.8,10.5,0,.55),c:C3(0xf4f8fc)});
@@ -3686,10 +3686,10 @@ function mkRooftop(){const g=new THREE.Group(),P=[];
  g.add(skyMesh(skyCv([[0,'#1a1440'],[.3,'#5a2a6a'],[.42,'#d0507a'],[.5,'#ffb060'],[.5,'#2a2030'],[1,'#120c18']],x=>{sunCv(x,760,250,150,'rgba(255,140,80,0)');for(let i=0;i<14;i++){x.fillStyle='rgba(255,170,140,'+rnd()*.3+')';x.beginPath();x.ellipse(rnd()*1024,150+rnd()*90,40+rnd()*120,3+rnd()*6,0,0,7);x.fill()}})));
  gnd(g,0x18141c,-220);
  // our building: tar-paper roof, parapet, brick facade dropping to the street, and a rooftop cage round the court
- const fac=new THREE.MeshLambertMaterial({map:winTex('#7a4636','#1c2230',.35,1)});bld(g,fac,[],190,220,118,47,32,-220.4);
- bx(P,47,-.3,32,190,.2,118,0x3a3a40);for(const z of[-27,91])bx(P,47,1.5,z,190,3.6,1,0x6a4030);for(const x of[-48,142])bx(P,x,1.5,32,1,3.6,118,0x6a4030);
+ const fac=new THREE.MeshLambertMaterial({map:winTex('#7a4636','#1c2230',.35,1)});bld(g,fac,[],190,220,128,47,32,-220.4);
+ bx(P,47,-.3,32,190,.2,128,0x3a3a40);for(const z of[-32,96])bx(P,47,1.5,z,190,3.6,1,0x6a4030);for(const x of[-48,142])bx(P,x,1.5,32,1,3.6,128,0x6a4030);
  chainFence(g,P);
- for(const[x,z]of[[-18,-14],[-18,78],[112,-14]]){bx(P,x,2,z,6,4,5,0x8a8a90);bx(P,x,4.3,z,6.4,.4,5.4,0x6a6a70)} // AC units
+ for(const[x,z]of[[-18,-18],[-18,82],[112,-18]]){bx(P,x,2,z,6,4,5,0x8a8a90);bx(P,x,4.3,z,6.4,.4,5.4,0x6a6a70)} // AC units
  // the skyline: towers of every height, the odd lit window, and wooden water tanks on the roofs
  const mats=[winTex('#3a3e48','#1a2030',.3),winTex('#6a4a3a','#1c2230',.3,1),winTex('#8a8a88','#242a34',.25),winTex('#2a3040','#3a4a66',.15)].map(t=>new THREE.MeshLambertMaterial({map:t}));
  for(let i=0;i<70;i++){const a=rnd()*6.283,d=110+rnd()*230,x=47+Math.cos(a)*d*1.2,z=32+Math.sin(a)*d,w=20+rnd()*30,h=150+rnd()*(d>200?320:200),top=h-220;
@@ -3706,8 +3706,8 @@ function mkGym(){const g=new THREE.Group(),P=[];
  const wt=new THREE.CanvasTexture(wc),wm=new THREE.MeshBasicMaterial({map:wt,side:THREE.BackSide}),cm=new THREE.MeshBasicMaterial({color:0x2e2c2a,side:THREE.BackSide}),fm=new THREE.MeshBasicMaterial({color:0x8a5a30,side:THREE.BackSide});
  const room=new THREE.Mesh(new THREE.BoxGeometry(230,72,180),[wm,wm,cm,fm,wm,wm]);room.position.set(47,35.8,32);g.add(NS(room));
  // pulled-out wooden bleachers on the far wall with a crowd
- for(let r=0;r<10;r++){bx(P,47,(r+1)*.8,-12-r*2.4,120,(r+1)*1.6,2.4,r%2?0x9a6a3a:0xa87440);people(P,-10,104,1.6+r*1.6,-12.4-r*2.4,24)}
- bx(P,47,8,-38,120,16,.3,0x5a3a20);
+ for(let r=0;r<10;r++){bx(P,47,(r+1)*.8,-16.8-r*2.4,120,(r+1)*1.6,2.4,r%2?0x9a6a3a:0xa87440);people(P,-10,104,1.6+r*1.6,-17.2-r*2.4,24)}
+ bx(P,47,8,-42.8,120,16,.3,0x5a3a20);
  // wall pads behind the hoops, banners and the scoreboard
  for(const x of[-67,161])bx(P,x+(x<0?.5:-.5),5,32,.6,8,30,0x1c3a7a);
  const ban=(t1,t2,x,y,z,ry)=>{const[c,x2]=cv(128,224);x2.fillStyle='#7a1c24';x2.fillRect(0,0,128,224);x2.fillStyle='#d4a020';x2.fillRect(6,6,116,212);x2.fillStyle='#7a1c24';x2.fillRect(12,12,104,200);
@@ -3735,7 +3735,7 @@ function mkNeon(){const g=new THREE.Group(),P=[],Q=[];
  for(let i=0;i<46;i++){const a=rnd()*6.283,d=95+rnd()*150,x=47+Math.cos(a)*d*1.2,z=32+Math.sin(a)*d,w=8+rnd()*16,h=30+rnd()*130;(i%2?P:Q).push({g:UBOX,m:m4(x,h/2,z,w,h,w*(.6+rnd()*.8),rnd()),c:C3(0x0a0716)})}
  for(const[L,col]of[[P,0x3ff4ff],[Q,0xff3ad8]]){const geo=mg(L);g.add(NS(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true}))));g.add(NS(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:col}))))}
  // light strips round the court and spinning rings behind each basket
- const strip=new THREE.MeshBasicMaterial({color:0x3ff4ff});for(const[x,z,w,d]of[[47,-3,104,.4],[47,67,104,.4],[-5,32,.4,70],[99,32,.4,70]]){const m=new THREE.Mesh(new THREE.BoxGeometry(w,.3,d),strip);m.position.set(x,.1,z);g.add(NS(m))}
+ const strip=new THREE.MeshBasicMaterial({color:0x3ff4ff});for(const[x,z,w,d]of[[47,-7.8,104,.4],[47,71.8,104,.4],[-5,32,.4,79.6],[99,32,.4,79.6]]){const m=new THREE.Mesh(new THREE.BoxGeometry(w,.3,d),strip);m.position.set(x,.1,z);g.add(NS(m))}
  const rings=[];for(const x of[-24,118]){const r=new THREE.Mesh(new THREE.TorusGeometry(16,.5,8,64),new THREE.MeshBasicMaterial({color:0xff3ad8}));r.position.set(x,22,32);r.rotation.y=Math.PI/2;g.add(NS(r));rings.push(r)}
  const H=parts(g,300,0x7af8ff,.8,.8);ENV.NEON={g,gt,rings,H}}
 
@@ -3873,7 +3873,7 @@ function endInit(){profRecord();
  let dx=470-fp.x,dz=320-fp.y;const l=Math.hypot(dx,dz)||1;dx=dx/l*.6;dz=dz/l*.6+1;const a=Math.atan2(dx,dz);
  // everyone else: at least 10 ft from him, and right out of the wedge the camera swoops through (angles a-.25 .. a+1.2), so nobody blocks the shot
  TM.flat().forEach(q=>{if(q===fp)return;let r=Math.max(100,Math.hypot(q.x-fp.x,q.y-fp.y)),f=Math.atan2(q.x-fp.x,q.y-fp.y),u=Math.atan2(Math.sin(f-a),Math.cos(f-a));
-  if(u>-.25&&u<1.2&&r<300)u=u<.47?-.45:1.4;f=a+u;q.x=mClamp(fp.x+Math.sin(f)*r,20,920);q.y=mClamp(fp.y+Math.cos(f)*r,20,620)});
+  if(u>-.25&&u<1.2&&r<300)u=u<.47?-.45:1.4;f=a+u;q.x=mClamp(fp.x+Math.sin(f)*r,20,920);q.y=mClamp(fp.y+Math.cos(f)*r,20,CW-20)});
  if(IN&&IN.pz)poseReset(IN.pz);
  IN.pz={sd:-1,p:fp,kind:won?'FLEX':'FOLD',t0:0};IN.rt=0;IN.rdt=1/60;
  ES={t:0,p:fp,won,a,sel:1,box:false,cc:ccMatch(fp)};ms.on=false;B.mode='over';B.h=null; // (the ball is put away)
@@ -3888,7 +3888,7 @@ function endStep(dt){if(!ES)return;ES.t+=dt;IN.rt=ES.t;IN.rdt=dt;
 function endPtr(x,y,type){if(!ES)return;
  if(ES.box){if(type==0)ES.box=false;return}
  for(let i=0;i<3;i++)if(mIn(x,y,ES_BTN(i))){ES.sel=i;if(type==0)endPick(i);return}}
-function endCam(){const p=ES.p,t=ES.t,e=1-Math.pow(1-Math.min(1,t/2.8),3),px=p.x/10,pz=p.y/10,ht=p.ht;
+function endCam(){const p=ES.p,t=ES.t,e=1-Math.pow(1-Math.min(1,t/2.8),3),px=p.x/10,pz=(p.y/10-ZO),ht=p.ht;
  // swoop: high and wide, swinging round as it drops in to a waist-up shot, then a slow drift
  const ang=ES.a+.95*(1-e)+.1*Math.sin(t*.35)*e,d=26-13*e,h=15-(15-4.4*ht)*e;
  cam.position.set(px+Math.sin(ang)*d,h,pz+Math.cos(ang)*d);
@@ -5091,10 +5091,12 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.90'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.91'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.91','Wider courts',['Every court is about 15% wider (sideline to sideline 64 ft -> 74 ft): more room to space the floor, drive and swing the ball.',
+  'Court lines, floors, fences, bleachers and the rest of each arena moved out with the sidelines; the default camera pulls back a little to match.']],
  ['v1.90','SUN GOD',['New trail SUN GOD: the ball burns like a star in flight, then hits the rim like the sun crashing down to earth: a blinding solar flare, molten spray, a screen-wide glare, a huge boom with a long rolling rumble, and the camera shakes as the ground quakes.',
   'Also new: AURORA (northern lights swaying green to violet), DRAGON (dragon fire with a roar on release) and GLITCH (corrupted pixels flickering pink, cyan and yellow).',
   '28 trails in STORE > COSMETICS.']],
@@ -5852,7 +5854,7 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
   else if(c=='pas'&&p.ps&&passHand(p,_SVA))pl=_SVA.clone();
   else if(c=='sht'&&(SPV.ph=='shot'||SPV.ph=='set')&&(SPV.ph=='shot'||!SPV.v||SPV.v=='fade')){const a=spvHand(p,1,_SVA),b=spvHand(p,0,_SVB);a.add(b).multiplyScalar(.5);a.y+=.35;pl=a.clone()}
   else if(c=='drb'){const hz0=36*p.ht;let lat=p.side*9,fw=7,bz=4+(hz0-4)*Math.abs(Math.cos(SPV.t*8.5));if(p.bm){const r_=drbBall(p,p.bm,hz0);lat=r_[0];fw=r_[1];bz=r_[2]}
-   p.ls=lat/9;p.spvBz=bz;const bx=Math.sin(p.ang),by=Math.cos(p.ang);pl=_SVA.set((p.x-by*lat+bx*fw)/10,bz/10,(p.y+bx*lat+by*fw)/10).clone()}
+   p.ls=lat/9;p.spvBz=bz;const bx=Math.sin(p.ang),by=Math.cos(p.ang);pl=_SVA.set((p.x-by*lat+bx*fw)/10,bz/10,(p.y+bx*lat+by*fw)/10-ZO).clone()}
   else if(SPV.ph!='after'&&!SPV.done){const h=spvHand(p,1,_SVA).clone();h.y=Math.max(.4,h.y-1.7*Math.abs(Math.sin(SPV.t*8.5)));pl=h} // dribbling
   if(pl)bm.position.copy(pl)}
  if(!SPV.trl&&(SPV.done>1.1||SPV.t>9))spvStart(SPV.key)} // loop (the trail preview loops itself: trlPrevUpd)
@@ -5867,7 +5869,7 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
   if(o===SPV.p){let tg=Math.atan2(o.fx,o.fy);if(SPV.c=='sht'&&SPV.ph=='set'&&SPV.v=='pfade')tg=-Math.PI/2;let da=tg-o.ang;da=Math.atan2(Math.sin(da),Math.cos(da));o.ang+=da*(1-Math.exp(-14*dt))}
   const d0=o.dunk,sp3=d0&&d0.sty==3?sm3(Math.max(0,Math.min(1,(d0.t-d0.f0)/((1-d0.f0)*.8))))*2*Math.PI:0;
   o.lyw=ex(o.lyw||0,d0?dkYaw(o,d0):o.lay?layYaw(o,o.lay):0,dt,o.lay&&o.lay.rv?(o.lay.rv==2?60:22):14);
-  o.m.position.set(o.x/10,o.z/10,o.y/10);o.m.rotation.y=o.ang+sp3+o.lyw+(o.spin>0?(1-o.spin/(o.sd||.5))*2*Math.PI*(o.spd||1)*(o.spn||1):0);pose(o,dt)}
+  o.m.position.set(o.x/10,o.z/10,(o.y/10-ZO));o.m.rotation.y=o.ang+sp3+o.lyw+(o.spin>0?(1-o.spin/(o.sd||.5))*2*Math.PI*(o.spd||1)*(o.spn||1):0);pose(o,dt)}
  const cam=SPV.cam,cx=SPV.c=='pas'?81:SPV.c=='sht'?78:79;cam.position.set(cx-1.5,7.2,32+27);cam.lookAt(cx+.5,6.3,32);
  if(SPV.c=='drb'){cam.position.set(79,6.2,45);cam.lookAt(72,3.4,32)} // (dribble styles: closer, from the front three-quarters - the moves go side to side)
  if(SPV.trl){trlPrevUpd(dt);if(SUNR)cam.position.add(_SVB.set((Math.random()-.5)*SUNR*.5,(Math.random()-.5)*SUNR*.35,0))}
