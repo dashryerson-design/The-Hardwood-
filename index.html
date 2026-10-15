@@ -5137,10 +5137,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.93'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.94'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.94','Signatures screen fits',['Fixed: on the SIGNATURES screen the 13th PLAYMAKING signature (CRITICAL COMBOS) was hidden behind the DONE button. The badge rows now shrink to fit any category.']],
  ['v1.93','Real ankle breakers',['Ankle breakers no longer snap the defender flat on his back. He now loses his footing in one of five ways, picked from the move and how he was moving:',
   'BACK: a few panicked backpedal steps, then he sits down hard (step-backs, hesitations). SLIP: his feet shoot out the way he was already sliding and he lands on his hip (crossovers on the move).',
   'SIDE: he lurches the wrong way on crossed feet and catches himself on one hand (crosses, spins). HIPS: his hips open the wrong way, his legs tangle and he drops to a knee.',
@@ -6190,7 +6191,7 @@ function openLook(){MM.lk={row:0,hold:0,py:5,pz:6.6,ly:4.8};MM.pry=0;MM.pd=-1;S=
 function lookDone(){if(MM.bioNew){MM.bi=1;MM.bd=1;S='cbio';for(const k in P)P[k]=0;beep(560,.1,'triangle',.04)}else lookBack()}
 function lookBack(){if(MM.bioNew){S='cpos';for(const k in P)P[k]=0;return}if(MM.fromAct){actReturn();return}S='create';MM.row=5;MM.apS=0;for(const k in P)P[k]=0}
 // ===== SIGNATURES MENU (from the attribute editor): pick which Signatures the player has equipped, within the SP budget and the limits =====
-const SG_TAB=i=>[40+i*116,84,112,36],SG_TILE=j=>[40+(j%3)*196,126+Math.floor(j/3)*90,190,84],SG_PANEL=[636,86,294,394],SG_TB=i=>[642+i*72,404,66,32],SG_DONE=[40,494,160,34],
+const SG_TAB=i=>[40+i*116,84,112,36],SG_TILE=j=>{const rh=Math.min(90,362/Math.ceil(sgList(MM.sg.cat).length/3));return[40+(j%3)*196,126+Math.floor(j/3)*rh,190,rh-6]},/* (rows shrink so a long category still ends above DONE) */SG_PANEL=[636,86,294,394],SG_TB=i=>[642+i*72,404,66,32],SG_DONE=[40,494,160,34],
  SG_TCOL=['#8a90a0','#e4a46c','#dfe4ea','#ffd75e'];
 const sgList=c=>SIG_DEF.filter(s=>s.cat==c).sort((a,b)=>a.no-b.no);
 function openSigs(){MM.sg={cat:0,sel:0,msg:'',mt:0};if(!MM.cr.sig)MM.cr.sig={};S='sigs';beep(520,.06,'triangle')}
@@ -6229,10 +6230,10 @@ function drawSigs(){const d=MM.cr,sg=MM.sg,m=d.sig||{},lv=sgLv(),sp=spOf(lv,rbOf
  // badge grid
  const L=sgList(sg.cat);L.forEach((s,j)=>{const[x,y,w,h]=SG_TILE(j),on=sg.sel==j,et=m[s.id]||0,q=sigQual(s,d.st);
   mRR(x,y,w,h,10,et?'rgba(255,210,63,.07)':'rgba(255,255,255,.04)',on?GOLD:et?'rgba(255,210,63,.35)':'rgba(255,255,255,.1)');if(on){g.save();g.lineWidth=2;g.strokeStyle=GOLD;g.beginPath();g.roundRect(x,y,w,h,10);g.stroke();g.restore()}
-  drawSig(s.id,et||q,x+32,y+h/2,52);
-  g.textAlign='left';let f=13;g.font='bold '+f+'px Georgia';while(g.measureText(s.n).width>w-70&&f>9){f-=.5;g.font='bold '+f+'px Georgia'}g.fillStyle=q?'#fff':'#8a90a0';g.fillText(s.n,x+64,y+30);
-  if(s.el){g.font='bold 8px system-ui';const tw=g.measureText('ELITE').width+8;mRR(x+64,y+38,tw,13,3,GOLD);g.fillStyle='#14161d';g.fillText('ELITE',x+68,y+48)}
-  g.font='bold 9.5px system-ui';g.fillStyle=et?SG_TCOL[et]:q?'#7fffa0':'#6a7080';g.fillText(et?'EQUIPPED  ·  '+SIG_TN[et]:q?'UNLOCKED  ·  UP TO '+SIG_TN[q]:'LOCKED',x+64,y+70)});
+  drawSig(s.id,et||q,x+32,y+h/2,Math.min(52,h-14));const k=h/84; // (k: the tile's height vs the full-size 84)
+  g.textAlign='left';let f=13;g.font='bold '+f+'px Georgia';while(g.measureText(s.n).width>w-70&&f>9){f-=.5;g.font='bold '+f+'px Georgia'}g.fillStyle=q?'#fff':'#8a90a0';g.fillText(s.n,x+64,y+30*k);
+  if(s.el){g.font='bold 8px system-ui';const tw=g.measureText('ELITE').width+8;mRR(x+64,y+36*k,tw,13,3,GOLD);g.fillStyle='#14161d';g.fillText('ELITE',x+68,y+36*k+10)}
+  g.font='bold 9.5px system-ui';g.fillStyle=et?SG_TCOL[et]:q?'#7fffa0':'#6a7080';g.fillText(et?'EQUIPPED  ·  '+SIG_TN[et]:q?'UNLOCKED  ·  UP TO '+SIG_TN[q]:'LOCKED',x+64,y+h-10)});
  // detail panel
  const s=sgSel();{const[x,y,w,h]=SG_PANEL;mRR(x,y,w,h,12,'rgba(255,255,255,.04)','rgba(255,255,255,.12)');
   if(s){const et=m[s.id]||0,q=sigQual(s,d.st);drawSig(s.id,et||q||1,x+44,y+46,64);
