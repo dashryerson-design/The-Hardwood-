@@ -313,7 +313,7 @@ const spdM=p=>{const r=p&&p.rt&&p.rt.spd>0?p.rt.spd:70;return spdF(p)/SPD_REF+(r
 function chase(p,dt){const dx=B.x+B.vx*.25-p.x,dy=B.y+B.vy*.25-p.y,l=Math.hypot(dx,dy)||1,a=Math.min(1,dt*7),v=l>6?125*spdM(p):0;p.vx+=(dx/l*v-p.vx)*a;p.vy+=(dy/l*v-p.vy)*a;p.fx=dx/l;p.fy=dy/l;if(B.z>30&&B.z<110&&l<rbR(p)*1.8&&p.jump<=0)hop(p,22)} // jump for it a little earlier the better the rebounder
 // GUARD tuning: contest reach and strength while fully in the stance, and the movement speed it allows (by perimeter defense rating)
 const GUARD={rng:.45,eff:.4,spd:p=>.45+.35*Math.max(0,Math.min(1,((p.rt&&p.rt.pd>0?p.rt.pd:50)-25)/75))};
-const shootNow=p=>(ms.on&&p.team==0&&p.i==ctl&&B.h===p)||p.sj>0;
+const shootNow=p=>(B.h===p&&!!msOf(p)&&msOf(p).on)||p.sj>0; // (holding the shot: whoever's meter it is - you, or the online guest. Was p.i==ctl, which missed you whenever your roster slot isn't your floor slot)
 function snap(){RP.fr.push({t:RT,p:TM.map(t=>t.map(p=>{const o=SF.map(k=>p[k]);o.push(p.dunk?Object.assign({},p.dunk,{by:null}):null);o.push(p.lay?Object.assign({},p.lay):null);o.push(p.ps?Object.assign({},p.ps,{tg:null}):null);o.push(p.kd?Object.assign({},p.kd):null);o.push(p.rdh||null);return o})),/* (kd: a posterized man's knockdown, so replays show it) */b:{x:B.x,y:B.y,z:B.z,mode:B.mode,perf:B.perf,ht:B.h?[B.h.team,B.h.k]:null},ms:[ms.on,ms.t,ctl]});while(RP.fr[0].t<RT-12)RP.fr.shift()}
 function startRep(){const c=RP.clip;if(!c||c.length<2||!RP.who)return;const RD0=TM.map(t=>t.map(p=>p.rd));TM.flat().forEach(rdOff);RS={RD:RD0,P:TM.map(t=>t.map(p=>Object.assign({},p))),B:Object.assign({},B),ms:Object.assign({},ms),ctl};
  RP.dir=repPlan();RP.ct=null;RP.loop=0;RP.seg=-1;S='replay';{let k;do k=Math.random()*REP_CAMS.length|0;while(k===RP.sty&&REP_CAMS.length>1);RP.sty=k;RP.k=null}ms.on=false;beep(400,.1)}
@@ -779,7 +779,7 @@ function move(p,k,nofo){
  if(MODE==1)p.ckT=-99;
  p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd};p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
  fo*=am;if(d&&d.swp>0)fo*=1.5;{const an='ZVB'.includes(k)?sigv(p,'ankle'):0;if(an)fo=Math.min(.95,fo+an)} // ankle-breaker chance now comes from the BALL HANDLE rating (was a flat 30-55%, 75% on combos)
- if(!nofo&&d&&Math.random()<fo){d.stun=.85;d.stb=0;say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.i==ctl&&!AUTO)say(n);
+ if(!nofo&&d&&Math.random()<fo){d.stun=.85;d.stb=0;say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
  if(fast&&!nofo&&d&&k!='V'&&!(d.stun>0)&&!(d.lock>0)&&inFront(d,p))bbTry(p,d); // BLOW-BY or CUT-OFF
 }
@@ -1259,7 +1259,7 @@ const hs=Math.max(6,9.5-2.5*c)*jsOf(p).jh*(p.fdk?1+(FADE.jump-1)*Math.max(p.fdk,
  else if(p.air)tf=Math.max(.06,p.vz/(G*(p.gs||1)));else tf=Math.max(.06,(p.jph==1?p.jld-p.jt+p.jtp:p.jtp-p.jt)+p.jvz/(G*(p.gs||1)));
  p.sjm=tf;p.sjp=.26;p.sj=tf+.26;
  {const l=Math.hypot(hx(p.team)-p.x,HY-p.y)||1;p.fx=(hx(p.team)-p.x)/l;p.fy=(HY-p.y)/l}const mk_=q==2||Math.random()<pr&&!(needOpen(p,d)&&c>=WOPEN),pts=three?3:2; /* a PERFECT release always goes in (a block above still stops it). Otherwise: under 60 for this shot type (3pt rating from deep, mid rating from mid-range): no make unless wide open */
- p.fire={t:tf,f:()=>{B.make=mk_;B.perf=q==2;B.pts=pts;B.xk=three?'3':d>=MIDS?'M':null;B.bk=0;B.bc=0;B.txt=null;B.mode='shot';B.t=0;B.sx=B.x;B.sy=B.y;B.dur=.7+d/500;B.z=Math.max(B.z,40);B.z0=B.z;{const a=Math.random()*6.28,ro=mk_?0:9+Math.random()*5;B.tx=hx(p.team)+Math.cos(a)*ro;B.ty=HY+Math.sin(a)*ro}B.vz0=(RZ-B.z0+.5*G*B.dur*B.dur)/B.dur;B.so=p.team;B.bd=dr(p.team);B.sh=p;B.as=asstFor(p);RP.rel=RT;RP.who=p;shotAtt(p,three)}};
+ p.fire={t:tf,f:()=>{if(p.m&&!p.dunk)shotBall(p);B.make=mk_;B.perf=q==2;B.pts=pts;B.xk=three?'3':d>=MIDS?'M':null;B.bk=0;B.bc=0;B.txt=null;B.mode='shot';B.t=0;B.sx=B.x;B.sy=B.y;B.dur=.7+d/500;B.z=Math.max(B.z,40);B.z0=B.z;{const a=Math.random()*6.28,ro=mk_?0:9+Math.random()*5;B.tx=hx(p.team)+Math.cos(a)*ro;B.ty=HY+Math.sin(a)*ro}B.vz0=(RZ-B.z0+.5*G*B.dur*B.dur)/B.dur;B.so=p.team;B.bd=dr(p.team);B.sh=p;B.as=asstFor(p);RP.rel=RT;RP.who=p;shotAtt(p,three)}};
  if(isYou(p)||NET.host&&p.team==1){ms.pw=perfW(p,d,c);ms.show=1;ms.res=q;ms.last=ms.t;ms.who=p;say(txt+(p.fdk?' FADEAWAY':'')+(three?' (3PT)':''),q==2?'#4cff7a':q?'#ffd23f':'#ff6b6b')}
  beep(300,.05);
 }
@@ -1795,6 +1795,7 @@ function step(dt){
   h.ls=lat/9;{const bx=Math.sin(h.ang),by=Math.cos(h.ang);B.x=h.x-by*lat+bx*fw;B.y=h.y+bx*lat+by*fw}
   if(h.dunk&&h.dunk.ph>=2)B.z=h.z+75*h.ht;else if(B.mode=='inbound')B.z=60;else if(msOf(h)&&msOf(h).on)B.z=(72+msOf(h).t*14)*h.ht+h.z;else if(bz!=null)B.z=bz;else{const hz=(36-12*(h.pst||0))*h.ht+h.z;B.vz-=G*dt;B.z+=B.vz*dt;if(B.z<=4){B.z=4;B.vz=Math.max(Math.abs(B.vz)*.88,Math.sqrt(2*G*Math.max(8,hz-4)*1.15))}if(B.z>hz&&B.vz>0){B.z=hz;B.vz=-170}} // every floor bounce comes back up at least to the hand (a dribble picked up off the floor, or a low catch, used to die out and leave the ball glued to the floor)
  }
+ if(B.mode=='held'&&B.h&&!B.h.dunk&&!B.h.lay&&B.h.m&&shootNow(B.h))shotBall(B.h); // (shooting: the game's ball stays on his hand, not the dribble spot)
  if(B.mode=='pass'&&B.oop)oopStep(dt); // ALLEY-OOP lob
  else if(B.mode=='pass'){
   // flies straight at the lead spot; over the last third it eases into his hands if he is within reach of that spot (PASS_REACH) - if he has cut away it sails past him
@@ -2932,6 +2933,14 @@ function poseReset(P){const m=P.p.m;if(P.ap){m.aL.position.copy(P.ap[0]);m.aR.po
 // (Customisation keeps the court behind its see-through panel as a live preview of the court / graphics settings.)
 const NO_COURT=new Set(['store','menu','career','archq','sigs','playnow','pnmode','slotact','create','look','rosters','rteam','cpos','cbio','ctrans','cteam','cconf','cdebut']);
 function blankGL(){R.setRenderTarget(null);R.setScissorTest(false);R.setViewport(0,0,960,540);R.setClearColor(0x000000,1);R.clear()}
+// THE BALL ON THE SHOOTING HAND (jump shots, from the moment he starts holding the shot until the flick): placed on the RIGHT palm of the rig as last drawn, and the game's
+// ball (B) is put there too - every frame AND every game step - so the release always leaves from his fingertips, never from the dribble spot beside him.
+function shotBall(sh){const a=_SBA;sh.m.updateMatrixWorld(true);sh.m.aL.h.getWorldPosition(a);
+  const go=sh.sj>0,tr=go?sh.sjm+sh.sjp-sh.sj-sh.sjm:-1,e=go?sm3(Math.max(0,Math.min(1,(tr+.05)/.05))):0; // ball sits between both hands until the last 0.05s, then rolls onto the right hand for the flick
+  // the ball sits ON the right palm (hand behind the ball, between the face and the ball): palm point = wrist + fingers * pa, ball centre = palm + palm-normal * pr; at the flick it rolls up off the fingertips
+  const hq=sh.m.aL.h.getWorldQuaternion(_SBQ),fing=_SBF.set(0,-1,0).applyQuaternion(hq),palm=_SBP.set(0,0,-1).applyQuaternion(hq),sc_=sh.m.scale.y;
+  ballM.position.copy(a).addScaledVector(fing,(SHK.pa+.22*e)*sc_).addScaledVector(palm,SHK.pr*sc_);B.x=ballM.position.x*10;B.y=ballM.position.z*10;B.z=ballM.position.y*10}
+const _SBA=new THREE.Vector3(),_SBF=new THREE.Vector3(),_SBP=new THREE.Vector3(),_SBQ=new THREE.Quaternion();
 const _BLB={h:null,x:0,y:0,z:0,o:{x:0,y:0,z:0,xv:0,yv:0,zv:0}};
 function render(dt){
  const hb=(B.mode=='held'||B.mode=='inbound')?B.h:null;if(hb)hb.ct=ex(hb.ct||0,cont(hb),dt,10);
@@ -2964,18 +2973,15 @@ function render(dt){
   const gb=k.g!=null?sm3(k.g):k.ph==1?sm3(k.pt):1;
   if(gb<1)ballM.position.lerp(a,gb);else{ballM.position.copy(a);B.x=a.x*10;B.y=a.z*10;B.z=a.y*10}}
  const sh=!h&&B.mode=='held'&&shootNow(B.h)?B.h:null;
- if(sh){const a=new THREE.Vector3(),l=new THREE.Vector3(),fw=new THREE.Vector3();sh.m.updateMatrixWorld(true);sh.m.aL.h.getWorldPosition(a);sh.m.aR.h.getWorldPosition(l);sh.m.getWorldDirection(fw);
-  const go=sh.sj>0,tr=go?sh.sjm+sh.sjp-sh.sj-sh.sjm:-1,e=go?sm3(Math.max(0,Math.min(1,(tr+.05)/.05))):0; // ball sits between both hands until the last 0.05s, then rolls onto the right hand for the flick
-  // the ball sits ON the right palm (hand behind the ball, between the face and the ball): palm point = wrist + fingers * pa, ball centre = palm + palm-normal * pr; at the flick it rolls up off the fingertips
-  const hq=sh.m.aL.h.getWorldQuaternion(new THREE.Quaternion()),fing=new THREE.Vector3(0,-1,0).applyQuaternion(hq),palm=new THREE.Vector3(0,0,-1).applyQuaternion(hq),sc_=sh.m.scale.y;
-  ballM.position.copy(a).addScaledVector(fing,(SHK.pa+.22*e)*sc_).addScaledVector(palm,SHK.pr*sc_);B.x=ballM.position.x*10;B.y=ballM.position.z*10;B.z=ballM.position.y*10}
+ if(sh)shotBall(sh);
  const ly=!h&&!sh&&B.mode=='held'&&B.h&&B.h.lay&&B.h.lay.t<B.h.lay.tr?B.h:null;
  if(ly){const L=ly.lay,a=new THREE.Vector3(),l=new THREE.Vector3();ly.m.updateMatrixWorld(true);(L.M?ly.m.aR:ly.m.aL).h.getWorldPosition(a);(L.M?ly.m.aL:ly.m.aR).h.getWorldPosition(l);
   const w=L.v!=null?laySep(L,layTau(ly,L)):1,mid=l.clone().add(a).multiplyScalar(.5);a.y+=.38;mid.y+=.15; // ball between both hands, then on the shooting hand
   ballM.position.copy(mid.lerp(a,w));B.x=ballM.position.x*10;B.y=ballM.position.z*10;B.z=ballM.position.y*10}
  {const bh=B.mode=='held'||B.mode=='inbound'?B.h:null,L=_BLB; // BALL BLEND: when the held ball jumps between frames (dribble -> shot pocket, -> pass wind-up, -> layup / dunk gather) it glides there in ~0.1s instead (only what you see: the game's ball is untouched)
-  if(bh&&bh===L.h){const jx=L.x-ballM.position.x,jy=L.y-ballM.position.y,jz=L.z-ballM.position.z;if(jx*jx+jy*jy+jz*jz>1.44){L.o.x+=jx;L.o.y+=jy;L.o.z+=jz}}
-  L.h=bh;L.x=ballM.position.x;L.y=ballM.position.y;L.z=ballM.position.z;for(const k of ['x','y','z'])smd(L.o,k,0,.1,dt);ballM.position.x+=L.o.x;ballM.position.y+=L.o.y;ballM.position.z+=L.o.z}
+  const rx=ballM.position.x-(bh?bh.x/10:0),ry=ballM.position.y-(bh?bh.z/10:0),rz=ballM.position.z-(bh?bh.y/10:0); // (measured against the holder, so him moving fast never counts as a jump)
+  if(bh&&bh===L.h){const jx=L.x-rx,jy=L.y-ry,jz=L.z-rz;if(jx*jx+jy*jy+jz*jz>1.44){L.o.x+=jx;L.o.y+=jy;L.o.z+=jz}}
+  L.h=bh;L.x=rx;L.y=ry;L.z=rz;const sht=bh&&shootNow(bh);for(const k of ['x','y','z'])smd(L.o,k,0,sht?.05:.1,dt);ballM.position.x+=L.o.x;ballM.position.y+=L.o.y;ballM.position.z+=L.o.z} // (into the shooting hand: 0.05s, so it's in his palm before he rises)
  trailUpd(dt);
  ballM.rotation.x+=dt*6;ballS.position.set(ballM.position.x,.04,ballM.position.z);
  flash.visible=FX.t>0;if(FX.t>0){FX.t-=dt;flash.position.set(FX.x,FX.y,FX.z);const u=1-FX.t/.4;flash.scale.setScalar(.6+u*3);flash.material.opacity=.85*(1-u)}
@@ -4613,10 +4619,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.71'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.72'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.72','Ball glued to the shooting hand',['Fixed: in modes where your floor spot isn\'t your roster spot, holding a jump shot left the ball hovering above your shoulder until the release, and the shot then flew off without touching your hand. It now sits in your hands from the moment you start the shot.',
+  'Fixed: a jump shot could leave from the dribble spot beside the shooter on a slow frame. Every release now leaves from the right hand\'s fingertips at the flick.',
+  'The ball now slides into the shooting hand twice as fast (0.05s) when you start a shot.']],
  ['v1.71','Flashy passes',['7 new flashy passes: NO-LOOK, BEHIND THE HEAD, ELBOW PASS, WRAPAROUND (bounced round the defender), BETWEEN THE LEGS (bounced), HOOK PASS and SHOVEL FLIP.',
   'Players with PASSING 85+ now ALWAYS throw a flashy pass that fits the play: hook passes long and out of the post, wraparounds and between-the-legs past a defender in the lane, shovel flips on the drive, behind the back and elbow passes to the side, no-looks anywhere.',
   'They unlock at PASSING 85 in the STORE (FLASHY PASSES), where you can switch each one on or off and preview it.']],
