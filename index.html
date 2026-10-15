@@ -787,38 +787,44 @@ function reachRate(p,hp,pr){const H=hx(hp.team),gx=H-hp.x,gy=HY-hp.y,gl=Math.hyp
  if(pos<.55&&!p.trap&&!(pr>0))return 0;return AI_STL.rate*(.5+stlN(p))*(exp?(slow?1:.55):.05)*(1+1.5*(pr||0))*(p.trap?2:1)}
 // REACH-IN ANIMATION (every steal attempt, AI or yours): RCH_D seconds - the ball-side arm shoots out at the ball and back, chest forward, a short step in
 const RCH_D=.34;
-// ===== DRIBBLE STYLES (v1.81): 13 sets, each restyling EVERY dribble move (crossover, hesitation, spin, step-back, between the legs, behind the back), from plain
-// to mixtape-flashy, unlocked by BALL HANDLE (the flashiest at 89) and switched on / off in the STORE (DRIBBLING). Each move picks one of the player's switched-on,
-// unlocked styles at random, so a good ball handler mixes them up. Looks only: speed, distance and ankle-break chances are the same in every style.
-// dr crouch · tw shoulder twist · ln lean · shk [shimmy amount, shakes] · roll side-to-side body roll · hop bounce · Lg wider stance · ofa off-arm pose [x, elbow, out]
-// (ofs: it sweeps up and down) · ball: bz dribble height (x) · dbl double crossover (across, back, across) · orb wrap round the body (radius) · yy yo-yo push out
-// in front · spn turns on a spin move · tmp tempo: hangs, then snaps
+// ===== DRIBBLE PACKAGES (v1.82): 8 packages, each a GROUP of its own animations - one for EVERY dribble move (Z crossover, X hesitation, C spin, V step-back,
+// B between the legs, N behind the back). Equip ONE in the STORE (DRIBBLING) and all your moves use its animations; the AI uses the best one its handle unlocks.
+// BASIC 1 / 2 -> PRO 1 / 2 -> ELITE 1 / 2 -> FLASHY 1 / 2 (89 BALL HANDLE). Looks only: speed, distance and ankle-break chances are the same in every package.
+// Per animation: n name · dr crouch · tw shoulder twist · ln lean (- = back) · shk [shimmy amount, shakes] · roll body roll · hop bounce · Lg wider stance ·
+// ofa off-arm pose [x, elbow, out] (ofs: it sweeps) · ball: bz dribble height (x) · dbl double crossover · orb wrap round the body (radius) · yy push out in front
+// (- = snatched back) · spn turns on the spin (whole turns only) · tmp tempo: hangs, then snaps
 const DRB=[
- {n:'STANDARD',req:0,dr:.28,tw:.4,ln:.15,d:'Plain, solid moves.'},
- {n:'TIGHT HANDLE',req:55,dr:.36,tw:.3,ln:.2,bz:.75,ofa:[-.9,-1.2,.3],d:'Low and compact, the off arm up as a shield.'},
- {n:'HOOPER',req:62,dr:.3,tw:.5,ln:.18,Lg:.12,ofa:[-.6,-.8,.7],d:'Wider base, bigger shoulder swing, the off arm out for balance.'},
- {n:'SHIFTY',req:67,dr:.3,tw:.55,ln:.16,dbl:1,shk:[.18,3],d:'Every move hides a double crossover and a shoulder shake.'},
- {n:'HANG TIME',req:71,dr:.22,tw:.45,ln:-.05,bz:1.45,roll:.12,ofa:[-1.7,-.4,.5],d:'The ball hangs high on every move, leaning back, off arm raised.'},
- {n:'LOW RIDER',req:74,dr:.5,tw:.35,ln:.3,bz:.5,Lg:.3,ofa:[-.3,-.4,1],d:'Sat right down, ball skimming the floor, arm out wide.'},
- {n:'BOUNCE',req:77,dr:.25,tw:.4,ln:.15,hop:.35,shk:[.12,2],ofa:[-1.2,-1.6,.9],d:'Light on his feet: a little hop and shimmy in every move.'},
- {n:'SNAKE',req:79,dr:.32,tw:.6,ln:.22,roll:.3,d:'The whole body slithers side to side through the move.'},
- {n:'YO-YO',req:81,dr:.3,tw:.45,ln:.25,yy:14,ofa:[-1,-.6,.4],d:'The ball is pushed way out in front and snapped back on a string.'},
- {n:'PUPPET MASTER',req:83,dr:.3,tw:.5,ln:.2,ofa:[-1.6,-.5,.9],ofs:1,shk:[.1,2],d:'Big theatrical off-arm sweeps pulling the defender around.'},
- {n:'AND1',req:85,dr:.34,tw:.55,ln:.2,orb:12,dbl:1,hop:.25,shk:[.15,4],ofa:[-1.5,-1.8,1.1],d:'Streetball mixtape: the ball wraps round his body, double crosses, hops.'},
- {n:'HYPNOTIC',req:87,dr:.34,tw:.75,ln:.18,tmp:1,shk:[.22,5],roll:.2,ofa:[-.8,-2,.2],d:'Slow, slow... SNAP: hanging tempo, shoulder shakes, huge sway.'},
- {n:'MIXTAPE LEGEND',req:89,dr:.38,tw:.7,ln:.22,bz:1.2,orb:16,dbl:1,hop:.4,spn:2,shk:[.2,4],roll:.25,ofa:[-1.6,-.6,1],ofs:1,d:'The flashiest there is: orbits, double crosses, a double spin, hops and full-body sway.'}];
-const drbT=u=>sm3(sm3(u)); // HYPNOTIC tempo: lingers at both ends, snaps through the middle
-function drbPick(p){const bh=(p.rt&&p.rt.bh)||50,ok=[];DRB.forEach((s,i)=>{if(bh>=s.req&&animOn(p,'drb:'+i))ok.push(i)});return ok.length?ok[Math.random()*ok.length|0]:0}
+ {n:'BASIC 1',req:0,m:{Z:{n:'CROSSOVER'},X:{n:'HESITATION'},C:{n:'SPIN MOVE'},V:{n:'STEP-BACK'},B:{n:'BETWEEN THE LEGS'},N:{n:'BEHIND THE BACK'}}},
+ {n:'BASIC 2',req:50,m:{Z:{n:'QUICK CROSS',dr:.32,tw:.35,ln:.2,bz:.8},X:{n:'UPRIGHT HESI',dr:.2,tw:.2,ln:-.05,ofa:[-.9,-1.1,.3]},C:{n:'TIGHT SPIN',dr:.35,tw:.3,ln:.2},
+  V:{n:'CLEAN STEP-BACK',dr:.25,tw:.3,ln:-.1},B:{n:'WIDE BETWEEN',dr:.34,tw:.45,ln:.2,Lg:.15},N:{n:'GUARDED BEHIND',dr:.3,tw:.45,ln:.18,ofa:[-.7,-1,.3]}}},
+ {n:'PRO 1',req:65,m:{Z:{n:'SHOULDER-SHAKE CROSS',dr:.36,tw:.55,ln:.22,shk:[.12,2]},X:{n:'HIGH HESI',dr:.15,tw:.25,ln:-.08,bz:1.35,ofa:[-1.4,-.5,.4]},C:{n:'LOW SPIN',dr:.4,tw:.3,ln:.25,Lg:.15},
+  V:{n:'HOP-BACK',dr:.3,tw:.45,ln:-.15,hop:.25},B:{n:'DOUBLE BETWEEN',dr:.38,tw:.5,ln:.22,dbl:1},N:{n:'SWIVEL BEHIND',dr:.3,tw:.55,ln:.2,roll:.15}}},
+ {n:'PRO 2',req:72,m:{Z:{n:'LOW-RIDE CROSS',dr:.45,tw:.4,ln:.3,bz:.55,Lg:.25},X:{n:'SHAKE HESI',dr:.22,tw:.5,ln:.1,shk:[.2,3],roll:.12},C:{n:'ARM-OUT SPIN',dr:.3,tw:.4,ln:.2,ofa:[-1.6,-.4,.8]},
+  V:{n:'SNATCH-BACK',dr:.35,tw:.6,ln:-.2,yy:-6},B:{n:'HOP BETWEEN',dr:.3,tw:.4,ln:.2,hop:.3,shk:[.1,2]},N:{n:'WRAP BEHIND',dr:.32,tw:.5,ln:.2,orb:8}}},
+ {n:'ELITE 1',req:78,m:{Z:{n:'DOUBLE CROSS',dr:.32,tw:.6,ln:.2,dbl:1,shk:[.15,3]},X:{n:'SLOW-MO HESI',dr:.2,tw:.4,ln:-.05,tmp:1,bz:1.3,roll:.18},C:{n:'PIVOT SPIN',dr:.42,tw:.35,ln:.25,Lg:.2,ofa:[-.4,-.3,1.1]},
+  V:{n:'SPRING-BACK',dr:.3,tw:.5,ln:-.18,hop:.35,ofa:[-1.2,-1,.6]},B:{n:'SNAKE BETWEEN',dr:.36,tw:.55,ln:.2,dbl:1,roll:.2},N:{n:'PUSH BEHIND',dr:.3,tw:.6,ln:.22,yy:10}}},
+ {n:'ELITE 2',req:83,m:{Z:{n:'YO-YO CROSS',dr:.35,tw:.55,ln:.25,yy:14,ofa:[-1,-.6,.5]},X:{n:'STUTTER HESI',dr:.25,tw:.6,ln:.15,shk:[.25,5],hop:.2},C:{n:'WRAP SPIN',dr:.35,tw:.4,ln:.2,orb:10},
+  V:{n:'SHAKE-BACK',dr:.32,tw:.55,ln:-.2,shk:[.2,3],hop:.3},B:{n:'LOW DOUBLE BETWEEN',dr:.4,tw:.5,ln:.3,bz:.5,Lg:.3,dbl:1},N:{n:'ORBIT BEHIND',dr:.3,tw:.65,ln:.2,orb:12,roll:.2}}},
+ {n:'FLASHY 1',req:86,m:{Z:{n:'AND1 WRAP CROSS',dr:.36,tw:.6,ln:.22,orb:12,dbl:1,hop:.25},X:{n:'HANG & WAVE',dr:.2,tw:.5,ln:-.1,bz:1.45,tmp:1,ofa:[-1.7,-.4,.6],ofs:1},C:{n:'DOUBLE SPIN',dr:.38,tw:.5,ln:.22,spn:2,hop:.2},
+  V:{n:'MIXTAPE STEP-BACK',dr:.3,tw:.6,ln:-.25,hop:.4,yy:-8,shk:[.2,3]},B:{n:'TRIPLE THREAD',dr:.36,tw:.6,ln:.25,dbl:1,orb:8,shk:[.15,4]},N:{n:'HALO BEHIND',dr:.32,tw:.7,ln:.22,orb:14,ofa:[-1.6,-.6,1],ofs:1}}},
+ {n:'FLASHY 2',req:89,m:{Z:{n:'LEGEND CROSS',dr:.4,tw:.75,ln:.25,orb:16,dbl:1,hop:.4,shk:[.2,4],roll:.25},X:{n:'HYPNO HESI',dr:.25,tw:.7,ln:.1,tmp:1,shk:[.3,6],roll:.25,bz:1.3,hop:.25},
+  C:{n:'TORNADO',dr:.4,tw:.6,ln:.25,spn:2,orb:12,ofa:[-1.6,-.6,1],ofs:1},V:{n:'SHOWTIME STEP-BACK',dr:.35,tw:.7,ln:-.25,hop:.45,yy:-10,shk:[.25,4],roll:.2},
+  B:{n:'SKY-TO-FLOOR BETWEEN',dr:.45,tw:.6,ln:.3,bz:.5,Lg:.3,dbl:1,orb:10,hop:.3},N:{n:'ORBIT LEGEND',dr:.35,tw:.75,ln:.25,orb:16,roll:.3,hop:.3,ofa:[-1.7,-.5,1.1],ofs:1}}}];
+DRB.forEach(P=>{for(const k in P.m)P.m[k]=Object.assign({dr:.28,tw:.4,ln:.15},P.m[k]);P.d='ZXCVBN'.split('').map(k=>P.m[k].n).join(' · ')}); // (unset = the plain move) · d = its six animations
+const drbA=(v,k)=>(DRB[v|0]||DRB[0]).m[k]||DRB[0].m.Z; // package v's animation for move k
+const drbT=u=>sm3(sm3(u)); // the tempo that hangs at both ends and snaps through the middle
+// which package p uses: your created player - the one you equipped (the best one below it that your handle allows if it no longer does); AI - the best his handle unlocks
+function drbPick(p){const bh=(p.rt&&p.rt.bh)||50;let v=p.build?p.build.drb|0:DRB.length-1;while(v>0&&DRB[v].req>bh)v--;return v}
 // the ball during a move: [sideways, forward, height, progress 0-1] (local to the handler; hz0 = his hip height)
-function drbBall(h,bm,hz0){const S=DRB[bm.v|0]||DRB[0],u=Math.min(1,bm.t/bm.d),k=bm.k,uu=S.tmp?drbT(u):u,fl=uu<.5?1-(2*uu)**2:1-(2-2*uu)**2;
+function drbBall(h,bm,hz0){const S=drbA(bm.v,bm.k),u=Math.min(1,bm.t/bm.d),k=bm.k,uu=S.tmp?drbT(u):u,fl=uu<.5?1-(2*uu)**2:1-(2-2*uu)**2;
  let lat=h.side*9,fw=7,bz=k=='X'?4+(hz0-4)*(.55+.45*Math.cos(uu*6.283)):4+(hz0-4)*fl;
  if('ZCBN'.includes(k)){const sn=Math.sin(uu*Math.PI);lat=h.side*9*(S.dbl?-Math.cos(uu*3*Math.PI):2*sm3(uu)-1);fw=k=='Z'?7+9*sn:k=='B'?7-8*sn:7-16*sn;
   if(S.orb){const a=uu*2*Math.PI;lat+=h.side*S.orb*Math.sin(a);fw-=S.orb*(1-Math.cos(a))}} // (the orbit starts and ends where the plain path does)
  if(k=='V')fw=7-6*Math.sin(uu*Math.PI);
  if(S.yy)fw+=S.yy*Math.sin(uu*Math.PI);if(S.bz)bz=4+(bz-4)*S.bz;
  return[lat,fw,bz,u]}
-// the body during a move (from pose()): crouch, twist, lean, plus the style's shimmy / roll / hop / stance / off arm
-function drbPose(p,q){const b=p.bm,S=DRB[b.v|0]||DRB[0],u0=Math.min(1,b.t/b.d),u=S.tmp?drbT(u0):u0,s2=Math.sin(u*Math.PI),mx=(a,c,w)=>a+(c-a)*w;
+// the body during a move (from pose()): crouch, twist, lean, plus the animation's shimmy / roll / hop / stance / off arm
+function drbPose(p,q){const b=p.bm,S=drbA(b.v,b.k),u0=Math.min(1,b.t/b.d),u=S.tmp?drbT(u0):u0,s2=Math.sin(u*Math.PI),mx=(a,c,w)=>a+(c-a)*w;
  q.drop=S.dr*s2;q.tw=-p.side*S.tw*s2;q.lean+=S.ln*s2;
  if(S.shk)q.tw+=S.shk[0]*Math.sin(u*Math.PI*2*S.shk[1])*s2;
  if(S.roll)q.roll=(q.roll||0)+S.roll*Math.sin(u*2*Math.PI)*s2;
@@ -847,7 +853,7 @@ function move(p,k,nofo){
  if(p.sig||(d&&d.sig)){const hc=sigv(p,'handles')*p.chain;if(hc){du*=1-hc;sp/=1-hc;sigFx(p,'handles')}const cl=d?sigv(d,'clamps'):0;if(cl&&inFront(d,p)){sp*=1-cl;sigFx(d,'clamps')}
   const ck=ckOn(p)?sigv(p,'check1v1'):0;if(ck){sp*=1+ck;sigFx(p,'check1v1')}const rl=sigv(p,'relentless');if(rl&&rm<1){rm=1-(1-rm)*(1-rl);sigFx(p,'relentless')}}
  if(MODE==1)p.ckT=-99;
- p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1),v:drbPick(p)};p.spn=k=='C'?DRB[p.bm.v].spn||1:1;p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
+ p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1),v:drbPick(p)};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
  fo*=am;if(d&&d.swp>0)fo*=1.5;{const an='ZVB'.includes(k)?sigv(p,'ankle'):0;if(an)fo=Math.min(.95,fo+an)} // ankle-breaker chance now comes from the BALL HANDLE rating (was a flat 30-55%, 75% on combos)
  if(!nofo&&d&&Math.random()<fo){d.stun=.85;d.stb=0;say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
@@ -3745,7 +3751,7 @@ function sanitize(b){
  let used=STATS.reduce((a,[k])=>a+st[k]-SMIN,0);
  const pool=poolOf(b);while(used>pool){let m=STATS[0][0];STATS.forEach(([k])=>{if(st[k]>st[m])m=k});st[m]--;used--}
  const sigLv=lvInfo(Math.max(0,Math.round(+b.xp)||0)).lv;
- return{js:JS_M[b.js]?b.js:'b1',anim:animClean(b.anim),sig:sigClean(b.sig,st,sigLv,rbOf(b)),rb:Math.min(999,rbOf(b)),name:String(b.name||'PLAYER').slice(0,12).toUpperCase(),sk:/^#[0-9a-f]{6}$/i.test(b.sk)?b.sk.toLowerCase():'#c68642',hs:mClamp(b.hs|0,0,HSTY.length-1),fc:b.fc!=null&&(b.fc>=0&&b.fc<8||b.fc==9)?b.fc|0:null,xp:mClamp(Math.round(+b.xp)||0,0,9999999),tm:b.tm!=null&&b.tm>=0&&b.tm<TEAMS.length?b.tm|0:null,hc:/^#[0-9a-f]{6}$/i.test(b.hc)?b.hc.toLowerCase():'#17110c',pos,h,wt,ws,bt:mClamp(b.bt|0,0,4),btSet:!!b.btSet,st,arch:ARCH_N.has(b.arch)?b.arch:archOf({st,pos,h}),archSk:ARCH_N.has(b.archSk)?b.archSk:null}
+ return{js:JS_M[b.js]?b.js:'b1',drb:Math.max(0,Math.min(DRB.length-1,b.drb|0)),anim:animClean(b.anim),sig:sigClean(b.sig,st,sigLv,rbOf(b)),rb:Math.min(999,rbOf(b)),name:String(b.name||'PLAYER').slice(0,12).toUpperCase(),sk:/^#[0-9a-f]{6}$/i.test(b.sk)?b.sk.toLowerCase():'#c68642',hs:mClamp(b.hs|0,0,HSTY.length-1),fc:b.fc!=null&&(b.fc>=0&&b.fc<8||b.fc==9)?b.fc|0:null,xp:mClamp(Math.round(+b.xp)||0,0,9999999),tm:b.tm!=null&&b.tm>=0&&b.tm<TEAMS.length?b.tm|0:null,hc:/^#[0-9a-f]{6}$/i.test(b.hc)?b.hc.toLowerCase():'#17110c',pos,h,wt,ws,bt:mClamp(b.bt|0,0,4),btSet:!!b.btSet,st,arch:ARCH_N.has(b.arch)?b.arch:archOf({st,pos,h}),archSk:ARCH_N.has(b.archSk)?b.archSk:null}
 }
 function saveSlots(){try{localStorage.setItem(SLOT_KEY,JSON.stringify({slots:SLOTS,active:ACTIVE}))}catch(e){}}
 function loadSlots(){try{const v=JSON.parse(localStorage.getItem(SLOT_KEY)||'null');
@@ -4833,10 +4839,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.81'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.82'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.82','Dribble packages',['Dribble styles are now DRIBBLE PACKAGES: BASIC 1 & 2, PRO 1 & 2 (65 / 72), ELITE 1 & 2 (78 / 83) and FLASHY 1 & 2 (86 / 89 BALL HANDLE).',
+  'Each package is a group of its own animations, one for EVERY dribble move - e.g. FLASHY 2: LEGEND CROSS, HYPNO HESI, TORNADO (a double spin), SHOWTIME STEP-BACK, SKY-TO-FLOOR BETWEEN and ORBIT LEGEND. 48 dribble animations in all.',
+  'Equip ONE package in the STORE (DRIBBLING, with a preview of all six moves) and every move you make uses it - the move\'s name pops up when you do it. AI players use the best package their handle unlocks.']],
  ['v1.81','Dribble styles',['13 DRIBBLE STYLES, each restyling every dribble move (crossover, hesitation, spin, step-back, between the legs, behind the back): STANDARD, TIGHT HANDLE (55), HOOPER (62), SHIFTY (67), HANG TIME (71), LOW RIDER (74), BOUNCE (77), SNAKE (79), YO-YO (81), PUPPET MASTER (83), AND1 (85), HYPNOTIC (87) and MIXTAPE LEGEND (89 BALL HANDLE).',
   'They get flashier as they go: double crossovers, the ball wrapping round the body, yo-yo push-outs, hops, shimmies, body rolls, a double spin, and the off arm in on the act.',
   'New STORE category DRIBBLING: preview every style and switch them on or off. Each move picks one of your switched-on styles at random. Looks only - every style moves the same.']],
@@ -5359,7 +5368,7 @@ function hlSigItems(){const out=[{t:'HOW SIGNATURES WORK',tag:'START HERE',d:'Si
  return out}
 const HL_ATTR=[
  {t:'HOW RATINGS WORK',tag:'START HERE',d:'Every player has 14 ratings from 25 to 100. Most of them scale smoothly: a 60 is a bit better than a 50, and a 90 is a lot better than a 60, so every point counts.\n• Ratings also unlock Signatures (see the SIGNATURES page): each Signature tier needs certain ratings.\n• Created players have rating caps set by their position, height, weight and wingspan. Taller players can go higher in dunking, blocking and rebounding but lower in speed and handles; heavier players get more strength and post play; longer arms help blocking, steals and rebounding but cost a little shooting.\n• There is no stamina: players never tire.'},
- {t:'BALL HANDLE',tag:'BH',d:'How sharp your dribble moves are.\n• Crossovers, hesitations, spins, step-backs, between-the-legs and behind-the-back all play faster and cover more ground as it goes up (75% of the normal time at 100, 125% at 25).\n• The wait before you can do another move is shorter the better your handle (0.45s at 25, 0.32s at 100) - Critical Combos cuts it further.\n• DRIBBLE STYLES: 13 looks for every move, from STANDARD up to MIXTAPE LEGEND (89), unlocked as your handle goes up and switched on / off in the STORE (DRIBBLING). Each move uses one of your switched-on styles at random.\n• Your chance to break a defender\'s ankles with a move climbs steeply: a crossover drops a close defender about 2% of the time at 25, 10% at 60, 21% at 80 and 37% at 100. A broken defender stumbles for almost a second.\n• You\'re always a little slower with the ball than without it; a better ball handler loses less speed (16% slower at 25, 8% at 100).\n• It does not stop steals by itself: Signatures like Tight Handles do that.\n• Sprinting into a move at a defender in front of you can set off a BLOW-BY (you slip past) or a CUT-OFF (he bumps you back): a higher rating sets them off more often and wins more of them.\n• Euro step layups use it, and the AI gives the ball to its best ball handler / passer.'},
+ {t:'BALL HANDLE',tag:'BH',d:'How sharp your dribble moves are.\n• Crossovers, hesitations, spins, step-backs, between-the-legs and behind-the-back all play faster and cover more ground as it goes up (75% of the normal time at 100, 125% at 25).\n• The wait before you can do another move is shorter the better your handle (0.45s at 25, 0.32s at 100) - Critical Combos cuts it further.\n• DRIBBLE PACKAGES: 8 packages (BASIC 1-2, PRO 1-2, ELITE 1-2, FLASHY 1-2 at 89), each with its own animation for every move. Equip one in the STORE (DRIBBLING).\n• Your chance to break a defender\'s ankles with a move climbs steeply: a crossover drops a close defender about 2% of the time at 25, 10% at 60, 21% at 80 and 37% at 100. A broken defender stumbles for almost a second.\n• You\'re always a little slower with the ball than without it; a better ball handler loses less speed (16% slower at 25, 8% at 100).\n• It does not stop steals by itself: Signatures like Tight Handles do that.\n• Sprinting into a move at a defender in front of you can set off a BLOW-BY (you slip past) or a CUT-OFF (he bumps you back): a higher rating sets them off more often and wins more of them.\n• Euro step layups use it, and the AI gives the ball to its best ball handler / passer.'},
  {t:'STEALING',tag:'STL',d:'How well you take the ball off people.\n• Your steal swipe (E) reaches further (about 70% of the normal reach at 25, 130% at 100) and works more often (about 5 times as likely at 100 as at 25).\n• Swiping during a dribble move rarely works, and a ball protected by a spin, behind-the-back or a post-up can\'t be stolen.\n• Also makes you better at picking off passes thrown near you.'},
  {t:'MID-RANGE',tag:'MID',d:'Jump shots from 13 ft out to the three-point line.\n• Sets the size of the green (perfect) window on your shot meter: the higher the rating, the bigger the window.\n• Decides how much a defender\'s contest shrinks that window: at 100 a hand in your face only takes away a quarter of it, at 25 it takes almost all of it.\n• Below 60, a contested mid-range jumper only goes in with a perfect release.\n• Inside 13 ft (close shots) ratings don\'t matter: everyone gets the same window.\n• Floaters use it.'},
  {t:'3PT',tag:'3PT',d:'Shots from beyond the arc.\n• Same as Mid-Range but for threes: a bigger perfect window and contests hurt less.\n• It also sets your range: the further you go past the line, the faster your window shrinks, and great shooters keep a usable window several feet deeper.\n• Below 60, a contested three only goes in with a perfect release.\n• AI shooters with high ratings pop out for threes off screens and space the floor.'},
@@ -5442,7 +5451,7 @@ const HELP_T=[
 const STORE_T=[
  {n:'LAYUPS',at:'lay',items:()=>LAYV.map((v,i)=>({k:'lay:'+i,n:v.txt,req:v.req||0,d:LAY_D[i]||''}))},
  {n:'DUNKS',at:'dnk',items:()=>DUNKV.map(v=>({k:'dnk:'+v.sty,n:v.n,req:v.req,d:v.d}))},
- {n:'DRIBBLE STYLES',at:'bh',items:()=>DRB.map((s,i)=>({k:'drb:'+i,n:s.n,req:s.req,d:s.d}))},
+ {n:'DRIBBLE PACKAGES',at:'bh',items:()=>DRB.map((s,i)=>({k:'drb:'+i,n:s.n,req:s.req,d:s.d}))},
  {n:'PASSES',at:'pas',items:()=>Object.keys(PASS_T).map(t=>({k:'pas:'+t,n:PASS_NM[t],req:PASS_REQ[t]||0,d:PASS_D[t]}))},
  {n:'SHOTS',at:'mid',opt:1,items:()=>[{k:'sht:fade',n:'FADEAWAY',req:0,d:'Shooting while moving back: a higher jump, drifting back, leaning away from the defender.'},
   {k:'sht:pfade',n:'POST FADEAWAY',req:0,d:'Out of a post-up: a one-legged turnaround fadeaway, knee up.'}]},
@@ -5530,7 +5539,7 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
     else if(!p.lay&&!SPV.bf){const a=SPV.ball.position.clone();spvFly(a,new THREE.Vector3(88.8,10.3,32),.45,3)}}
    else{vert(p,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=Math.exp(-dt*3);p.vy*=Math.exp(-dt*3);SPV.done+=dt}}}
  else if(c=='drb'){SPV.mt-=dt;if(p.bm)p.bm.t+=dt;if(p.spin>0){p.spin=Math.max(0,p.spin-dt)}
-  if(SPV.mt<=0&&!p.bm){const k='ZBNCXV'[SPV.mi++%6];if('ZCBN'.includes(k))p.side*=-1;p.bm={k,t:0,d:k=='X'?.5:k=='C'||k=='N'?.55:.42,v:+SPV.v};if(k=='C'){p.spin=p.sd=.5;p.spd=1;p.spn=DRB[+SPV.v].spn||1}SPV.mt=.35}
+  if(SPV.mt<=0&&!p.bm){const k='ZBNCXV'[SPV.mi++%6];if('ZCBN'.includes(k))p.side*=-1;p.bm={k,t:0,d:k=='X'?.5:k=='C'||k=='N'?.55:.42,v:+SPV.v};if(k=='C'){p.spin=p.sd=.5;p.spd=1;p.spn=drbA(+SPV.v,'C').spn||1}SPV.mn=drbA(+SPV.v,k).n;SPV.mt=.35}
   if(p.bm&&p.bm.t>=p.bm.d)p.bm=null}
  else if(c=='pas'){const ty=SPV.v,P=PASS_T[ty]||PASS_T.chest;p.x+=p.vx*dt;
   if(SPV.ph=='set'&&SPV.t>=.45){p.ps={ty,k:['btb','elbow','behead','legs'].includes(ty)?-1:1,t:0,wu:P.wu,d:P.wu+.38,go:0,fa:null};SPV.ph='wind'}
@@ -5585,14 +5594,15 @@ const AN_CAT=[
   {n:'LAYUPS',at:'lay',pk:[{n:'BASIC LAYUPS',k:[0,5]},{n:'TOUCH FINISHES',k:[1,4,2]},{n:'EURO STEP',k:[6]},{n:'REVERSE LAYUPS',k:[3,7]}].map(p=>Object.assign(p,{k:p.k.map(i=>'lay:'+i)}))}]},
  {n:'SHOOTING',ic:'sht',sub:[{n:'JUMP SHOTS',at:'tp',pk:JS.map(j=>({n:j.n,k:['js:'+j.id]}))},{n:'FADEAWAYS',at:'mid',pk:[{n:'FADEAWAY',k:['sht:fade']},{n:'POST FADEAWAY',k:['sht:pfade']}]}]},
  {n:'PASSING',ic:'pas',sub:[{n:'PASSES',at:'pas',pk:[{n:'BASIC PASSES',k:['pas:chest','pas:bounce','pas:over']},{n:'ONE-HAND PASSES',k:['pas:one','pas:base']},{n:'FLASHY PASSES',k:['pas:btb','pas:nolook','pas:behead','pas:elbow','pas:wrap','pas:legs','pas:hook','pas:flip']}]}]},
- {n:'DRIBBLING',ic:'drb',sub:[{n:'DRIBBLE STYLES',at:'bh',pk:DRB.map((s,i)=>({n:s.n,k:['drb:'+i]}))}]}];
+ {n:'DRIBBLING',ic:'drb',sub:[{n:'DRIBBLE PACKAGES',at:'bh',pk:DRB.map((s,i)=>({n:s.n,k:['drb:'+i]}))}]}];
 const dkRate=r=>Math.round(.4*r[0]+.3*r[1]+.3*r[2]);
 let AN_IT=null;const anItem=k=>(AN_IT||(AN_IT=Object.fromEntries(STORE_T.flatMap(t=>t.items().map(i=>[i.k,Object.assign({at:t.at},i)])))))[k];
-const anGrp=k=>k=='dnk:4'||k.startsWith('sht:')?null:/^dnk:(6|7|8|10)$/.test(k)?'oop':k.split(':')[0],AN_GN={dnk:'DUNK',oop:'ALLEY-OOP',lay:'LAYUP',pas:'PASS',drb:'DRIBBLE STYLE'}; // each group keeps one unlocked animation ON (the posterizer and fadeaways are optional)
-const pkOn=pk=>pk.k[0].startsWith('js:')?(MM.cr.js||'b1')==pk.k[0].slice(3):pk.k.every(k=>!MM.cr.anim.off.includes(k)),pkHave=pk=>pk.k.some(k=>stHave(anItem(k),anItem(k).at)),pkReq=pk=>Math.min(...pk.k.map(k=>anItem(k).req));
+const anGrp=k=>k=='dnk:4'||k.startsWith('sht:')||k.startsWith('drb:')?null:/^dnk:(6|7|8|10)$/.test(k)?'oop':k.split(':')[0],AN_GN={dnk:'DUNK',oop:'ALLEY-OOP',lay:'LAYUP',pas:'PASS'}; // each group keeps one unlocked animation ON (the posterizer and fadeaways are optional)
+const pkOn=pk=>pk.k[0].startsWith('drb:')?(MM.cr.drb|0)==+pk.k[0].slice(4):pk.k[0].startsWith('js:')?(MM.cr.js||'b1')==pk.k[0].slice(3):pk.k.every(k=>!MM.cr.anim.off.includes(k)),pkHave=pk=>pk.k.some(k=>stHave(anItem(k),anItem(k).at)),pkReq=pk=>Math.min(...pk.k.map(k=>anItem(k).req));
 function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
  if(!pkHave(pk)){const it=anItem(pk.k[0]);storeMsg('LOCKED: NEEDS '+statLbl(it.at)+' '+pkReq(pk));return}
  if(pk.k[0].startsWith('js:')){MM.cr.js=pk.k[0].slice(3);beep(620,.06,'triangle');return} // a jump shot: one at a time
+ if(pk.k[0].startsWith('drb:')){MM.cr.drb=+pk.k[0].slice(4);beep(620,.06,'triangle');return} // a dribble package: one at a time
  if(!pkOn(pk)){pk.k.forEach(k=>{const i=off.indexOf(k);if(i>=0)off.splice(i,1)});beep(620,.06,'triangle');return}
  const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
  pk.k.forEach(k=>{if(!off.includes(k))off.push(k)});beep(300,.05)}
@@ -5643,15 +5653,17 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
  // preview + package details
  const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'rgba(63,184,255,.5)');
  if(pk){const ks=pk.k,cur=ks[Math.floor(performance.now()/4500)%ks.length];g.clearRect(px,py,pw,ph);spvFrame(cur);
-  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='rgba(255,255,255,.75)';g.fillText('▶  '+anItem(cur).n,px+10,py+18);
+  g.textAlign='left';g.font='bold 10px system-ui';g.fillStyle='rgba(255,255,255,.75)';g.fillText('▶  '+anItem(cur).n+(cur.startsWith('drb:')&&SPV.mn?'  ·  '+SPV.mn:''),px+10,py+18);
   g.font='italic 900 26px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(pk.n,px,py+ph+34);
   if(pk.r){const R2=dkRate(pk.r),tx=px+g.measureText(pk.n).width+16;mRR(tx,py+ph+12,128,28,14,'rgba(255,210,63,.15)',GOLD);g.font='bold 12px system-ui';g.fillStyle=GOLD;g.fillText('DUNK RATING  '+R2,tx+12,py+ph+31);
    [['TECHNIQUE',pk.r[0]],['JUMP DISTANCE',pk.r[1]],['HEIGHT',pk.r[2]]].forEach(([l,v],i)=>{const bx=px+i*196,by=py+ph+52;g.font='bold 9px system-ui';g.fillStyle='#8fa3b8';g.fillText(l,bx,by);mRR(bx,by+5,150,7,3.5,'rgba(255,255,255,.1)');mRR(bx,by+5,Math.max(7,150*v/99),7,3.5,C);g.textAlign='right';g.fillStyle='#fff';g.fillText(v,bx+180,by+12);g.textAlign='left'})}
   {let yy=py+ph+(pk.r?92:62);g.font='bold 9px system-ui';g.fillStyle='#8fa3b8';g.fillText('INCLUDES',px,yy);yy+=16;let xx=px;
-   ks.forEach(k=>{const it=anItem(k),have=stHave(it,it.at),t=(k==cur?'▶ ':'')+it.n+(have?'':'  🔒'+it.req);g.font=(k==cur?'bold ':'')+'12px system-ui';const w=g.measureText(t).width+18;if(xx+w>px+400){xx=px;yy+=22}
+   if(ks[0].startsWith('drb:')){const v=+ks[0].slice(4),it=anItem(ks[0]),have=stHave(it,it.at);'ZXCVBN'.split('').forEach(k=>{const a=drbA(v,k),on=a.n==SPV.mn,t=(on?'▶ ':'')+k+'  '+a.n;g.font=(on?'bold ':'')+'11px system-ui';const w=g.measureText(t).width+16;if(xx+w>px+560){xx=px;yy+=22} // a package: its six move animations
+     mRR(xx,yy-12,w,18,9,on?'rgba(63,184,255,.2)':'rgba(255,255,255,.06)',null);g.fillStyle=have?'#fff':'#6a7080';g.fillText(t,xx+8,yy+1);xx+=w+6});if(!have){g.fillStyle='#8a90a0';g.font='11px system-ui';g.fillText('🔒 BALL HANDLE '+it.req,px,yy+24)}}
+   else ks.forEach(k=>{const it=anItem(k),have=stHave(it,it.at),t=(k==cur?'▶ ':'')+it.n+(have?'':'  🔒'+it.req);g.font=(k==cur?'bold ':'')+'12px system-ui';const w=g.measureText(t).width+18;if(xx+w>px+400){xx=px;yy+=22}
     mRR(xx,yy-12,w,18,9,k==cur?'rgba(63,184,255,.2)':'rgba(255,255,255,.06)',null);g.fillStyle=have?'#fff':'#6a7080';g.fillText(t,xx+9,yy+1);xx+=w+6})}
   {const[x,y,w,h]=AN_EQ,eq=pkOn(pk),lk=!pkHave(pk);mRR(x,y,w,h,2,lk?'#2a2f37':eq?'#1e3a28':'#ffb020',lk?'#555':eq?'#4cff7a':'#fff');g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle=lk?'#8a90a0':eq?'#4cff7a':'#11131a';
-   g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(eq&&!lk&&!ks[0].startsWith('js:')){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText('Enter / click to unequip',x+w/2,y+h+12)}}}
+   g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(eq&&!lk&&!ks[0].startsWith('js:')&&!ks[0].startsWith('drb:')){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText('Enter / click to unequip',x+w/2,y+h+12)}}}
  else{g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle='#8fa3b8';g.fillText('Choose '+L.map(s=>s.n.toLowerCase()).join(' or ')+' on the left',px+pw/2,py+ph/2)}
  if(st.mt>0){g.textAlign='center';g.font='bold 14px system-ui';const tw_=g.measureText(st.msg).width+28;mRR(px+pw/2-tw_/2,py+10,tw_,26,13,'rgba(20,10,10,.85)','rgba(255,120,120,.6)');g.fillStyle='#ff9a9a';g.fillText(st.msg,px+pw/2,py+28)}
  // category tabs along the bottom
