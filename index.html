@@ -2360,13 +2360,13 @@ const btOf=p=>p.bt!=null?p.bt:p.build?btOfBuild(p.build):(tmOf(p).bt||[])[p.i]??
 const btOfBuild=d=>btEff(d);
 // ===== BODY TYPES (model shape only; the whole model is then scaled by the player's height, so every type works at any height) =====
 // q limbs · th thigh/calf extra · sh shorts · lx hip (leg) spacing · hip/hipz pelvis · tt/tb torso top/bottom radius · tx/tz torso width/depth · shl shoulder span (x,y,z)
-// nk neck top/bottom · dt/dx deltoids · pec chest · bel belly [z, sx, sy, sz] · chin · hd head width · js shoulder joint · ua upper arm · bi biceps · ax arm spacing · nf/nb jersey number front/back
+// nk neck top/bottom · dt/dx deltoids · bel belly [z, sx, sy, sz] · chin · hd head width · js shoulder joint · ua upper arm · bi biceps · ax arm spacing · nf/nb jersey number front/back
 const BODY=[
- {n:'SLIM',    q:.76, th:.95, sh:.86, lx:.32,hip:.86, hipz:.55,tt:.7, tb:.56,tx:.86,tz:.5, shl:[.72,.27,.42],nk:[.16,.19],dt:0,  dx:0,  pec:0,  bel:0,                chin:0,hd:.96,js:.82,ua:.92,bi:0,   ax:.86,nf:.38,nb:.38},
- {n:'TONED',   q:1.06,th:1.08,sh:1.04,lx:.4, hip:1,   hipz:.6, tt:.88,tb:.6, tx:1.08,tz:.6,shl:[1,.34,.56],  nk:[.24,.28],dt:.38,dx:.98,pec:.22,bel:0,                chin:0,hd:1,  js:1.05,ua:1.08,bi:1.2,ax:1.12,nf:.5,nb:.45},
- {n:'REGULAR', q:1,   th:1,   sh:1,   lx:.38,hip:1,   hipz:.62,tt:.8, tb:.62,tx:1,  tz:.56,shl:[.85,.32,.5], nk:[.2,.24], dt:0,  dx:0,  pec:0,  bel:0,                chin:0,hd:1,  js:1,  ua:1,  bi:0,   ax:1,  nf:.43,nb:.43},
- {n:'MUSCULAR',q:1.3, th:1.06,sh:1.25,lx:.5, hip:1.3, hipz:.8, tt:.8, tb:.62,tx:1.32,tz:.82,shl:[1.4,.42,.72],nk:[.34,.4], dt:.5, dx:.5, pec:0,  bel:0,                chin:0,hd:1,  js:1.45,ua:1.1,bi:1.35,ax:1.32,nf:.7,nb:.7},
- {n:'FATTY',   q:1.22,th:1.22,sh:1.38,lx:.52,hip:1.4, hipz:.95,tt:.86,tb:.9, tx:1.24,tz:.84,shl:[1.16,.42,.72],nk:[.32,.38],dt:0,  dx:0,  pec:0,  bel:[.12,1.02,.78,.74],chin:1,hd:1.08,js:1.3,ua:1.3,bi:0,  ax:1.32,nf:.86,nb:.8}];
+ {n:'SLIM',    q:.76, th:.95, sh:.86, lx:.32,hip:.86, hipz:.55,tt:.7, tb:.56,tx:.86,tz:.5, shl:[.72,.27,.42],nk:[.16,.19],dt:0,  dx:0,  bel:0,                chin:0,hd:.96,js:.82,ua:.92,bi:0,   ax:.86,nf:.38,nb:.38},
+ {n:'TONED',   q:1.06,th:1.08,sh:1.04,lx:.4, hip:1,   hipz:.6, tt:.88,tb:.6, tx:1.08,tz:.6,shl:[1,.34,.56],  nk:[.24,.28],dt:.38,dx:.98,bel:0,                chin:0,hd:1,  js:1.05,ua:1.08,bi:1.2,ax:1.12,nf:.5,nb:.45},
+ {n:'REGULAR', q:1,   th:1,   sh:1,   lx:.38,hip:1,   hipz:.62,tt:.8, tb:.62,tx:1,  tz:.56,shl:[.85,.32,.5], nk:[.2,.24], dt:0,  dx:0,  bel:0,                chin:0,hd:1,  js:1,  ua:1,  bi:0,   ax:1,  nf:.43,nb:.43},
+ {n:'MUSCULAR',q:1.3, th:1.06,sh:1.25,lx:.5, hip:1.3, hipz:.8, tt:.8, tb:.62,tx:1.32,tz:.82,shl:[1.4,.42,.72],nk:[.34,.4], dt:.5, dx:.5, bel:0,                chin:0,hd:1,  js:1.45,ua:1.1,bi:1.35,ax:1.32,nf:.7,nb:.7},
+ {n:'FATTY',   q:1.22,th:1.22,sh:1.38,lx:.52,hip:1.4, hipz:.95,tt:.86,tb:.9, tx:1.24,tz:.84,shl:[1.16,.42,.72],nk:[.32,.38],dt:0,  dx:0,  bel:[.12,1.02,.78,.74],chin:1,hd:1.08,js:1.3,ua:1.3,bi:0,  ax:1.32,nf:.86,nb:.8}];
 function build(p){
  const G=new THREE.Group(),SK=new THREE.Color(p.sk),TMD=tmOf(p),JC=new THREE.Color(TMD.jc),SM=new THREE.Color(TMD.sm),WH=new THREE.Color(0xffffff),
   SH=JC.clone().lerp(WH,.4),HR=new THREE.Color(p.hc),SKd=SK.clone().multiplyScalar(.88);
@@ -2379,8 +2379,8 @@ function build(p){
  const J=(par,x,y)=>{const q=new THREE.Group();q.position.set(x,y,0);par.add(q);return q};
  const leg=x=>{const h=J(G,x,2.3);
   const so=Math.sign(x)||1; // (the outside of this leg)
-  part([sp(.37*q,0,0,0,SK),cy(.36*q*B.th,.27*q,1.2,0,-.6,0,SK),sp(1,0,-.45,.06,SK,.3*q*B.th,.5,.27*q*B.th), // thigh + quad
-   cy(.47*B.sh,.54*B.sh,1.12,0,-.53,0,SM),cy(.552*B.sh,.552*B.sh,.08,0,-1.05,0,JC),sp(1,so*.505*B.sh,-.55,0,JC,.03,.54,.05), // KNEE-LENGTH SHORTS: baggy, trim at the hem, a stripe down the outside
+  part([sp(Math.max(.37*q,.48*B.sh),0,0,0,SM),cy(.36*q*B.th,.27*q,1.2,0,-.6,0,SK),sp(1,0,-.45,.06,SK,.3*q*B.th,.5,.27*q*B.th), // hip ball (inside the shorts, so a raised leg shows shorts, not bare thigh) + thigh + quad
+   cy(.5*B.sh,.54*B.sh,1.34,0,-.42,0,SM),cy(.552*B.sh,.552*B.sh,.08,0,-1.05,0,JC),sp(1,so*.505*B.sh,-.55,0,JC,.03,.54,.05), // KNEE-LENGTH SHORTS: baggy, trim at the hem, a stripe down the outside
    sp(.27*q,0,-1.2,0,SK)],h);
   const k=J(h,0,-1.2);
   part([cy(.27*q*B.th,.17*q,1.1,0,-.55,0,SK),sp(.25*q*B.th,0,-.36,-.06,SK,1,1.4,1),sp(1,0,-.03,.1,SK,.15*q,.14,.1*q), // shin, calf, KNEE CAP
@@ -2396,7 +2396,6 @@ function build(p){
   cy(B.nk[0],B.nk[1],.4,0,2.98,0,SK),{g:new THREE.TorusGeometry(1,.16,8,24),m:m4(0,2.86,.02,B.nk[1]+.06,B.nk[1]+.06,(B.nk[1]+.06)*1.15,0,Math.PI/2+.25,0),c:TRM}, // neck + the jersey's collar trim (dipping in front)
   sp(1,0,2.78,B.shl[2]*.9,TRM,.11,.07,.05), // the V of the neckline
   ...(B.dt?[sp(B.dt,-B.dx,2.5,.12,SK,1,.8,.7),sp(B.dt,B.dx,2.5,.12,SK,1,.8,.7)]:[]),                                  // deltoids
-  ...(B.pec?[sp(.42,-.36,2.2,B.pec,JC,1.05,.62,.5),sp(.42,.36,2.2,B.pec,JC,1.05,.62,.5)]:[]),                           // chest pushing the jersey out
   ...(B.bel?[sp(1,0,1.12,B.bel[0],JC,...B.bel.slice(1)),sp(1,-.62,1.05,0,JC,.42,.62,.62),sp(1,.62,1.05,0,JC,.42,.62,.62)]:[])],body); // soft belly + love handles (fat spread round the waist, not one ball)
  const hd=G.head=J(body,0,3.0),hi=J(hd,0,-3.0); // HEAD on its own neck joint (turns / nods independently, e.g. to look at the intro camera)
  part([...(B.chin?[sp(1,0,3.03,.2,SK,.38,.2,.34)]:[]),                                                                       // double chin
@@ -4132,7 +4131,7 @@ function topEnter(){if(MM.t==0){MM.r=ACTIVE>=0?ACTIVE:0;S='career'}else if(MM.t=
 function setTeams(a,b){if(TI[0]==a&&TI[1]==b)return;TI=[a,b];FULL.forEach(t=>t.forEach(p=>sc3.remove(p.m)));buildAll();applyRoster();reset(0);savePrefs()}
 function playNow(a,b){setTeams(a,b);playWith(-1)} // default roster, chosen teams
 const ctCard=i=>[56+(i%5)*172,132+(i/5|0)*150,160,138],pnCard=i=>[54+(i%3)*288,128+(i/3|0)*176,276,170],pnSide=i=>[130+i*370,140,330,270],PN_BACK=[40,486,140,36];
-function pnBack(){if(MM.car){if(MM.ps==4){MM.ps=1;MM.pc=MM.pb}else S='pnmode';return}
+function pnBack(){if(MM.car){if(MM.ps==5){MM.ps=MODE==1?4:1;MM.pc=MODE==1?MM.pk:MM.pb}else if(MM.ps==4){MM.ps=1;MM.pc=MM.pb}else S='pnmode';return}
  if(MM.ps==0){S='pnmode';return}if(MM.ps==5){MM.ps=MODE==1?4:2;MM.pc=MODE==1?MM.pk:MM.side;return}if(MM.ps==3){MM.ps=2;MM.pc=MM.side||0;return}if(MM.ps==4){MM.ps=3;MM.pc=MM.pA;return}MM.ps--;MM.pc=MM.ps==0?MM.pa:MM.pb}
 // ===== GAME MODE select (Play Now and Career PLAY): 5V5 · 3V3 (each side's best three) · 1V1 (pick the two players, first to 11) =====
 const MODES=[5,3,1],modeN=()=>MM.prc||MM.mctx=='car'?4:3,modeRect=i=>{const n=modeN(),w=(828-(n-1)*18)/n;return[66+i*(w+18),140,w,300]};
@@ -4183,9 +4182,10 @@ function drawPick(){const ti=pkTeam(),t=TEAMS[ti],as=MM.ps==3;
   const srt=[...STATS].sort((a,b2)=>r[b2[0]]-r[a[0]]).slice(0,3);srt.forEach(([k,l],j)=>{const yy=y+242+j*16;g.textAlign='left';g.font='10px system-ui';g.fillStyle='#cfd3dc';g.fillText(l,x+12,yy);g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=ovrCol(r[k]);g.fillText(r[k],x+w-12,yy)});
   g.textAlign='center';g.font='bold 10px system-ui';g.fillStyle='#e6e9f0';g.fillText(fmtH(bio.h)+'  \u00b7  '+bio.wt+' LB',cx,y+h-14)});g.globalAlpha=1}
 function pnEnter(){
- if(MM.car){ // career 1v1: opponent team, then the opponent player
-  if(MM.ps==1){if(MM.pc==MM.pa){beep(200,.1,'square');return}MM.pb=MM.pc;if(MODE!=1){setTeams(MM.pa,MM.pb);playWith(MM.slot);return}MM.ps=4;MM.pc=SLOTS[MM.slot].pos;return}
-  if(MM.ps==4){const ps=SLOTS[MM.slot].pos;MODE=1;PICK=[ps,ps];setTeams(MM.pa,MM.pb);playWith(MM.slot)}return}
+ if(MM.car){ // career: opponent team (1v1: then the opponent player), then the court
+  if(MM.ps==1){if(MM.pc==MM.pa){beep(200,.1,'square');return}MM.pb=MM.pc;if(MODE!=1){pnCourt(0);return}MM.ps=4;MM.pc=SLOTS[MM.slot].pos;return}
+  if(MM.ps==4){const ps=SLOTS[MM.slot].pos;MODE=1;PICK=[ps,ps];pnCourt(0);return}
+  if(MM.ps==5){savePrefs();setTeams(MM.pa,MM.pb);playWith(MM.slot)}return}
  if(MM.ps==0){MM.pa=MM.pc;MM.ps=1;MM.pc=(MM.pa+1)%6}
  else if(MM.ps==1){if(MM.pc==MM.pa){beep(200,.1,'square');return}MM.pb=MM.pc;MM.ps=2;MM.pc=0}
  else if(MM.ps==2){if(MODE!=1){pnCourt(MM.pc);return}MM.side=MM.pc;MM.ps=3;MM.pc=0}
@@ -5091,10 +5091,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.91'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.92'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.92','Shorts, toned build, career courts',['Fixed: the tops of the thighs showed above the shorts (team intros and in game, most with a leg raised). The shorts now come up under the waistband.',
+  'Fixed: the TONED body type had two odd lumps on the chest near the armpits.',
+  'CAREER: after picking the team you face (and the player in 1V1) you now CHOOSE THE COURT too, just like Play Now.']],
  ['v1.91','Wider courts',['Every court is about 15% wider (sideline to sideline 64 ft -> 74 ft): more room to space the floor, drive and swing the ball.',
   'Court lines, floors, fences, bleachers and the rest of each arena moved out with the sidelines; the default camera pulls back a little to match.']],
  ['v1.90','SUN GOD',['New trail SUN GOD: the ball burns like a star in flight, then hits the rim like the sun crashing down to earth: a blinding solar flare, molten spray, a screen-wide glare, a huge boom with a long rolling rumble, and the camera shakes as the ground quakes.',
@@ -5715,7 +5718,7 @@ const HL_MOVES=[
  {t:'SET PLAYS AND SCREENS',tag:'AI',d:'In the half court the AI offence runs real set plays instead of just moving around: FLASH CUT, ISO, FAKE HANDOFF, DRIBBLE HANDOFF, SPAIN PICK AND ROLL, STACK, KANSAS, GIVE AND GO, HORNS, FLOPPY, HAMMER, ELEVATOR DOORS, UCLA CUT and PRINCETON BACKDOOR (the play\'s name shows over the ball handler). Players cut off screens, set ball screens, roll to the rim, hand the ball off, and the handler hits the man the play gets open.\n• SCREENS are real: a defender who runs into one is held up. How long depends on the screener\'s STRENGTH and the defender\'s PERIMETER DEFENSE (a strong screen on a poor defender holds him over a second, an elite defender slides round a weak one almost straight away).\n• Teams lean towards plays that suit their game plan: pick-and-roll teams run Spain, Kansas and Horns, star teams run ISO, shooting teams run Floppy, Hammer, Stack and Elevator Doors, cutting teams run Flash Cut, Give and Go, UCLA Cut and Princeton Backdoor.'},
  {t:'CAMERA, PAUSE AND REPLAYS',tag:'1 · K · T',d:'• 1: switch camera (COURT / COURT LOW).\n• K: pause menu (resume, customisation, replay camera, main menu).\n• T: watch a replay after a bucket (every replay picks one of 7 camera angles: broadcast, baseline, backboard, sideline rail, spidercam, courtside fan, chase. 1 switches to the next angle, T goes back). T also skips the match intro. No replays in 1v1.'}];
 const HL_MODES=[
- {t:'CAREER',tag:'MAIN MENU',d:'Create up to 3 players, sign with a team, and level up by playing 5v5, 3v3 or 1v1 games against the AI (pick the mode, then the team you face), or play a friend online. See CREATE A PLAYER for the details.'},
+ {t:'CAREER',tag:'MAIN MENU',d:'Create up to 3 players, sign with a team, and level up by playing 5v5, 3v3 or 1v1 games against the AI (pick the mode, the team you face, then the court), or play a friend online. See CREATE A PLAYER for the details.'},
  {t:'PLAY NOW',tag:'MAIN MENU',d:'A quick game with the league\'s players (no created player, no EXP). Pick a mode, then the two teams, which side you play for and, last, the COURT (it shows live behind the list):\n• 5V5: full squads, four quarters.\n• 3V3: each side plays its three highest-rated players.\n• 1V1: pick any player from each team. First to 11, check ball at the top after every possession.'},
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
