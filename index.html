@@ -2446,6 +2446,8 @@ const TS={
  // ss / sn = size / count of the shapes shed in flight · fx = which sound + rim-impact style the trail borrows (FIRE · ICE · BLACK · STORM · LAZER) · w = ribbon width · rb = colours cycle through the rainbow · geo can be a list (random pick)
  'GREEN LAZER':{c:[0x2dff6a,0x9dffb8,0xffffff],sp:[0x2dff6a,0x6dff9a,0xd8ffe4],g:0x14ff50,m:0x7dffa0,k:0xf0fff4,add:1,up:0,j:.06,L:0x2dff6a,n:2,geo:8,fx:'LAZER',w:.45},
  'RED LAZER':{c:[0xff2030,0xff7a80,0xffffff],sp:[0xff2030,0xff5060,0xffd8dc],g:0xff1428,m:0xff7a84,k:0xfff2f3,add:1,up:0,j:.06,L:0xff2a3a,n:2,geo:8,fx:'LAZER',w:.45},
+ 'PINK LAZER':{c:[0xff4fb8,0xff9ad6,0xffffff],sp:[0xff4fb8,0xff7ac8,0xffe0f2],g:0xff3aae,m:0xff9ad4,k:0xfff2fa,add:1,up:0,j:.06,L:0xff5ac0,n:2,geo:8,fx:'LAZER',w:.45},
+ 'YELLOW LAZER':{c:[0xffe02a,0xfff08a,0xffffff],sp:[0xffe02a,0xffea5a,0xfffbe0],g:0xffd400,m:0xfff07a,k:0xfffdf0,add:1,up:0,j:.06,L:0xffe03a,n:2,geo:8,fx:'LAZER',w:.45},
  'BLUE LAZER':{c:[0x2a8cff,0x8cc8ff,0xffffff],sp:[0x2a8cff,0x5aa8ff,0xd8ecff],g:0x1a7aff,m:0x7ab8ff,k:0xf2f8ff,add:1,up:0,j:.06,L:0x3a96ff,n:2,geo:8,fx:'LAZER',w:.45},
  'RAINBOW LAZER':{c:[0xff0000,0x00ff00,0x0000ff],sp:[0xff0000,0x00ff00,0x0000ff],g:0xff0000,m:0xff8800,k:0xffffff,add:1,up:0,j:.06,L:0xffffff,n:3,geo:8,fx:'LAZER',w:.5,rb:1},
  MONEY:{ss:3.2,sn:3,c:[0x2fae4f,0x86d96a,0xffcc33],sp:[0x7dff9a,0xffd84a,0xffffff],g:0x2fbf5a,m:0xffd84a,k:0xfffbe0,add:1,up:-1.5,j:.5,L:0x7dff9a,n:4,geo:[5,5,6],fx:'ICE'},
@@ -2463,6 +2465,9 @@ const TS={
  PLASMA:{c:[0xff3ad8,0x7a3aff,0xffffff],sp:[0xff5ae0,0x9a6aff,0xffd8ff],g:0xd02aff,m:0xff7ae8,k:0xfff0ff,add:1,up:.5,j:.5,L:0xe04aff,n:5,geo:1,fx:'STORM',zig:1},
  CANDY:{ss:1.8,c:[0xff5a9a,0xffffff,0x5ad8ff],sp:[0xff7ab0,0xffffff,0x7ae0ff],g:0xff5aa0,m:0xffd0e4,k:0xffffff,add:1,up:.4,j:.45,L:0xff8ab8,n:4,geo:[3,0,1],fx:'ICE'}};
 const tb=k=>TS[k].fx||k; // base style of a trail
+// whose trail a perfect release shows: a created player's own (CAREER > CUSTOMISATION), everyone else his team's laser (TEAMS order)
+const TEAM_TRL=['PINK LAZER','GREEN LAZER','YELLOW LAZER','RED LAZER','BLUE LAZER','RAINBOW LAZER'];let TRL_C='FIRE',lastH=null;
+const shTrl=p=>!p?TRL_S:p.build?(TS[p.build.trl]?p.build.trl:TRL_S):TEAM_TRL[TI[p.team]]||TRL_S;
 function rbw(st){const h=T*.45%1,c=x=>colA.setHSL((h+x)%1,1,.55).getHex();st.g=st.L=c(0);st.m=c(.12);st.sp=st.c=[c(0),c(.33),c(.66)]} // RAINBOW: hue rolls with time
 const shpG=(...f)=>new THREE.ShapeGeometry(f.map(fn=>{const s=new THREE.Shape();fn(s);return s}));
 const PG=[new THREE.SphereGeometry(1,8,6),new THREE.OctahedronGeometry(1,0),new THREE.BoxGeometry(.5,.5,2.4),
@@ -2493,7 +2498,7 @@ function shard(p,v,st,life,sz){const o=TRL[ti++%TRL.length],gi=st.geo||0;o.m.geo
 function burstFx(p,st){bst=.45;bstP.copy(p);
  for(let i=0;i<80;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=5+Math.random()*17;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,.35+Math.random()*.55,.35+Math.random()*.9,st.sp[i%3],4,0)}
  for(let i=0;i<26;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=4+Math.random()*12;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.45+Math.random()*.4,.18+Math.random()*.22)}
- shake=Math.max(shake,.2);sfxRelease(TRL_S)}
+ shake=Math.max(shake,.2);sfxRelease(TRL_C)}
 function ribUpd(m,pts,w,col,inten,pw,zig,dark){const n=pts.length;if(n<2){m.visible=false;return}m.visible=true;
  const PA=m.geometry.attributes.position,CA=m.geometry.attributes.color,cp=cam.position;
  for(let i=0;i<n;i++){const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(n-1,i+1)],u=Math.min(1,p.age/TLIFE);
@@ -2539,9 +2544,9 @@ function ambient(k){
  else{const h=osc('sawtooth',100,.14,900),h2=osc('sawtooth',200.6,.07,1400);lfo(50,.03,h.g.gain);nsrc(4500,'highpass',.5,.012)} // mains-style electric hum; zaps are events
  return AMB[k]={m,vol:{FIRE:.3,ICE:.5,BLACK:.34,STORM:.34,LAZER:.3}[b0]}}
 function sfxUpd(on,dt){
- const a=AC;if(on&&!AMB[TRL_S])ambient(TRL_S);if(!a)return;
- for(const k in AMB)AMB[k].m.gain.setTargetAtTime(on&&k==TRL_S?AMB[k].vol:0,a.currentTime,on?.05:.04);
- if(!on)return;const k=tb(TRL_S),r=Math.random();dt=dt||.016;
+ const a=AC;if(on&&!AMB[TRL_C])ambient(TRL_C);if(!a)return;
+ for(const k in AMB)AMB[k].m.gain.setTargetAtTime(on&&k==TRL_C?AMB[k].vol:0,a.currentTime,on?.05:.04);
+ if(!on)return;const k=tb(TRL_C),r=Math.random();dt=dt||.016;
  if(k=='FIRE'){ // irregular crackle: sharp, varied pops with the odd cluster and low "pop"
   if(r<14*dt){const n=1+(Math.random()<.3?2:0);for(let i=0;i<n;i++)click(1200+Math.random()*4500,.05+Math.random()*.2,i*(.01+Math.random()*.03),.25)}
   if(Math.random()<1.6*dt)tn(260,70,.06,{v:.09,at:.001,rv:.3})}
@@ -2618,9 +2623,10 @@ function impUpd(dt){
   for(let j=0;j<9;j++){const d=j/8*L,jj=j?1.7:0;P.setXYZ(j,IM.p.x+Math.cos(a)*Math.cos(el)*d+(Math.random()-.5)*jj,IM.p.y+Math.sin(el)*d+(Math.random()-.5)*jj,IM.p.z+Math.sin(a)*Math.cos(el)*d+(Math.random()-.5)*jj)}
   P.needsUpdate=true;l.material.opacity=1-t/.6})
 }
-function trailUpd(dt){const st=TS[TRL_S],on=B.mode=='shot'&&B.perf,bp=ballM.position,cool=GFX!='LOW',sb=tb(TRL_S);if(st.rb)rbw(st);
+function trailUpd(dt){if(B.h)lastH=B.h;const on=B.mode=='shot'&&B.perf;if(on&&!trOn)TRL_C=shTrl(B.sh||lastH); // (online guests only know who last held it)
+ const st=TS[TRL_C],bp=ballM.position,cool=GFX!='LOW',sb=tb(TRL_C);if(st.rb)rbw(st);
  if(on&&!trOn){trOn=1;TP.length=0;burstFx(bp,st)}if(!on)trOn=0;
- {const Hn=bp.x<47?5.2:88.8;if(IM.pOn&&!on&&Math.abs(bp.x-Hn)<.25&&Math.abs(bp.z-32)<.25&&bp.y>8&&bp.y<12){IM.p.set(Hn,10,32);impactFx(TRL_S)}IM.pOn=on?1:0}
+ {const Hn=bp.x<47?5.2:88.8;if(IM.pOn&&!on&&Math.abs(bp.x-Hn)<.25&&Math.abs(bp.z-32)<.25&&bp.y>8&&bp.y<12){IM.p.set(Hn,10,32);impactFx(TRL_C)}IM.pOn=on?1:0}
  impUpd(dt);sfxUpd(on&&S!='pause',dt);
  if(on){if(TP[0]&&Math.hypot(bp.x-TP[0].x,bp.y-TP[0].y,bp.z-TP[0].z)>6)TP.length=0;
   if(!TP[0]||Math.hypot(bp.x-TP[0].x,bp.y-TP[0].y,bp.z-TP[0].z)>.07){TP.unshift({x:bp.x,y:bp.y,z:bp.z,age:0,jx:Math.random()-.5,jy:Math.random()-.5,jz:Math.random()-.5});if(TP.length>TN)TP.pop()}}
@@ -4423,7 +4429,7 @@ addEventListener('keydown',e=>{ // name entry
 
 // ===== CUSTOMISATION sub-menu: graphics · ball trail · court =====
 const TRL_DESC={FIRE:'Explosion impact',ICE:'Frost shatter impact',BLACK:'Void collapse impact',STORM:'Lightning strike impact',
- 'GREEN LAZER':'Green laser beam','RED LAZER':'Red laser beam','BLUE LAZER':'Blue laser beam','RAINBOW LAZER':'Laser that cycles every colour',MONEY:'Bills and gold coins',DEMONIC:'Hellfire and a blood-red void',
+ 'GREEN LAZER':'Green laser beam','RED LAZER':'Red laser beam','BLUE LAZER':'Blue laser beam','PINK LAZER':'Pink laser beam','YELLOW LAZER':'Yellow laser beam','RAINBOW LAZER':'Laser that cycles every colour',MONEY:'Bills and gold coins',DEMONIC:'Hellfire and a blood-red void',
  STARS:'A shower of shooting stars',FAIRY:'Pink fairy dust and sparkles',BULLET:'Gunshot and a smoking round',IRISH:'Lucky clovers and gold',
  'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs',CANDY:'Sweet pink and blue sprinkles'};
 const custRect=i=>[240,150+i*70,480,60],custRows=()=>MM.back=='slotact'?['trail']:['gfx'];
@@ -5068,10 +5074,13 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.87'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.88'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.88','Team laser trails',['Every player who is not a created player now shoots his team\'s laser on a perfect release: Pinkie Pies PINK, Green Gekos GREEN, Yellow Vikings YELLOW, Red Royals RED, Blue Crusaders BLUE and Rainbow Slayers RAINBOW.',
+  'Your created player keeps the trail you pick in CAREER > CUSTOMISATION. In Play Now everyone uses his team\'s laser.',
+  'New PINK LAZER and YELLOW LAZER trails (24 in all).']],
  ['v1.87','18 new ball trails',['CAREER: after you pick the match type you now choose the team you face, in 5V5 and 3V3 too (1V1 then picks their player as before).',
   'CAREER: new CUSTOMISATION tile on your player. It holds your BALL TRAIL, which is saved on that player and used in his games. The main-menu CUSTOMISATION is now just GRAPHICS.',
   'New trails: GREEN, RED, BLUE and RAINBOW LAZER (thin beams with a laser zap), MONEY (bills and coins), DEMONIC (hellfire and a red void), STARS, FAIRY, BULLET (gunshot and a smoking round), IRISH (clovers) and ULTRA AURA.',
@@ -5687,7 +5696,7 @@ const HL_MODES=[
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
  {t:'GAME PLANS',tag:'AI TEAMS',d:'Every team has its own way of playing on offence and defence (shown on its roster page) and adjusts during the game, for example when it\'s chasing the score or a player is hot. The strip under the scoreboard shows what each team is running, and call-outs like SCREEN, POST UP, TRAP or LEAK OUT show the plan in action.'},
- {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / CAREER',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then CUSTOMISATION): 22 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each player keeps his own trail; Play Now uses the last one you picked.\nChanges show straight away and are remembered.'},
+ {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / CAREER',d:'• GRAPHICS (main menu or pause): LOW (fast), COOL (shadows and a glossy court) or SUPER (reflections and extra lights). Use LOW if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then CUSTOMISATION): 24 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
  {t:'AFTER THE GAME',tag:'RESULTS',d:'The result screen shows the player of the game, what went well and what to work on, and the EXP you earned. From there: MAIN MENU, RUN IT BACK (rematch) or the BOX SCORE (M and B are shortcuts).'},
  {t:'TEAMS',tag:'6 TEAMS',d:'Pinkie Pies, Green Gekos, Yellow Vikings, Red Royals, Blue Crusaders and Rainbow Slayers. Each has its own style, strengths and weaknesses: see ROSTERS.'}];
 const HELP_T=[
