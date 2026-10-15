@@ -2060,24 +2060,26 @@ function step(dt){
   for(const d of TM[1-B.from.team])if(!d.chk&&d.stun<=0&&Math.hypot(d.x-B.x,d.y-B.y)<20*stlR(d)*(1+sigv(d,'intercept'))&&B.z<d.ht*85+d.z){d.chk=1;if(Math.random()<((isHum(d)?(d.swp>0?.2:.01):(d.swp>0?AI_STL.icS:AI_STL.ic))*stlP(d)*(1+sigv(d,'intercept'))+(B.bail?SIG_BASE.bailRisk*(1-sigv(B.from,'bail')):0))*Math.max(0,1-1.6*sigv(B.from,'needle'))*(1-fgOf(B.from))){if(sigv(d,'intercept'))sigFx(d,'intercept');say('INTERCEPTED!',d.team?'#ff6b6b':'#4cff7a');(pstat(d).stl++,awardP(d,XP_STEAL,'STEAL'));post('tov',d,d.team);break}}
   if(f>=1&&B.mode=='pass'&&rd>=PASS_REACH){B.mode='loose';B.h=null;B.age=0;B.so=B.from.team;B.bd=dr(B.so);B.vx=(B.lx-B.sx)/B.dur*.55;B.vy=(B.ly-B.sy)/B.dur*.55;B.vz=0;say('MISSED PASS','#ff9f43');beep(180,.08,'square')}
   if(f>=1&&B.mode=='pass'){B.mode='held';B.vz=0;B.h=B.to;B.to.ct0=T;B.to.think=Math.max(B.to.think||0,(roleOf(B.to)=='SH'?.12:.22)+Math.random()*.15);ALAST={from:B.from,to:B.to,q:qn,c:qc};if(B.to.team==0)setCtl(B.to.k);beep(500,.05)}
- }else if(B.mode=='shot'){
+ }else if(B.mode=='shot'){const q0=[B.x,B.y,B.z];
   B.t+=dt/B.dur;const f=Math.min(1,B.t),H=hx(off);
   const tt=f*B.dur;
   if(B.bk){const ka=.7;if(f<ka){const u=f/ka;B.x=B.sx+(B.bx-B.sx)*u;B.y=B.sy+(B.by-B.sy)*u;B.z=B.z0+(B.bz-B.z0)*u+B.arc*4*u*(1-u)}
    else{if(!B.bc){B.bc=1;beep(250,.06,'square');rimKick(off,.5)}const u=(f-ka)/(1-ka);B.x=B.bx+(B.tx-B.bx)*u;B.y=B.by+(B.ty-B.by)*u;B.z=B.bz+(RZ-B.bz)*u*u}}
   else{B.x=B.sx+(B.tx-B.sx)*f;B.y=B.sy+(B.ty-B.sy)*f;B.z=B.z0+B.vz0*tt-.5*G*tt*tt}
-  if(f>=1){rimKick(off,B.make?.45:.8);
+  let hitB=0;if(!B.bk&&dt>0){const sv=[B.vx,B.vy,B.vz];B.vx=(B.x-q0[0])/dt;B.vy=(B.y-q0[1])/dt;B.vz=(B.z-q0[2])/dt;hitB=boardCol(q0[0],q0[1],q0[2]);if(!hitB){B.vx=sv[0];B.vy=sv[1];B.vz=sv[2]}} // a long miss, or a shot from behind the board, meets the glass
+  if(hitB){if(B.sh)B.sh.hot=0;gpShot(off,B.xk||'I',0);B.mode='loose';B.age=0;say('MISS','#ff6b6b')}
+  else if(f>=1){rimKick(off,B.make?.45:.8);
    if(B.make){netHit(off,B.perf?1.7:1.1,(B.tx-B.sx)/B.dur,(B.ty-B.sy)/B.dur);B.x=H;B.y=HY;B.vx=B.vy=0;B.vz=(B.vz0-G*B.dur)*.5;sc[off]+=B.pts;crowdRoar();gpShot(off,B.xk||'I',1);if(B.sh){B.sh.hot=(B.sh.hot||0)+1;pstat(B.sh).pts+=B.pts;shotMade(B.sh,B.pts==3);if(B.as){pstat(B.as).ast++;awardP(B.as,XP_AST,'ASSIST')}if(B.xk=='3')awardP(B.sh,XP_3PT,'3-POINTER');else if(B.xk=='M')awardP(B.sh,XP_MID,'MID-RANGE');else awardP(B.sh,XP_LAY,'CLOSE SHOT')}shake=.2;beep(660,.2,'triangle');beep(880,.3,'triangle');say((off?TEAMS[TI[1]].n+' SCORES +':(B.txt||'SWISH!')+' +')+B.pts,off?tcol(1):'#4cff7a');post('make',null,1-off)}
    else{if(B.sh)B.sh.hot=0;gpShot(off,B.xk||'I',0);const a=Math.atan2(B.ty-HY,B.tx-H),sv=60+Math.random()*90,bk=Math.random()<.5,D=dr(off);B.vx=Math.cos(a)*sv+(bk?D*(70+Math.random()*60):-D*30);B.vy=Math.sin(a)*sv;B.vz=Math.abs(B.vz0-G*B.dur)*.5+(bk?40:0);B.mode='loose';B.age=0;say('MISS','#ff6b6b');beep(150,.15,'square')}}
- }else if(B.mode=='loose'){B.age+=dt;B.vx*=1-.25*dt;B.vy*=1-.25*dt;B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;
-  {const pl=hx(B.so)+B.bd*12;if((B.x-pl)*B.bd>0&&Math.abs(B.y-HY)<32&&B.z>88&&B.z<135){B.x=pl;B.vx*=-.6;B.vy*=.8;B.vz*=.9;beep(210,.08,'square');rimKick(B.so,.5)}}
+ }else if(B.mode=='loose'){const q0=[B.x,B.y,B.z];B.age+=dt;B.vx*=1-.25*dt;B.vy*=1-.25*dt;B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;
+  boardCol(q0[0],q0[1],q0[2]);
   if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.66;B.vx*=.88;B.vy*=.88;if(B.vz<25)B.vz=0}
   B.x=Math.max(10,Math.min(930,B.x));B.y=Math.max(10,Math.min(CW-10,B.y));
   if(HC){if(B.age>=1)checkBall(1-B.so)} // 1v1 (and half-court 3v3): nobody rebounds - after 1s the other player gets it at the top of the key
   else if(B.age>.3){let b=null,bs=1e9;for(const p of TM[0].concat(TM[1])){if(p.stun>0||p.dunk)continue;const dd=Math.hypot(p.x-B.x,p.y-B.y),re=rbEdge(p);if(dd<rbR(p)*re.r&&B.z<95*p.ht+p.z){const k=dd-p.ht*10-8*rbN(p)+Math.random()*14-re.k;if(k<bs){bs=k;b=p}}}if(b)grab(b)}
  }else if(B.mode=='post'){
   B.t-=dt;
-  if(B.kind=='make'||B.kind=='miss'){B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.68;B.vx*=.85;B.vy*=.85}}
+  if(B.kind=='make'||B.kind=='miss'){const q0=[B.x,B.y,B.z];B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;boardCol(q0[0],q0[1],q0[2]);if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.68;B.vx*=.85;B.vy*=.85}}
   
   if(B.t<=0){if(B.kind=='miss'||B.live)live();else reset(B.next)}
  }
@@ -2141,13 +2143,61 @@ const floor=new THREE.Mesh(new THREE.PlaneGeometry(94,CW/10),new THREE.MeshLambe
 const apron=new THREE.Mesh(new THREE.PlaneGeometry(180,120),M(0x232733));apron.rotation.x=-Math.PI/2;apron.position.set(47,-.05,32);sc3.add(apron);
 const wall=new THREE.Mesh(new THREE.PlaneGeometry(200,40),M(0x1a1d27));wall.position.set(47,20,-14);wall.visible=false;sc3.add(wall);
 const rimG=new THREE.Group();sc3.add(rimG);
+// ===== THE HOOP (v1.99): tempered-glass backboard (white border + shooter's square, aluminium frame, padded bottom edge), a painted steel rim on a bracket with net hooks,
+// and a physics net: knots joined by diagonal cords (the diamond mesh), hung from 12 hooks, pulled by gravity and pushed aside by the ball (mkNet). =====
+const HOOP_MAT=(()=>{const c=document.createElement('canvas');c.width=512;c.height=300;const x=c.getContext('2d');x.clearRect(0,0,512,300); // glass markings: 72 x 42 in board, 2 in border, 24 x 18 in square
+ x.strokeStyle='rgba(255,255,255,.96)';x.lineWidth=12;x.strokeRect(6,6,500,288);x.lineWidth=11;x.strokeRect(171,126,170,127); // (the square's bottom line sits just above the rim)
+ const glass=c.cloneNode();{const y=glass.getContext('2d'),gr=y.createLinearGradient(0,0,512,300);gr.addColorStop(0,'rgba(255,255,255,.22)');gr.addColorStop(.35,'rgba(255,255,255,.04)');gr.addColorStop(.55,'rgba(255,255,255,.16)');gr.addColorStop(1,'rgba(255,255,255,.03)');y.fillStyle=gr;y.fillRect(0,0,512,300); // a soft reflection streak across the glass
+  for(let i=0;i<70;i++){y.strokeStyle='rgba(255,255,255,'+(.04+Math.random()*.07)+')';y.lineWidth=.6;y.beginPath();const a=Math.random()*512,b=Math.random()*300;y.moveTo(a,b);y.lineTo(a+(Math.random()-.5)*60,b+(Math.random()-.5)*20);y.stroke()}} // fine scuffs
+ const rim=document.createElement('canvas');rim.width=256;rim.height=32;{const y=rim.getContext('2d');y.fillStyle='#e8501a';y.fillRect(0,0,256,32);
+  for(let i=0;i<500;i++){const v=Math.random();y.fillStyle=v<.5?'rgba(255,140,80,'+Math.random()*.25+')':'rgba(90,25,5,'+Math.random()*.3+')';y.fillRect(Math.random()*256,Math.random()*32,1+Math.random()*6,1)} // paint wear: chips and ball scuffs
+  y.fillStyle='rgba(60,60,60,.35)';for(let i=0;i<12;i++)y.fillRect(i*256/12,26,3,6)} // (worn spots under the net hooks)
+ const T=t=>{const k=new THREE.CanvasTexture(t);k.anisotropy=4;return k},rimT=T(rim);rimT.wrapS=THREE.RepeatWrapping;
+ return{lines:new THREE.MeshBasicMaterial({map:T(c),transparent:true,depthWrite:false}),glass:new THREE.MeshStandardMaterial({color:0xcfe3ee,map:T(glass),transparent:true,opacity:.32,roughness:.06,metalness:.1,depthWrite:false}),
+  frame:new THREE.MeshStandardMaterial({color:0xb9c0c8,roughness:.32,metalness:.75}),pad:new THREE.MeshStandardMaterial({color:0x1d2330,roughness:.85}),
+  rim:new THREE.MeshStandardMaterial({color:0xffffff,map:rimT,roughness:.38,metalness:.45}),steel:new THREE.MeshStandardMaterial({color:0x3a404b,roughness:.45,metalness:.7}),
+  net:new THREE.LineBasicMaterial({color:0xf2f4f6,transparent:true,opacity:.92})}})();
+// the net: NR+1 rings of 12 knots (each ring turned half a mesh against the last), every knot tied to the two knots below it -> diamonds. Verlet integration;
+// cords are near-rigid, a weak sideways link keeps the taper; the top ring rides the rim's hooks; the ball (a sphere) pushes knots out of its way.
+const NET_K=12,NET_R=7,NET_L=1.45;
+function mkNet(par,cx,cy,cz){const N=NET_K*(NET_R+1),P=new Float32Array(N*3),O=new Float32Array(N*3),C=[],id=(r,k)=>r*NET_K+((k%NET_K)+NET_K)%NET_K;
+ for(let r=0;r<=NET_R;r++){const u=r/NET_R,rr=.71-.27*Math.pow(u,.85),y=cy-.04-u*NET_L;for(let k=0;k<NET_K;k++){const a=(k+(r%2)*.5)/NET_K*6.2832,i=id(r,k)*3;P[i]=O[i]=cx+Math.cos(a)*rr;P[i+1]=O[i+1]=y;P[i+2]=O[i+2]=cz+Math.sin(a)*rr}}
+ const ln=(a,b,s)=>{const d=Math.hypot(P[a*3]-P[b*3],P[a*3+1]-P[b*3+1],P[a*3+2]-P[b*3+2]);C.push([a,b,d,s])};
+ for(let r=0;r<NET_R;r++)for(let k=0;k<NET_K;k++){ln(id(r,k),id(r+1,r%2?k:k),1);ln(id(r,k),id(r+1,r%2?k+1:k-1),1)} // the cords
+ for(let r=1;r<=NET_R;r++)for(let k=0;k<NET_K;k++)ln(id(r,k),id(r,k+1),.18); // shape (the knots)
+ const cords=C.filter(c=>c[3]==1),pos=new Float32Array(cords.length*6),g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+ const L=new THREE.LineSegments(g,HOOP_MAT.net);L.frustumCulled=false;par.add(L);
+ const n={P,O,C,L,cx,cy,cz,bp:null,
+  kick(a,sx,sz){for(let r=1;r<=NET_R;r++){const u=r/NET_R;for(let k=0;k<NET_K;k++){const i=id(r,k)*3;O[i]-=sx*u*.05;O[i+1]+=a*u*.035;O[i+2]-=sz*u*.05}}}, // a swish: the lower net whips down (and with the ball's line)
+  update(dt,ox,oy,oz,ball){dt=Math.min(dt,.033);if(dt<=0)return;const ST=3,h=dt/ST,gv=-32*h*h,br=.43,b0=n.bp;
+   for(let s=1;s<=ST;s++){
+    for(let i=NET_K;i<N;i++){const j=i*3;for(let q=0;q<3;q++){const v=(P[j+q]-O[j+q])*.982;O[j+q]=P[j+q];P[j+q]+=v+(q==1?gv:0)}}
+    for(let k=0;k<NET_K;k++){const a=k/NET_K*6.2832,j=k*3;P[j]=cx+ox+Math.cos(a)*.71;P[j+1]=cy+oy-.04;P[j+2]=cz+oz+Math.sin(a)*.71;O[j]=P[j];O[j+1]=P[j+1];O[j+2]=P[j+2]} // the hooks
+    let bx,by,bz;if(ball){const f=b0?s/ST:1;bx=b0?b0.x+(ball.x-b0.x)*f:ball.x;by=b0?b0.y+(ball.y-b0.y)*f:ball.y;bz=b0?b0.z+(ball.z-b0.z)*f:ball.z}
+    const near=ball&&Math.abs(bx-cx)<1.4&&Math.abs(bz-cz)<1.4&&by<cy+.6&&by>cy-NET_L-.8;
+    for(let it=0;it<3;it++){
+     for(const[a,b,d,st]of C){const A=a*3,B=b*3,dx=P[B]-P[A],dy=P[B+1]-P[A+1],dz=P[B+2]-P[A+2],l=Math.hypot(dx,dy,dz)||1e-6;let e=(l-d)/l*st;if(st<1&&l<d)e*=.6;
+      const ka=a<NET_K?0:b<NET_K?1:.5,kb=b<NET_K?0:a<NET_K?1:.5;P[A]+=dx*e*ka;P[A+1]+=dy*e*ka;P[A+2]+=dz*e*ka;P[B]-=dx*e*kb;P[B+1]-=dy*e*kb;P[B+2]-=dz*e*kb}
+     if(near)for(let i=NET_K;i<N;i++){const j=i*3,dx=P[j]-bx,dy=P[j+1]-by,dz=P[j+2]-bz,l=Math.hypot(dx,dy,dz);if(l<br&&l>1e-5){const m=br/l;P[j]=bx+dx*m;P[j+1]=by+dy*m;P[j+2]=bz+dz*m}}}}
+   n.bp=ball?{x:ball.x,y:ball.y,z:ball.z}:null;
+   let w=0;for(const[a,b,,st]of C){if(st<1)continue;pos[w++]=P[a*3];pos[w++]=P[a*3+1];pos[w++]=P[a*3+2];pos[w++]=P[b*3];pos[w++]=P[b*3+1];pos[w++]=P[b*3+2]}g.attributes.position.needsUpdate=true}};
+ for(let i=0;i<40;i++)n.update(.02,0,0,0,null); // let it settle under its own weight
+ return n}
 const HP=[];function hoop3(s){
- const H=s>0?88.8:5.2,bx=H+s*1.2,px=s>0?95.5:-1.5,add=(m,x,y,z)=>{m.position.set(x,y,z);sc3.add(m);return m};
- add(new THREE.Mesh(new THREE.BoxGeometry(.2,3.5,6),M(0xdfe8f2,{transparent:true,opacity:.85})),bx,11.2,32);
- add(new THREE.Mesh(new THREE.BoxGeometry(.5,12,.5),M(0x555b66)),px,6,32);
- add(new THREE.Mesh(new THREE.BoxGeometry(Math.abs(px-bx),.4,.4),M(0x555b66)),(px+bx)/2,11.2,32);
- const r=new THREE.Mesh(new THREE.TorusGeometry(.75,.07,8,24),M(0xff5a1f));r.rotation.x=Math.PI/2;r.position.set(H,10,32);rimG.add(r);
- const n=new THREE.Mesh(new THREE.CylinderGeometry(.75,.45,1.3,12,5,true),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true}));n.position.set(H,9.35,32);rimG.add(n);HP.push({r,n,H,b:Array.from(n.geometry.attributes.position.array),t:9,a:0,sx:0,sz:0,dip:0,v:0,vt:9,va:0});
+ const H=s>0?88.8:5.2,bx=H+s*1.2,px=s>0?95.5:-1.5,add=(m,x,y,z,p)=>{m.position.set(x,y,z);(p||sc3).add(m);return m},box=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m),NSd=m=>{m.userData.ns=1;return m};
+ add(NSd(box(.2,3.5,6,HOOP_MAT.glass)),bx,11.2,32); // the glass (game collision: the slab 1.1-1.3 ft behind the rim centre, see boardCol)
+ const ln=add(new THREE.Mesh(new THREE.PlaneGeometry(6,3.5),HOOP_MAT.lines),bx-s*.105,11.2,32);ln.rotation.y=-s*Math.PI/2; // the white border + shooter's square, on the court side of the glass
+ for(const[y,h_]of[[12.93,.08],[9.47,.08]])add(box(.24,h_,6.08,HOOP_MAT.frame),bx,y,32); // aluminium frame: top / bottom rails
+ for(const z of[28.97,35.03])add(box(.24,3.5,.08,HOOP_MAT.frame),bx,11.2,z); // side rails
+ add(box(.36,.28,6.2,HOOP_MAT.pad),bx,9.34,32); // the padded bottom edge
+ add(box(.5,12,.5,HOOP_MAT.steel),px,6,32);add(box(.6,1.2,.6,HOOP_MAT.pad),px,.6,32); // the pole, padded at the bottom
+ add(box(Math.abs(px-bx)-.1,.4,.4,HOOP_MAT.steel),(px+bx)/2+s*.05,11.2,32);add(box(Math.abs(px-bx)*.8,.18,.18,HOOP_MAT.steel),(px+bx)/2+s*.4,12.4,32); // the arm + a brace
+ add(box(.06,.42,.62,HOOP_MAT.steel),bx-s*.13,9.93,32); // the rim's mounting plate on the glass
+ const r=new THREE.Mesh(new THREE.TorusGeometry(.75,.055,12,48),HOOP_MAT.rim);r.rotation.x=Math.PI/2;r.position.set(H,10,32);rimG.add(r);
+ const br=new THREE.Group();add(box(.4,.07,.5,HOOP_MAT.rim),s*.9,-.03,0,br);add(box(.06,.24,.34,HOOP_MAT.rim),s*1.02,-.12,0,br); // the bracket from the rim to the plate (moves with the rim)
+ for(let k=0;k<NET_K;k++){const a=k/NET_K*6.2832,hk=new THREE.Mesh(new THREE.TorusGeometry(.035,.012,4,8),HOOP_MAT.steel);hk.position.set(Math.cos(a)*.71,-.07,Math.sin(a)*.71);hk.rotation.y=-a;br.add(hk)} // net hooks
+ br.position.set(H,10,32);rimG.add(br);
+ const n=mkNet(rimG,H,10,32);HP.push({r,br,n,H,v:0,vt:9,va:0,dip:0});
 }
 hoop3(1);hoop3(-1);
 const numTex={};function nt(n){if(!numTex[n]){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle='#fff';x.font='bold 54px Arial';x.textAlign='center';x.fillText(n,32,50);numTex[n]=new THREE.CanvasTexture(c)}return numTex[n]}
@@ -2473,7 +2523,28 @@ function rosterIdx(t){if(MODE==5)return[0,1,2,3,4];if(MODE==1)return[PICK[t]];co
 function applyMode(){TM=[0,1].map(t=>{const ids=rosterIdx(t);FULL[t].forEach((p,i)=>{p.m.visible=ids.includes(i)});return ids.map((i,k)=>{const p=FULL[t][i];p.k=k;return p})})}
 const myP=()=>ACTIVE>=0&&SLOTS[ACTIVE]?TM[0].find(p=>p.build===SLOTS[ACTIVE]):null; // your created player on the floor
 const bt=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.fillStyle='#e8751a';x.fillRect(0,0,64,64);x.strokeStyle='#3a1a08';x.lineWidth=3;x.strokeRect(0,31,64,3);x.beginPath();x.moveTo(32,0);x.lineTo(32,64);x.stroke();return new THREE.CanvasTexture(c)})();
-const ballM=new THREE.Mesh(new THREE.SphereGeometry(.4,16,12),new THREE.MeshLambertMaterial({map:bt}));sc3.add(ballM);
+// ===== THE BALL (v1.99): a 1024 x 512 wrap-around (equirectangular) leather texture worked out per pixel: pebbled grain, the 8-panel channels
+// (two great circles + the two curved seams, ovals around the sides), a stamped logo, slight wear; plus a bump map so the pebbles and the grooves catch the light. =====
+const BALL_TX=(()=>{const W=1024,H_=512,c=document.createElement('canvas'),bc=document.createElement('canvas');c.width=bc.width=W;c.height=bc.height=H_;
+ const x=c.getContext('2d'),y=bc.getContext('2d'),im=x.createImageData(W,H_),bm=y.createImageData(W,H_),D=im.data,E=bm.data;
+ const hs=(a,b,c_)=>{let h=Math.sin(a*127.1+b*311.7+c_*74.7)*43758.5453;return h-Math.floor(h)}; // hash
+ const peb=(px,py,pz)=>{const f=22,X=px*f,Y=py*f,Z=pz*f,ix=Math.floor(X),iy=Math.floor(Y),iz=Math.floor(Z);let m=9; // cellular noise: distance to the nearest pebble centre
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)for(let d=-1;d<=1;d++){const cx=ix+a+hs(ix+a,iy+b,iz+d),cy=iy+b+hs(iy+b,iz+d,ix+a),cz=iz+d+hs(iz+d,ix+a,iy+b),q=(X-cx)**2+(Y-cy)**2+(Z-cz)**2;if(q<m)m=q}return Math.sqrt(m)};
+ const C1=Math.cos(.98);
+ for(let j=0;j<H_;j++){const la=(.5-(j+.5)/H_)*Math.PI,cl=Math.cos(la),sl=Math.sin(la);
+  for(let i=0;i<W;i++){const lo=(i+.5)/W*2*Math.PI,px=cl*Math.cos(lo),py=sl,pz=cl*Math.sin(lo);
+   // seams: the equator (y=0), the meridian ring (x=0), and the curved seams around +-x (squashed into tall ovals)
+   const s1=Math.abs(py),s2=Math.abs(px),qn=Math.hypot(px,py*.78,pz*1.25),s3=Math.abs(Math.abs(px)/qn-C1)*1.15,sd=Math.min(s1,s2,s3),w=.017;
+   const gr=sd<w?Math.cos(sd/w*Math.PI/2):0,ed=sd>=w&&sd<w*1.9?Math.sin((sd-w)/(w*.9)*Math.PI):0; // groove, and the raised leather lip either side
+   const pb=peb(px,py,pz),bump=Math.max(0,1-pb*1.7); // pebble height
+   const n=hs(i>>3,j>>3,7)*.06+hs(i>>5,j>>5,3)*.05; // slight dye / wear variation
+   let r=186,g_=76,b=30;const k=(.86+n+bump*.12-ed*.04)*(1-gr*.86);r*=k;g_*=k;b*=k;if(gr>0){r+=12*gr;g_+=8*gr;b+=6*gr}
+   const o=(j*W+i)*4;D[o]=Math.min(255,r);D[o+1]=Math.min(255,g_);D[o+2]=Math.min(255,b);D[o+3]=255;
+   const hv=Math.max(0,Math.min(255,150+bump*70+ed*25-gr*150));E[o]=E[o+1]=E[o+2]=hv;E[o+3]=255}}
+ x.putImageData(im,0,0);y.putImageData(bm,0,0);
+ for(const[cx,f]of[[W*.5,1],[0,-1],[W,-1]]){x.save();x.translate(cx,H_*.5-34);x.fillStyle='rgba(20,10,5,.75)';x.font='italic 900 30px Georgia,serif';x.textAlign='center';x.fillText('HARDWOOD',0,0);x.font='bold 15px system-ui,sans-serif';x.fillText(f>0?'OFFICIAL GAME BALL':'27  ·  INDOOR / OUTDOOR',0,22);x.restore()} // the stamp, on two panels
+ const T=t=>{const k=new THREE.CanvasTexture(t);k.anisotropy=8;return k};return{map:T(c),bump:T(bc)}})();
+const ballM=new THREE.Mesh(new THREE.SphereGeometry(.4,40,28),new THREE.MeshStandardMaterial({map:BALL_TX.map,bumpMap:BALL_TX.bump,bumpScale:.012,roughness:.66,metalness:0}));sc3.add(ballM);
 const ballS=new THREE.Mesh(shadowG,shadowM);ballS.rotation.x=-Math.PI/2;ballS.scale.set(.5,.5,.5);sc3.add(ballS);
 const ring=new THREE.Mesh(new THREE.RingGeometry(1.75,2.0,24),new THREE.MeshBasicMaterial({color:0xffd23f,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;sc3.add(ring);
 const arrow=new THREE.Mesh(new THREE.ConeGeometry(.5,1,8),new THREE.MeshBasicMaterial({color:0xffd23f}));arrow.rotation.x=Math.PI;sc3.add(arrow);
@@ -2741,13 +2812,23 @@ function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}const on=pv?pv.on
  const tg0=cool&&(on||bst>0)?(bst>.28?9:sb=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?(tb(IM.k)=='SUN'?40:12)*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=((SET.tlight?tg:0)-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
  ballM.material.emissive.setHex(on?st.L:0);ballM.material.emissiveIntensity=on?.85+.2*Math.sin(T*40):1}
 
+// ===== BACKBOARD COLLISION (v1.99), game units: the glass is the slab 11-13 behind the rim centre, HY +-30 wide, 94.5-129.5 high; the ball (radius 4) can't get into it.
+// Swept against the ball's last position, so it bounces off whichever face or edge it came at (front, back, sides, bottom, top). Returns the hoop's x, or 0.
+const BB={f:11,b:13,w:30,lo:94.5,hi:129.5,r:4};
+function boardCol(px,py,pz){for(const H of[52,888]){const D=H>470?1:-1,u=(B.x-H)*D,u0=(px-H)*D,r=BB.r;
+ if(u<=BB.f-r||u>=BB.b+r||Math.abs(B.y-HY)>=BB.w+r||B.z<=BB.lo-r||B.z>=BB.hi+r)continue;
+ if(u0<=BB.f-r){B.x=H+D*(BB.f-r);if(B.vx*D>0)B.vx=-B.vx*.62;B.vy*=.85}else if(u0>=BB.b+r){B.x=H+D*(BB.b+r);if(B.vx*D<0)B.vx=-B.vx*.62;B.vy*=.85}
+ else if(Math.abs(py-HY)>=BB.w+r){const sg=Math.sign(B.y-HY);B.y=HY+sg*(BB.w+r);if(B.vy*sg<0)B.vy=-B.vy*.6}
+ else if(pz<=BB.lo-r){B.z=BB.lo-r;if(B.vz>0)B.vz=-B.vz*.5}else if(pz>=BB.hi+r){B.z=BB.hi+r;if(B.vz<0)B.vz=-B.vz*.5}
+ else B.x=H+D*(u0<12?BB.f-r:BB.b+r); // (already inside: out through the nearest face)
+ const sp=Math.hypot(B.vx,B.vy,B.vz);if(T-(B.bbT||-9)>.12&&sp>20){B.bbT=T;sfxBoard(Math.min(1,sp/380));rimKick(H==888||HC?0:1,Math.min(.6,sp/500))}
+ return H}return 0}
+function sfxBoard(g){const k=.9+Math.random()*.2;OUTB='court';try{nz(.09,{ft:'lowpass',f0:900*k,f1:180,v:.42*g,at:.002,rv:.25});tn(150*k,85,.13,{v:.3*g,at:.002});nz(.03,{ft:'bandpass',f0:2600*k,q:1.2,v:.12*g,at:.0008});tn(1150*k,1100*k,.22,{type:'triangle',v:.025*g,at:.003,rv:.4})}finally{OUTB='sfx'}} // the glass: a dull thud, the frame's knock and a faint ring
 function rimKick(i,a){const h=HP[HC?0:i];if(!h)return;h.v+=2.2*a;h.va=.016*a;h.vt=0}
-function netHit(i,a,vx,vy){const h=HP[HC?0:i];h.t=0;h.a=a;h.sx=Math.max(-.5,Math.min(.5,vx/220));h.sz=Math.max(-.5,Math.min(.5,vy/220))}
-function netUpd(dt){HP.forEach((h,idx)=>{h.t+=dt;const e=Math.exp(-h.t*2.8),ps=h.n.geometry.attributes.position,b=h.b,bp=ballM.position,near=Math.abs(bp.x-h.H)<1.2&&Math.abs(bp.z-32)<1.2;
- for(let i=0;i<ps.count;i++){const x=b[i*3],y=b[i*3+1],z=b[i*3+2],hh=(.65-y)/1.3,ph=h.t*15-hh*4.5;let sc=1;
-  if(near)sc+=.28*Math.exp(-(((bp.y-(h.n.position.y+y))/.6)**2));
-  ps.setXYZ(i,x*sc+h.sx*Math.sin(h.t*10-hh*3)*e*hh,y-h.a*Math.sin(ph)*e*hh*.3,z*sc+h.sz*Math.sin(h.t*9-hh*3)*e*hh)}
- ps.needsUpdate=true;h.v+=(-900*h.dip-26*h.v)*dt;h.dip+=h.v*dt;h.dip=Math.max(-.02,Math.min(.05,h.dip));h.vt+=dt;const vb=h.va*Math.exp(-h.vt*9)*Math.sin(h.vt*70);h.r.position.set(h.H+vb,10-h.dip,32+vb*.5);h.n.position.set(h.H+vb,9.35-h.dip,32+vb*.5)})}
+function netHit(i,a,vx,vy){const h=HP[HC?0:i];if(h)h.n.kick(a,Math.max(-.5,Math.min(.5,vx/220)),Math.max(-.5,Math.min(.5,vy/220)))}
+function netUpd(dt){HP.forEach(h=>{ // the rim shudders (dip + vibration) and carries the net's hooks; the net simulates and meets the ball
+ h.v+=(-900*h.dip-26*h.v)*dt;h.dip+=h.v*dt;h.dip=Math.max(-.02,Math.min(.05,h.dip));h.vt+=dt;const vb=h.va*Math.exp(-h.vt*9)*Math.sin(h.vt*70);
+ h.r.position.set(h.H+vb,10-h.dip,32+vb*.5);h.br.position.copy(h.r.position);h.n.update(dt,vb,-h.dip,vb*.5,ballM.visible?ballM.position:null)})}
 const ex=(a,b,dt,r)=>a+(b-a)*(1-Math.exp(-r*dt));
 const sm3=x=>x*x*(3-2*x);
 // kfc: a smooth curve through the keys (monotone cubic / PCHIP: no overshoot, holds stay flat) - the joints keep moving through each key instead of
@@ -4652,9 +4733,6 @@ function makePS(N){const pos=new Float32Array(N*3),col=new Float32Array(N*3),siz
   update(dt,fovScale){mat.uniforms.sc.value=fovScale;for(let i=0;i<N;i++){if(life[i]<=0){siz[i]=0;continue}life[i]-=dt;if(life[i]<=0){siz[i]=0;continue}const u=1-life[i]/mx[i],d=Math.exp(-1.4*dt);
     vel[i*3]*=d;vel[i*3+1]=vel[i*3+1]*d+buo[i]*dt;vel[i*3+2]*=d;pos[i*3]+=vel[i*3]*dt;pos[i*3+1]+=vel[i*3+1]*dt;pos[i*3+2]+=vel[i*3+2]*dt;ramp(u,Math.min(1,(1-u)*2.2),i);siz[i]=s0[i]*(1-.45*u)}
    geo.attributes.position.needsUpdate=geo.attributes.color.needsUpdate=geo.attributes.size.needsUpdate=true}}}
-function ballTex(){const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');x.fillStyle='#e8661c';x.fillRect(0,0,256,128);
- x.strokeStyle='#1a0d06';x.lineWidth=4;x.beginPath();x.moveTo(0,64);x.lineTo(256,64);x.moveTo(64,0);x.lineTo(64,128);x.moveTo(192,0);x.lineTo(192,128);x.stroke();
- x.beginPath();x.ellipse(0,64,52,64,0,-1.2,1.2);x.ellipse(128,64,52,64,0,1.94,4.34);x.ellipse(256,64,52,64,0,1.94,4.34);x.stroke();const t=new THREE.CanvasTexture(c);return t}
 // ---- logo: black-and-white street blackletter ("Old English" style), drawn onto a texture that hangs BEHIND the lineup in the 3D scene.
 // Uses the UnifrakturMaguntia web font when it has loaded (it is redrawn the moment it arrives); offline it falls back to a heavy serif.
 function makeLogo(c){c=c||document.createElement('canvas');c.width=1024;c.height=420;const x=c.getContext('2d');x.clearRect(0,0,1024,420);let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
@@ -4701,7 +4779,7 @@ function buildMenuScene(){if(MN.built)return;MN.built=true;
  for(let r=0;r<4;r++){const y=3.5-r*.32,rr=1.2-r*.14;for(let k=0;k<14;k++){const a=k/14*6.283,b=(k+1)/14*6.283;nv.push(Math.cos(a)*rr,y,Math.sin(a)*rr-.2,Math.cos(b)*rr,y,Math.sin(b)*rr-.2)}}
  const ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.Float32BufferAttribute(nv,3));mHoop.add(new THREE.LineSegments(ng,new THREE.LineBasicMaterial({color:0xf4f6fa,transparent:true,opacity:.75})));
  // --- the ball
- mBall=new THREE.Mesh(new THREE.SphereGeometry(.6,24,16),new THREE.MeshStandardMaterial({map:ballTex(),roughness:.7,emissive:0x602000,emissiveIntensity:.8}));mBall.visible=false;msc.add(mBall);
+ mBall=new THREE.Mesh(new THREE.SphereGeometry(.6,40,28),new THREE.MeshStandardMaterial({map:BALL_TX.map,bumpMap:BALL_TX.bump,bumpScale:.012,roughness:.7,emissive:0x602000,emissiveIntensity:.8}));mBall.visible=false;msc.add(mBall);
  mBallL=new THREE.PointLight(0xff7a20,0,40,1.6);msc.add(mBallL);
  mPS=makePS(1400);msc.add(mPS.pts);
  // --- the lineup stage (far to the right of the hoop so the camera swap is instant)
@@ -5241,10 +5319,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.98'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.99'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.99','Realistic hoop and ball',['NEW BALL: pebbled leather grain, proper 8-panel channels (with the curved seams), a stamped logo and a bump map, so the grain and the grooves catch the light.','BACKBOARD COLLISION: the ball can no longer go into or through the glass. Loose balls and rebounds bounce off the front, the back, the sides and the bottom edge; a long miss bounces off the board; a shot from behind the backboard hits the back of it (no basket). The glass has its own thud.','NEW NET: a real diamond-mesh net hung from 12 hooks and simulated with physics. It sags under its own weight, stretches around the ball as it drops through, swings after a swish and shudders with the rim.','NEW RIM AND BACKBOARD: a painted steel rim with wear, a bracket and net hooks; tempered glass with the white border and shooter\'s square, an aluminium frame, a padded bottom edge and a padded pole. The STORE trail preview uses the new hoop too.']],
  ['v1.98','New menu music',['3 new songs in the menu music rotation: NIGHTBALL, NIGHTBALL 2 and BLACKTOP COURT (5 songs now, they take turns).','Menu music now plays on every menu screen outside a match (career, play now, rosters, online lobbies...), not only once you have been on the main menu. It still stops when a match starts.','In the career STORE the music drops right down so you can hear the ball trail previews, and comes back up when you leave the store.']],
  ['v1.97','Audio and visual settings',['PAUSE MENU is now RESUME · AUDIO · VISUALS · QUIT (mouse or keys). The same AUDIO and VISUALS pages are under CUSTOMISATION on the main menu.','AUDIO: MASTER, CROWD, COURT SOUNDS (bounces, footsteps, squeaks), SOUND EFFECTS, BALL TRAILS and MENU MUSIC volume sliders, plus MUTE IN BACKGROUND. Changing a slider plays a sample at the new level.','VISUALS: GRAPHICS PRESET (LOW / COOL / SUPER), RESOLUTION (AUTO, 480p, 720p, 1080p, 1440p, 4K), TARGET FPS (30, 60, 90, 120, 144, MAX), TRAILS LIGHT THE COURT on / off, CAMERA SHAKE (OFF / LOW / FULL), BRIGHTNESS and SHOW FPS.','RESET puts a page back to its defaults. Every setting applies live and is saved on this device.']],
  ['v1.96','Real footsteps',['Footsteps now use a recorded sneaker step instead of the synth thud','Each step gets a slight pitch and level change so it never repeats exactly','Footsteps sit at the same loudness as the ball bounce, and jogging is only a little quieter than sprinting']],
@@ -5944,10 +6023,10 @@ function spvInit(){if(SPV.sc)return;const s=new THREE.Scene();s.background=new T
  {const f=new THREE.Mesh(new THREE.PlaneGeometry(240,200),new THREE.MeshLambertMaterial({color:0x7a5532}));f.rotation.x=-Math.PI/2;f.position.set(70,0,-30);s.add(f)} // floor
  {const k=new THREE.Mesh(new THREE.PlaneGeometry(19,16),new THREE.MeshLambertMaterial({color:0x8c2f2f}));k.rotation.x=-Math.PI/2;k.position.set(84.5,.01,32);s.add(k)} // the key
  box(.25,.02,50,0xffffff,94,.02,32);box(.25,.02,16,0xffffff,75,.02,32); // baseline, free-throw line
- box(.12,3.5,6,0xffffff,90.1,11.25,32,{transparent:true,opacity:.55});box(.14,1.5,2,0xffffff,90.04,10.75,32,{transparent:true,opacity:.35}); // backboard + square
+ {const gb=new THREE.Mesh(new THREE.BoxGeometry(.2,3.5,6),HOOP_MAT.glass);gb.position.set(90,11.2,32);s.add(gb);const ln=new THREE.Mesh(new THREE.PlaneGeometry(6,3.5),HOOP_MAT.lines);ln.position.set(89.895,11.2,32);ln.rotation.y=-Math.PI/2;s.add(ln);box(.36,.28,6.2,0x1d2330,90,9.34,32)} // backboard (glass, markings, pad)
  box(.5,13,.5,0x30343f,97,6.5,32);box(7,.35,.35,0x30343f,93.6,12.4,32); // pole + arm
- {const r=new THREE.Mesh(new THREE.TorusGeometry(.75,.06,8,28),new THREE.MeshLambertMaterial({color:0xff6a1a}));r.rotation.x=Math.PI/2;r.position.set(88.8,10,32);s.add(r)}
- {const n=new THREE.Mesh(new THREE.CylinderGeometry(.75,.45,1.5,14,2,true),new THREE.MeshBasicMaterial({color:0xffffff,wireframe:true,transparent:true,opacity:.55}));n.position.set(88.8,9.25,32);s.add(n)}
+ {const r=new THREE.Mesh(new THREE.TorusGeometry(.75,.055,12,48),HOOP_MAT.rim);r.rotation.x=Math.PI/2;r.position.set(88.8,10,32);s.add(r)}
+ SPV.net=mkNet(s,88.8,10,32);
  SPV.ball=new THREE.Mesh(ballM.geometry,ballM.material);s.add(SPV.ball);
  SPV.sc=s;SPV.cam=new THREE.PerspectiveCamera(30,SPV_R[2]/SPV_R[3],.5,300)}
 // your player as the editor has him (look, height, weight, wingspan, ratings - the ratings set his jump and run like in a game), plus a teammate for the passes
@@ -6029,7 +6108,7 @@ function trlPrevUpd(dt){trlHost(SPV.sc);const bf=SPV.bf,on=!!(bf&&!bf.drop&&SPV.
  if(SPV.tw!=null){SPV.tw+=dt;if(SPV.tw>=IM.dur+1){SPV.tw=null;spvStart(SPV.key)}}
  TCAM=SPV.cam;trailUpd(dt,{on,pos:SPV.ball.position,k:SPV.tk});TCAM=null}
 function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=performance.now(),dt=Math.min(.033,(now-(SPV.lt||now))/1000)||.016;SPV.lt=now;
- spvStep(dt);for(const o of [SPV.p,SPV.q]){if(o===SPV.q&&!o.m.visible)continue;
+ spvStep(dt);SPV.net.update(dt,0,0,0,SPV.ball.visible?SPV.ball.position:null);for(const o of [SPV.p,SPV.q]){if(o===SPV.q&&!o.m.visible)continue;
   if(o===SPV.p){let tg=Math.atan2(o.fx,o.fy);if(SPV.c=='sht'&&SPV.ph=='set'&&SPV.v=='pfade')tg=-Math.PI/2;let da=tg-o.ang;da=Math.atan2(Math.sin(da),Math.cos(da));o.ang+=da*(1-Math.exp(-14*dt))}
   const d0=o.dunk,sp3=d0&&d0.sty==3?sm3(Math.max(0,Math.min(1,(d0.t-d0.f0)/((1-d0.f0)*.8))))*2*Math.PI:0;
   o.lyw=ex(o.lyw||0,d0?dkYaw(o,d0):o.lay?layYaw(o,o.lay):0,dt,o.lay&&o.lay.rv?(o.lay.rv==2?60:22):14);
