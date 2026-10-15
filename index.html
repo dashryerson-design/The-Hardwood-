@@ -2850,17 +2850,22 @@ function pose(p,dt){
  else if(p.bb&&!d&&!air&&!shoot&&!p.lay)bbPose(p,q); // BLOW-BY / CUT-OFF pair
  if(p.stun>0&&p.stb){const w=Math.sin(T*28),k=p.stb; // STUMBLE: quick backward shuffle, arms thrown out for balance, never falls
   q.Lh=-.45+.5*w;q.Rh=-.45-.5*w;q.Lk=.55+.35*Math.max(0,-w);q.Rk=.55+.35*Math.max(0,w);q.Lx=q.Rx=-.8*k;q.Le=q.Re=-.35;q.Lz=-.75*k;q.Rz=.75*k;q.lean=-.18*k;q.drop=.12;q.tw=0;q.r=18}
- const r=q.r,S=(j,v)=>{j.rotation.x=ex(j.rotation.x,v,dt,r)};
- S(m.L,q.Lh);S(m.L.k,q.Lk);S(m.R,q.Rh);S(m.R.k,q.Rk);S(m.aL,q.Lx);S(m.aL.e,q.Le);S(m.aR,q.Rx);S(m.aR.e,q.Re);S(m.aL.w,q.Lw);S(m.aR.w,q.Rw);
- m.aL.rotation.z=ex(m.aL.rotation.z,q.Lz,dt,r);m.aR.rotation.z=ex(m.aR.rotation.z,q.Rz,dt,r);
- m.L.rotation.z=ex(m.L.rotation.z,q.Lg,dt,r);m.R.rotation.z=ex(m.R.rotation.z,q.Rg,dt,r);
+ // ANIMATION BLENDING (v1.70): every joint is a critically damped spring (it keeps its own velocity), so going from one action into the next - a crossover into a
+ // jump shot, a run into a pass - the limbs carry their motion and ease into the new pose instead of changing direction in one frame. How stiff the springs are
+ // (q.r, set by each action) ramps over ~0.1s instead of jumping, and outside dunks / layups it is capped so nothing snaps.
+ m.rS=m.rS==null?q.r:ex(m.rS,Math.min(q.r,d0||p.lay?60:26),dt,25);
+ const r=m.rS,J=m.jv||(m.jv={}),w_=2/(1.1/r),x_=w_*dt,e_=1/(1+x_+.48*x_*x_+.235*x_*x_*x_),SP=(o,k,id,tg)=>{const c=o[k]-tg,v=J[id]||0,t=(v+w_*c)*dt;J[id]=(v-w_*t)*e_;o[k]=tg+(c+t)*e_},
+  S=(j,v,id)=>SP(j.rotation,'x',id,v);
+ S(m.L,q.Lh,0);S(m.L.k,q.Lk,1);S(m.R,q.Rh,2);S(m.R.k,q.Rk,3);S(m.aL,q.Lx,4);S(m.aL.e,q.Le,5);S(m.aR,q.Rx,6);S(m.aR.e,q.Re,7);S(m.aL.w,q.Lw,8);S(m.aR.w,q.Rw,9);
+ SP(m.aL.rotation,'z',10,q.Lz);SP(m.aR.rotation,'z',11,q.Rz);
+ SP(m.L.rotation,'z',12,q.Lg);SP(m.R.rotation,'z',13,q.Rg);
  const pu=d?(d.ph==2?d.pt:d.ph>2?1:0):p.pu;
  for(const l of [m.L,m.R]){const fl=-(l.rotation.x+l.k.rotation.x),ft_=l===m.L?q.Lf:q.Rf;l.k.f.rotation.x=ex(l.k.f.rotation.x,ft_!=null?ft_:air?.6:fl+(.6-fl)*sm3(ck((pu-.5)/.5)),dt,16)}
  if(d0||p.lay||m.hdk){const h=m.head;h.rotation.x=ex(h.rotation.x,m.hdT,dt,10);h.rotation.y=ex(h.rotation.y,m.hyT,dt,10);m.hdk=!!(d0||p.lay)||Math.abs(h.rotation.x)+Math.abs(h.rotation.y)>.002;if(!m.hdk)h.rotation.x=h.rotation.y=0}
- if(q.Ly!=null||q.Ry!=null||q.roll!=null||m.ayk){m.aL.rotation.y=ex(m.aL.rotation.y,q.Ly||0,dt,r);m.aR.rotation.y=ex(m.aR.rotation.y,q.Ry||0,dt,r);m.body.rotation.z=ex(m.body.rotation.z,q.roll||0,dt,r); // upper-arm swing round + torso side lean (leaning tomahawk), eased back afterwards
+ if(q.Ly!=null||q.Ry!=null||q.roll!=null||m.ayk){SP(m.aL.rotation,'y',14,q.Ly||0);SP(m.aR.rotation,'y',15,q.Ry||0);SP(m.body.rotation,'z',16,q.roll||0); // upper-arm swing round + torso side lean (leaning tomahawk), eased back afterwards
   m.ayk=q.Ly!=null||q.Ry!=null||q.roll!=null||Math.abs(m.aL.rotation.y)+Math.abs(m.aR.rotation.y)+Math.abs(m.body.rotation.z)>.002;if(!m.ayk)m.aL.rotation.y=m.aR.rotation.y=m.body.rotation.z=0} // dunker's eyes on the rim (eases back level afterwards)
- S(m.body,q.lean);m.body.rotation.y=ex(m.body.rotation.y,q.tw,dt,r);
- const hy=ex(m.L.position.y,2.3-q.drop,dt,r);m.L.position.y=m.R.position.y=hy;m.body.position.y=hy+((air||d)?0:q.bob||0);
+ S(m.body,q.lean,17);SP(m.body.rotation,'y',18,q.tw);
+ SP(m.L.position,'y',19,2.3-q.drop);const hy=m.L.position.y;m.R.position.y=hy;m.body.position.y=hy+((air||d)?0:q.bob||0);
  if(!d&&m.wd){for(const a of [m.aL,m.aR])a.rotation.x=Math.atan2(Math.sin(a.rotation.x),Math.cos(a.rotation.x))}m.wd=!!d;
 }
 // ===== INTRO STAR POSES. Driven by REAL time at ~0.6x (reads as slow motion but still clearly moves); joints ease in from wherever the walk cycle left them.
@@ -2872,7 +2877,8 @@ function headTo(m,rdt,tilt=0){const c=m.body.worldToLocal(_PC.copy(cam.position)
  h.rotation.y=ex(h.rotation.y,Math.max(-1.2,Math.min(1.2,Math.atan2(c.x,c.z))),rdt,6);h.rotation.x=ex(h.rotation.x,Math.max(-.45,Math.min(.45,-Math.atan2(c.y-3.45,Math.hypot(c.x,c.z)))),rdt,6);h.rotation.z=ex(h.rotation.z,tilt,rdt,6)}
 function starPose(p,gdt){const P=IN.pz,m=p.m,rdt=IN.rdt||.016,k=1-Math.exp(-6*rdt),t=(IN.rt-P.t0)*.6,V=(x,y,z)=>new THREE.Vector3(x,y,z),E=(o,key,v,r=7)=>{o[key]=ex(o[key],v,rdt,r)};
  if(!P.ap)P.ap=[m.aL.position.clone(),m.aR.position.clone()];
- if(P.kind=='WALK'){pose(p,gdt);headTo(m,rdt,.06);return} // legs + arm swing from the normal walk cycle (slowed), head locked on the camera
+ if(P.kind=='WALK'){pose(p,gdt);headTo(m,rdt,.06);return}
+ m.jv=null; // (posed directly here: the joint springs restart from this pose afterwards) // legs + arm swing from the normal walk cycle (slowed), head locked on the camera
  // square up to the camera
  const ty=Math.atan2(cam.position.x-p.x/10,cam.position.z-p.y/10);let da=ty-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.ang+=da*(1-Math.exp(-3*rdt));m.rotation.y=p.ang;
  // stand: legs straight, slightly apart
@@ -2895,6 +2901,7 @@ function poseReset(P){const m=P.p.m;if(P.ap){m.aL.position.copy(P.ap[0]);m.aR.po
 // (Customisation keeps the court behind its see-through panel as a live preview of the court / graphics settings.)
 const NO_COURT=new Set(['store','menu','career','archq','sigs','playnow','pnmode','slotact','create','look','rosters','rteam','cpos','cbio','ctrans','cteam','cconf','cdebut']);
 function blankGL(){R.setRenderTarget(null);R.setScissorTest(false);R.setViewport(0,0,960,540);R.setClearColor(0x000000,1);R.clear()}
+const _BLB={h:null,x:0,y:0,z:0,o:{x:0,y:0,z:0,xv:0,yv:0,zv:0}};
 function render(dt){
  const hb=(B.mode=='held'||B.mode=='inbound')?B.h:null;if(hb)hb.ct=ex(hb.ct||0,cont(hb),dt,10);
  TM.forEach(tm=>tm.forEach(p=>{
@@ -2906,13 +2913,13 @@ function render(dt){
   else if(B.mode=='held'&&B.h===p&&!p.dunk){ // ball handler: loose hoop assist, the body stays within ~FACE_MAX of the basket whatever the move direction
    let d=Math.atan2(Math.sin(tgt-ha),Math.cos(tgt-ha));if(Math.abs(d)>2.7)d=(p.fs||1)*Math.abs(d);else p.fs=Math.sign(d)||1;
    tgt=ha+FACE_MAX*Math.tanh(d/FACE_MAX);if((p.pst||0)>.05)tgt=Math.atan2(p.fx,p.fy)}
-  let da=tgt-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.sqd=sqz?da:0;p.sq=1-Math.min(1,Math.abs(da));p.ang+=da*(1-Math.exp(-(sqz?9:12)*dt));
+  let da=tgt-p.ang;da=Math.atan2(Math.sin(da),Math.cos(da));p.sqd=sqz?da:0;p.sq=1-Math.min(1,Math.abs(da));p.angv=p.angv||0;smdA(p,'ang',tgt,1.1/(sqz?9:12),dt); // (turning is a spring too: he swings round and settles, never whips)
   const sp3=p.dunk&&p.dunk.sty==3?sm3(Math.max(0,Math.min(1,(p.dunk.t-p.dunk.f0)/((1-p.dunk.f0)*.8))))*2*Math.PI:0;
   p.lyw=ex(p.lyw||0,p.dunk?dkYaw(p,p.dunk):p.lay?layYaw(p,p.lay):0,dt,p.lay&&p.lay.rv?(p.lay.rv==2?60:22):14); // leaning tomahawk: side-on to the rim · reverse layup: the 180-deg twist
   m.rotation.y=p.ang+(p.spin>0?(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1):0)+sp3+p.lyw+bbYaw(p);
   m.rotation.order='YXZ'; // (tilts are about his own axes, after the facing)
   if(p.kd){p.kd.t+=dt;if(p.kd.t>=(p.kd.T||KD.T)||p.stun<=0)p.kd=null}
-  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=ex(p.rbx||0,p.stun>0?(p.stb?-.14*p.stb:-1.2):0,dt,10);p.rbz=ex(p.rbz||0,0,dt,10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
+  if(p.kd){const k=p.kd;_KQ.setFromAxisAngle(_KA.set(k.fw,0,-k.lf).normalize(),kdAng(k));m.quaternion.copy(_KY.setFromAxisAngle(_KU,k.yaw+(k.spin||0)*sm3(Math.min(1,k.t/.35)))).multiply(_KQ)}/* (local push (lf, 0, fw): the head goes that way) */else{p.rbx=p.rbx||0;p.rbxv=p.rbxv||0;smd(p,'rbx',p.stun>0?(p.stb?-.14*p.stb:-1.2):0,.13,dt);p.rbz=ex(p.rbz||0,0,dt,10);m.rotation.x=p.rbx;m.rotation.z=p.rbz} // stumble (stb) = a slight backward lean; any other stun = full fall
   rdRestore(p);if((S=='intro'||S=='over')&&IN.pz&&IN.pz.p===p)starPose(p,dt);else pose(p,dt);m.sh.position.y=.03-p.z/10;
   if(p.kd&&p.z<1){m.updateMatrixWorld(true);_KB.makeEmpty();for(const o of [m.body,m.L,m.R])_KB.expandByObject(o);m.position.y-=_KB.min.y;m.sh.position.y+=_KB.min.y} // knocked down: whatever is lowest (back, backside, knees) rests ON the floor, not floating
   if(p.rd){rdStep(p,dt);if(p.rd){m.sh.quaternion.copy(m.quaternion).invert().multiply(_KQ.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2));m.sh.position.set(0,0,0);m.updateMatrixWorld(true);m.worldToLocal(m.sh.position.set(m.position.x,.03,m.position.z))}else{m.sh.quaternion.setFromAxisAngle(_KA.set(1,0,0),-Math.PI/2);m.sh.position.x=m.sh.position.z=0}} // RAGDOLL physics on top of the animation (the shadow stays flat on the floor)
@@ -2935,6 +2942,9 @@ function render(dt){
  if(ly){const L=ly.lay,a=new THREE.Vector3(),l=new THREE.Vector3();ly.m.updateMatrixWorld(true);(L.M?ly.m.aR:ly.m.aL).h.getWorldPosition(a);(L.M?ly.m.aL:ly.m.aR).h.getWorldPosition(l);
   const w=L.v!=null?laySep(L,layTau(ly,L)):1,mid=l.clone().add(a).multiplyScalar(.5);a.y+=.38;mid.y+=.15; // ball between both hands, then on the shooting hand
   ballM.position.copy(mid.lerp(a,w));B.x=ballM.position.x*10;B.y=ballM.position.z*10;B.z=ballM.position.y*10}
+ {const bh=B.mode=='held'||B.mode=='inbound'?B.h:null,L=_BLB; // BALL BLEND: when the held ball jumps between frames (dribble -> shot pocket, -> pass wind-up, -> layup / dunk gather) it glides there in ~0.1s instead (only what you see: the game's ball is untouched)
+  if(bh&&bh===L.h){const jx=L.x-ballM.position.x,jy=L.y-ballM.position.y,jz=L.z-ballM.position.z;if(jx*jx+jy*jy+jz*jz>1.44){L.o.x+=jx;L.o.y+=jy;L.o.z+=jz}}
+  L.h=bh;L.x=ballM.position.x;L.y=ballM.position.y;L.z=ballM.position.z;for(const k of ['x','y','z'])smd(L.o,k,0,.1,dt);ballM.position.x+=L.o.x;ballM.position.y+=L.o.y;ballM.position.z+=L.o.z}
  trailUpd(dt);
  ballM.rotation.x+=dt*6;ballS.position.set(ballM.position.x,.04,ballM.position.z);
  flash.visible=FX.t>0;if(FX.t>0){FX.t-=dt;flash.position.set(FX.x,FX.y,FX.z);const u=1-FX.t/.4;flash.scale.setScalar(.6+u*3);flash.material.opacity=.85*(1-u)}
@@ -4572,10 +4582,14 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v1.69'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v1.70'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v1.70','Smooth animation blending',['Every joint now moves like a spring that keeps its momentum, so one action flows into the next (a crossover into a jump shot, a sprint into a pass, a dunk into the landing) instead of snapping into the new pose.',
+  'How snappy an action is now ramps in and out instead of switching on in one frame, and only dunks and layups are allowed to be really quick.',
+  'Turning and stumbles / falls ease in and settle the same way.',
+  'The ball no longer teleports from the dribble into your hands when you start a shot, a pass or a layup: it glides there in about a tenth of a second.']],
  ['v1.69','Replay angles',['Replays now pick one of 7 camera angles each time (never the same one twice in a row). Each is still one smooth, continuous shot.',
   'New: BASELINE CAM (low on the floor behind the end line), BACKBOARD CAM (a tripod on top of the backboard), SIDELINE RAIL (a low dolly running with the play), SPIDERCAM (high overhead, slowly circling), COURTSIDE FAN (a handheld phone in the front row) and CHASE CAM (low behind the scorer).',
   'Press 1 during a replay to switch to the next angle. The angle name shows bottom left.']],
