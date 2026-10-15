@@ -147,7 +147,7 @@ function cont(p){let c=0,cb=null,nb=null,nl=1e9;const H=hx(p.team),hxv=H-p.x,hyv
  for(const d of TM[1-p.team]){{const l0=Math.hypot(d.x-p.x,d.y-p.y);if(l0<nl){nl=l0;nb=d}}if(d.stun>0)continue;const dx=d.x-p.x,dy=d.y-p.y,l=Math.hypot(dx,dy),n=dfN(d,wp),R=95*dfRng(n)*(1+sigv(d,'spoiler'))*(1+GUARD.rng*(d.grd||0));if(l>R||l<.1)continue;
   const al=(dx*hxv+dy*hyv)/hl/l;let k=(1-l/R)*(.45+.55*Math.max(0,al));const lane=Math.abs(dx*hyv-dy*hxv)/hl;if(al>0&&lane<14)k+=.2*(1-lane/14);if(d.jump>0)k+=.3;{const v=k*dfEff(n)*cBoost(d,p)*(1+GUARD.eff*(d.grd||0));if(v>c){c=v;cb=d}}}
  CBY=cb||nb;if(p.sep>0)c*=.3;if(p.fdk)c*=1-FADE.cont*p.fdk;return Math.max(0,Math.min(1,c))}
-function post(kind,h,next){ALAST=null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:Math.max(1.2,...TM.flat().map(q=>q.kd?(q.kd.T||KD.T)-q.kd.t+.2:0));B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
+function post(kind,h,next){ALAST=null;B.sw=kind=='make'&&B.z>RZ-20?{H:HC?888:B.x<470?52:888,ax:0,ay:0,avx:0,avy:0}:null;if(kind=='make'){RP.mk=1;RP.show=7}B.mode='post';B.kind=kind;B.t=kind=='tov'&&h?.45:Math.max(1.2,...TM.flat().map(q=>q.kd?(q.kd.T||KD.T)-q.kd.t+.2:0));B.live=kind=='tov'&&!!h;if(h)B.h=h;B.next=next;ms.on=false}
 function finRP(){if(RP.mk){RP.clip=RP.fr.filter(f=>f.t>=RP.rel-5&&f.t<=RP.rel+2);RP.mk=0;RP.has=RP.clip.length>5?1:0}}
 const CHK={t:0},SC1=15;
 function checkBall(team){if(PR&&PR<4)team=0;off=team;const o=team==0&&TM[0].length>1&&myP()?myP():TM[team][0],d=TM[1-team][o.k]||TM[1-team][0],H=hx(team),D=dr(team);
@@ -1245,7 +1245,7 @@ function dunkStep(p,dt){
    if(k.pv)SPV.slam=1;else if(k.mk&&!k.lost){const jc=jumpCont(p,k.pst?k.by:null),dn_=Math.max(0,Math.min(1,(((p.rt&&p.rt.dnk)||50)-25)/75));if(jc>0&&Math.random()<JC.dunk*jc*(1-.5*dn_)*(1-sigv(p,'rattle'))){k.mk=false;k.alt=1}} // VERTICAL CONTEST at the slam
    if(k.lost||k.pv){} // blocked on the way up (bkHit already sent the ball loose)
    else if(!k.mk)dunkMiss(p);
-   else{p.hot=(p.hot||0)+1;shotAtt(p,false);shotMade(p,false);sc[off]+=2;crowdRoar();gpShot(off,'I',1);pstat(p).pts+=2;awardP(p,XP_DUNK,'DUNK');{const a=asstFor(p);if(a){pstat(a).ast++;awardP(a,XP_AST,'ASSIST')}}rimKick(p.team,1);shake=.7;netHit(p.team,1.5,D*40,0);say((off?TEAMS[TI[1]].n+': ':'')+(k.oop?OOP.names[k.sty]:DKS[k.sty].nm||['TOMAHAWK','WIDE TOMAHAWK','TWO-HAND SLAM','360 SPIN','POSTERIZED','LEANING TOMAHAWK'][k.sty])+' ('+k.ft+'-FOOT)! +2','#ffd23f');beep(120,.3,'sawtooth');B.x=H;B.y=HY;B.z=RZ;B.vx=B.vy=0;B.vz=-90;post('make',null,1-off)}
+   else{p.hot=(p.hot||0)+1;shotAtt(p,false);shotMade(p,false);sc[off]+=2;crowdRoar();gpShot(off,'I',1);pstat(p).pts+=2;awardP(p,XP_DUNK,'DUNK');{const a=asstFor(p);if(a){pstat(a).ast++;awardP(a,XP_AST,'ASSIST')}}rimKick(p.team,1);shake=.7;netHit(p.team,1.5,D*40,0);say((off?TEAMS[TI[1]].n+': ':'')+(k.oop?OOP.names[k.sty]:DKS[k.sty].nm||['TOMAHAWK','WIDE TOMAHAWK','TWO-HAND SLAM','360 SPIN','POSTERIZED','LEANING TOMAHAWK'][k.sty])+' ('+k.ft+'-FOOT)! +2','#ffd23f');beep(120,.3,'sawtooth');B.x=H;B.y=HY;B.z=RZ;B.vx=(k.ax||0)*40;B.vy=(k.ay||0)*40;B.vz=-250;post('make',null,1-off)}
    if((k.sty==2||DKS[k.sty].hang)&&!k.lost&&k.mk){ // two-hand slam: grab the rim, hang and swing, momentum killed, then drop (handled by the p.hg step below)
     p.hgk=DKS[k.sty].hang==1;p.dunk=null;p.hg=.8;p.lz=Math.max(0,(10.15-7.14*p.ht)*10);p.hgx=H-k.ax*(3.9+12.2*p.ht);p.hgy=HY-k.ay*(3.9+12.2*p.ht);p.hfx=k.ax;p.hfy=k.ay;p.vx=p.vy=0;p.avx=p.avy=0;p.air=0;p.vz=0;p.pu=0;p.cr=0;p.jph=0;if(!k.pv)rimKick(p.team,1.4)}}
   return}
@@ -2071,7 +2071,7 @@ function step(dt){
   let hitB=0;if(!B.bk&&dt>0){const sv=[B.vx,B.vy,B.vz];B.vx=(B.x-q0[0])/dt;B.vy=(B.y-q0[1])/dt;B.vz=(B.z-q0[2])/dt;hitB=boardCol(q0[0],q0[1],q0[2]);if(!hitB){B.vx=sv[0];B.vy=sv[1];B.vz=sv[2]}} // a long miss, or a shot from behind the board, meets the glass
   if(hitB){if(B.sh)B.sh.hot=0;gpShot(off,B.xk||'I',0);B.mode='loose';B.age=0;say('MISS','#ff6b6b')}
   else if(f>=1){rimKick(off,B.make?.45:.8);
-   if(B.make){netHit(off,B.perf?1.7:1.1,(B.tx-B.sx)/B.dur,(B.ty-B.sy)/B.dur);B.x=H;B.y=HY;B.vx=B.vy=0;B.vz=(B.vz0-G*B.dur)*.5;sc[off]+=B.pts;crowdRoar();gpShot(off,B.xk||'I',1);if(B.sh){B.sh.hot=(B.sh.hot||0)+1;pstat(B.sh).pts+=B.pts;shotMade(B.sh,B.pts==3);if(B.as){pstat(B.as).ast++;awardP(B.as,XP_AST,'ASSIST')}if(B.xk=='3')awardP(B.sh,XP_3PT,'3-POINTER');else if(B.xk=='M')awardP(B.sh,XP_MID,'MID-RANGE');else awardP(B.sh,XP_LAY,'CLOSE SHOT')}shake=.2;beep(660,.2,'triangle');beep(880,.3,'triangle');say((off?TEAMS[TI[1]].n+' SCORES +':(B.txt||'SWISH!')+' +')+B.pts,off?tcol(1):'#4cff7a');post('make',null,1-off)}
+   if(B.make){netHit(off,B.perf?1.7:1.1,(B.tx-B.sx)/B.dur,(B.ty-B.sy)/B.dur);B.x=H;B.y=HY;B.vx=(B.tx-B.sx)/B.dur;B.vy=(B.ty-B.sy)/B.dur;B.vz=B.vz0-G*B.dur;sc[off]+=B.pts;crowdRoar();gpShot(off,B.xk||'I',1);if(B.sh){B.sh.hot=(B.sh.hot||0)+1;pstat(B.sh).pts+=B.pts;shotMade(B.sh,B.pts==3);if(B.as){pstat(B.as).ast++;awardP(B.as,XP_AST,'ASSIST')}if(B.xk=='3')awardP(B.sh,XP_3PT,'3-POINTER');else if(B.xk=='M')awardP(B.sh,XP_MID,'MID-RANGE');else awardP(B.sh,XP_LAY,'CLOSE SHOT')}shake=.2;beep(660,.2,'triangle');beep(880,.3,'triangle');say((off?TEAMS[TI[1]].n+' SCORES +':(B.txt||'SWISH!')+' +')+B.pts,off?tcol(1):'#4cff7a');post('make',null,1-off)}
    else{if(B.sh)B.sh.hot=0;gpShot(off,B.xk||'I',0);const a=Math.atan2(B.ty-HY,B.tx-H),sv=60+Math.random()*90,bk=Math.random()<.5,D=dr(off);B.vx=Math.cos(a)*sv+(bk?D*(70+Math.random()*60):-D*30);B.vy=Math.sin(a)*sv;B.vz=Math.abs(B.vz0-G*B.dur)*.5+(bk?40:0);B.mode='loose';B.age=0;say('MISS','#ff6b6b');beep(150,.15,'square')}}
  }else if(B.mode=='loose'){const q0=[B.x,B.y,B.z];B.age+=dt;B.vx*=1-.25*dt;B.vy*=1-.25*dt;B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;
   boardCol(q0[0],q0[1],q0[2]);
@@ -2081,7 +2081,7 @@ function step(dt){
   else if(B.age>.3){let b=null,bs=1e9;for(const p of TM[0].concat(TM[1])){if(p.stun>0||p.dunk)continue;const dd=Math.hypot(p.x-B.x,p.y-B.y),re=rbEdge(p);if(dd<rbR(p)*re.r&&B.z<95*p.ht+p.z){const k=dd-p.ht*10-8*rbN(p)+Math.random()*14-re.k;if(k<bs){bs=k;b=p}}}if(b)grab(b)}
  }else if(B.mode=='post'){
   B.t-=dt;
-  if(B.kind=='make'||B.kind=='miss'){const q0=[B.x,B.y,B.z];B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt;boardCol(q0[0],q0[1],q0[2]);if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.68;B.vx*=.85;B.vy*=.85}}
+  if(B.kind=='make'||B.kind=='miss'){const q0=[B.x,B.y,B.z];if(B.sw)swishStep(dt);else{B.vz-=G*dt;B.x+=B.vx*dt;B.y+=B.vy*dt;B.z+=B.vz*dt}boardCol(q0[0],q0[1],q0[2]);if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.68;B.vx*=.85;B.vy*=.85}}
   
   if(B.t<=0){if(B.kind=='miss'||B.live)live();else reset(B.next)}
  }
@@ -2814,6 +2814,23 @@ function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}const on=pv?pv.on
  const tg0=cool&&(on||bst>0)?(bst>.28?9:sb=='STORM'?(Math.random()<.3?4.2:.8):3.4+Math.random()*.8):0,tg=Math.max(tg0,cool&&IM.t>=0?(tb(IM.k)=='SUN'?40:12)*Math.pow(1-IM.t/IM.dur,2):0);tl.intensity+=((SET.tlight?tg:0)-tl.intensity)*Math.min(1,dt*(tg?22:7));tl.color.setHex(st.L);tl.position.copy(bp);
  ballM.material.emissive.setHex(on?st.L:0);ballM.material.emissiveIntensity=on?.85+.2*Math.sin(T*40):1}
 
+// ===== SWISH (v2.01), game units: a made ball goes through with the speed and angle it came in at, and the NET does the slowing. Inside the rim / net the ball meets
+// a soft wall: the rim's inside (radius SW.r0 for the ball's centre) narrowing to the stretched bottom ring (SW.r1). Pushing outward into the net: a stiff, heavily
+// damped spring (k, c) - the cords give, they don't bounce it back (moving inward they barely push: sl). The push on the cords turns into friction (mu) that brakes the
+// fall, and the push also swings the lower net along with the ball (a light pendulum hung from the rim: mass mn, spring ka, damping ca), so the ball keeps travelling in
+// its direction while it's caught. Plus a light brush of drag from the cords (dh sideways, dv down). Typical results: a deep three comes out at ~60% of its falling
+// speed, a mid-range shot ~70%, a close shot ~80%, layups / dunks ~90%; the ball carries 0.4-0.6 ft on through the net and drops out nearly straight, drifting a
+// little in its direction; the net swings 0.3-0.65 ft forward and swings back (the 3D net shows it: the ball pushes its knots).
+const SW={len:15,r0:2.95,r1:1.65,k:2600,c:110,sl:.12,mu:.6,dh:1,dv:2.2,mn:.35,ka:150,ca:8};
+function swishStep(dt){const w=B.sw,n=4,h=dt/n;
+ for(let i=0;i<n;i++){const dep=RZ-B.z;if(dep>SW.len+3){B.sw=null;B.x+=B.vx*h*(n-i);B.y+=B.vy*h*(n-i);B.vz-=G*h*(n-i);B.z+=B.vz*h*(n-i);return} // out the bottom: free fall from here
+  B.vz-=G*h;let fx=0,fy=0;const u=Math.max(0,Math.min(1,dep/SW.len));
+  if(dep>-2){const ra=SW.r0+(SW.r1-SW.r0)*u,dx=B.x-w.H-w.ax*u,dy=B.y-HY-w.ay*u,d=Math.hypot(dx,dy),e=d-ra;
+   if(e>0&&d>1e-6){const nx=dx/d,ny=dy/d,vr=(B.vx-w.avx*u)*nx+(B.vy-w.avy*u)*ny,F=vr>0?Math.max(0,SW.k*e+SW.c*vr):SW.k*e*SW.sl;
+    B.vx-=nx*F*h;B.vy-=ny*F*h;fx=nx*F;fy=ny*F;if(B.vz<0)B.vz=Math.min(0,B.vz+SW.mu*F*h*.8)}
+   if(dep>0){const a=Math.exp(-SW.dh*h);B.vx*=a;B.vy*=a;B.vz*=Math.exp(-SW.dv*h)}}
+  w.avx+=(fx*u/SW.mn-SW.ka*w.ax-SW.ca*w.avx)*h;w.avy+=(fy*u/SW.mn-SW.ka*w.ay-SW.ca*w.avy)*h;w.ax+=w.avx*h;w.ay+=w.avy*h;
+  B.x+=B.vx*h;B.y+=B.vy*h;B.z+=B.vz*h}}
 // ===== BACKBOARD COLLISION (v1.99), game units: the glass is the slab 11-13 behind the rim centre, HY +-30 wide, 94.5-129.5 high; the ball (radius 4) can't get into it.
 // Swept against the ball's last position, so it bounces off whichever face or edge it came at (front, back, sides, bottom, top). Returns the hoop's x, or 0.
 const BB={f:11,b:13,w:30,lo:94.5,hi:129.5,r:4};
@@ -5322,10 +5339,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.00'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.01'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.01','Real swishes',['A made shot now goes through the hoop with the speed and angle it came in at (it used to stop dead and drop straight down at half speed).','The net catches it: the cords give, pull on the ball and slow it with friction while the lower net swings along with it - the ball carries on in its direction through the net, then drops out nearly straight and lands about a foot past the rim.','How much the net slows it depends on how it comes in: a deep three leaves the net at ~60% of its falling speed, a mid-range shot ~70%, a close shot ~80%, layups and dunks ~90%.','Dunks are thrown down through the net (fast, in the direction of the dunk) instead of floating through it.']],
  ['v2.00','Smoother dribble moves',['The DOUBLE SPIN is gone: FLASHY 1\'s spin is now the SHOWTIME SPIN and FLASHY 2\'s is the TORNADO SPIN, both a single turn.','Every dribble move plays 35% slower (it still covers the same ground), and there is a little more time before the next one.','Ultra-smooth blending: when a move starts (even cutting into another one) the ball glides from wherever it really is onto the new move\'s path - no more ball teleporting.','Spins ease in and out instead of turning at one constant speed, and a spin or move that gets cut short no longer snaps the body round - the turn is absorbed and eased away.','The body\'s joints are softer through a move, the player turns less sharply mid-move, and the bounce in his stride is smoothed too.']],
  ['v1.99','Realistic hoop and ball',['NEW BALL: pebbled leather grain, proper 8-panel channels (with the curved seams), a stamped logo and a bump map, so the grain and the grooves catch the light.','BACKBOARD COLLISION: the ball can no longer go into or through the glass. Loose balls and rebounds bounce off the front, the back, the sides and the bottom edge; a long miss bounces off the board; a shot from behind the backboard hits the back of it (no basket). The glass has its own thud.','NEW NET: a real diamond-mesh net hung from 12 hooks and simulated with physics. It sags under its own weight, stretches around the ball as it drops through, swings after a swish and shudders with the rim.','NEW RIM AND BACKBOARD: a painted steel rim with wear, a bracket and net hooks; tempered glass with the white border and shooter\'s square, an aluminium frame, a padded bottom edge and a padded pole. The STORE trail preview uses the new hoop too.']],
  ['v1.98','New menu music',['3 new songs in the menu music rotation: NIGHTBALL, NIGHTBALL 2 and BLACKTOP COURT (5 songs now, they take turns).','Menu music now plays on every menu screen outside a match (career, play now, rosters, online lobbies...), not only once you have been on the main menu. It still stops when a match starts.','In the career STORE the music drops right down so you can hear the ball trail previews, and comes back up when you leave the store.']],
