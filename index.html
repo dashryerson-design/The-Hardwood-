@@ -834,7 +834,7 @@ function drbPose(p,q){const b=p.bm,S=drbA(b.v,b.k),u0=Math.min(1,b.t/b.d),u=S.tm
  if(S.hop)q.bob=(q.bob||0)+S.hop*Math.abs(Math.sin(u*2*Math.PI))*s2;
  if(S.Lg){q.Lg-=S.Lg*s2;q.Rg+=S.Lg*s2}
  if(S.ofa){const O=p.ls>0?'R':'L',sg=O=='L'?-1:1,[x,e,z]=S.ofa,sw=S.ofs?Math.sin(u*2*Math.PI):0;q[O+'x']=mx(q[O+'x'],x-1.1*sw,s2);q[O+'e']=mx(q[O+'e'],e,s2);q[O+'z']=mx(q[O+'z'],sg*z,s2)}} // (the off arm = the one without the ball)
-const MVD=.48,SPRINT=160,DRB_SLOW=1.35; // DRB_SLOW (v2.00): every dribble move plays 35% slower (same distance), so the moves and their blends read cleanly // SPRINT = top speed while Shift is held (the normal run is 120)
+const MVD=.3,SPRINT=160,DRB_SLOW=1.35; // DRB_SLOW (v2.00): every dribble move plays 35% slower (same distance), so the moves and their blends read cleanly // SPRINT = top speed while Shift is held (the normal run is 120)
  // dribble-move burst size (1 = the old, far too long glide)
 function move(p,k,nofo){
  const cmb=p.quick>0&&k!='X';if(p.mcd>0&&!cmb)return;p.chain=T-(p.mvT==null?-99:p.mvT)<.9?Math.min(3,(p.chain||0)+1):0;p.mvT=T;p.mvK=k;
@@ -856,7 +856,8 @@ function move(p,k,nofo){
  if(p.sig||(d&&d.sig)){const hc=sigv(p,'handles')*p.chain;if(hc){du*=1-hc;sp/=1-hc;sigFx(p,'handles')}const cl=d?sigv(d,'clamps'):0;if(cl&&inFront(d,p)){sp*=1-cl;sigFx(d,'clamps')}
   const ck=ckOn(p)?sigv(p,'check1v1'):0;if(ck){sp*=1+ck;sigFx(p,'check1v1')}const rl=sigv(p,'relentless');if(rl&&rm<1){rm=1-(1-rm)*(1-rl);sigFx(p,'relentless')}}
  if(MODE==1)p.ckT=-99;
- p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1)*DRB_SLOW,v:drbPick(p),l0:B.h===p&&p.bl?p.bl.slice():null};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb);
+ p.bx=Math.cos(an);p.by=Math.sin(an);p.burst=du;p.bs=sp*.6;p.bm={k,t:0,d:(k=='X'?.5:k=='C'||k=='N'?.55:.42)*(cmb?.67:1)*fd*(cc&&p.chain?1-.3*cc:1)*DRB_SLOW,v:drbPick(p),l0:B.h===p&&p.bl?p.bl.slice():null};p.spn=k=='C'?drbA(p.bm.v,'C').spn||1:1;if(p.bm.v)n=(cmb?'COMBO ':'')+drbA(p.bm.v,k).n; // (a package's move calls out its own name)
+ p.rec=du+.4;p.rm=rm;if(hes)p.quick=.9;p.vx*=.6;p.vy*=.6;sfxWoosh(k,cmb); // (v2.03: this line had been swallowed by the comment above since v1.82 - moves never cost any momentum)
  fo*=am;if(d&&d.swp>0)fo*=1.5;{const an='ZVB'.includes(k)?sigv(p,'ankle'):0;if(an)fo=Math.min(.95,fo+an)} // ankle-breaker chance now comes from the BALL HANDLE rating (was a flat 30-55%, 75% on combos)
  if(!nofo&&d&&Math.random()<fo){ankleBreak(d,p,k);say(n+' - ANKLES!','#ffd23f');shake=.25;if('ZVB'.includes(k)&&sigv(p,'ankle'))sigFx(p,'ankle')}else if(p.team==0&&p.k==ctl&&!AUTO)say(n);
  if(k=='X'&&d&&!(d.stun>0)){const hz=sigv(p,'hesi');if(hz&&Math.hypot(d.x-p.x,d.y-p.y)<70){d.lock=Math.max(d.lock||0,hz);sigFx(p,'hesi')}}
@@ -890,7 +891,7 @@ function bbTry(a,d){const n=r=>Math.max(0,Math.min(1,((r>0?r:50)-25)/75)),bh=n(a
  if(stop){const kx=-hx_*(1-st.kx)-px*g*st.kx,ky=-hy_*(1-st.kx)-py*g*st.kx,kl=Math.hypot(kx,ky)||1; // knocked back off his line (and sideways, away from where he was going)
   a.bb.lk=1;a.bb.vx=kx/kl*st.kb;a.bb.vy=ky/kl*st.kb;a.burst=0;a.rec=0;a.quick=0;a.pause=0;
   d.bb={k,st:1,r:1,t:0,d:st.d*.8,s:yawTo(d,a.x,a.y),lk:1,o:a,hx:hx_,hy:hy_};say(st.n+' - CUT OFF!','#4cc9ff');shake=.15;beep(110,.12,'square',.04)}
- else{const bx=hx_+px*g*st.sk,by=hy_+py*g*st.sk,bl=Math.hypot(bx,by);a.bx=bx/bl;a.by=by/bl;a.burst=st.d*.7;a.bs=st.bs*(.9+.2*bh);a.inv=Math.max(a.inv,st.d*.6);a.pause=0;
+ else{const bx=hx_+px*g*st.sk,by=hy_+py*g*st.sk,bl=Math.hypot(bx,by);a.bx=bx/bl;a.by=by/bl;a.burst=st.d*.7;a.bs=st.bs*(.9+.2*bh)*.85;a.inv=Math.max(a.inv,st.d*.6);a.pause=0;
   d.bb={k,st:0,r:1,t:0,d:st.d,s:yawTo(d,a.x+a.bx*60,a.y+a.by*60),lk:1,vx:-px*g*st.bt-hx_*st.bk,vy:-py*g*st.bt-hy_*st.bk};say(st.n+' - BLOW-BY!','#ffd23f');shake=.12}}
 // locked half of a pair, each step: a knocked-back handler loses all his momentum by the end; a cut-off defender slides to just in front of him; a beaten defender drifts on his bite
 function bbStep(p,b){
@@ -5346,10 +5347,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.02'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.03'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.03','Realistic dribble moves',['Dribble moves no longer work as a speed boost: each move covers about 40% less ground (from a standstill a crossover now moves you 2-3 ft, like a real one).','Moves now cost momentum, as they always should have: a bug since v1.82 had switched that off. Going into a move you slow down, and you are a beat slower for a moment after it, so running or sprinting straight is always faster than chaining moves - they are for style and for beating your man.','The hesitation-into-combo window and the move whoosh sounds work again (same bug).','Blow-bys (beating a defender in front of you at speed) are 15% less explosive.']],
  ['v2.02','Exact target FPS',['TARGET FPS is now exact: the game runs on its own frame clock instead of waiting for the screen, so 90 / 120 / 144 really are 90 / 120 / 144 frames a second (it used to stop at your screen\'s refresh rate, often 60).','New targets: 165 and 240. MAX still means one frame per screen refresh.','Note: a screen can only display as many frames as its refresh rate - extra frames still make the game update and respond more often.']],
  ['v2.01','Real swishes',['A made shot now goes through the hoop with the speed and angle it came in at (it used to stop dead and drop straight down at half speed).','The net catches it: the cords give, pull on the ball and slow it with friction while the lower net swings along with it - the ball carries on in its direction through the net, then drops out nearly straight and lands about a foot past the rim.','How much the net slows it depends on how it comes in: a deep three leaves the net at ~60% of its falling speed, a mid-range shot ~70%, a close shot ~80%, layups and dunks ~90%.','Dunks are thrown down through the net (fast, in the direction of the dunk) instead of floating through it.']],
  ['v2.00','Smoother dribble moves',['The DOUBLE SPIN is gone: FLASHY 1\'s spin is now the SHOWTIME SPIN and FLASHY 2\'s is the TORNADO SPIN, both a single turn.','Every dribble move plays 35% slower (it still covers the same ground), and there is a little more time before the next one.','Ultra-smooth blending: when a move starts (even cutting into another one) the ball glides from wherever it really is onto the new move\'s path - no more ball teleporting.','Spins ease in and out instead of turning at one constant speed, and a spin or move that gets cut short no longer snaps the body round - the turn is absorbed and eased away.','The body\'s joints are softer through a move, the player turns less sharply mid-move, and the bounce in his stride is smoothed too.']],
