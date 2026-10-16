@@ -305,7 +305,7 @@ function introDraw(){
 function endQ(){S='qend';qt=2.5;ms.on=false}
 function nextQ(){if(qn>=4&&sc[0]!=sc[1]){S='over';finishGame();endInit();return}qn++;qc=qn>4?45:QL;reset(qn%2==0?1:0);S='play'}
 
-function grab(p){pstat(p).reb++;awardP(p,XP_REB,'REBOUND');ALAST=null;const orb=p.team==B.so;if(!orb){TRB.team=1-p.team;TRB.t=3.8;gpBrk(p.team)}B.mode='held';B.vz=0;B.h=p;off=p.team;shot=orb?14:24;if(p.sig){if(sigv(p,'glass'))sigFx(p,'glass');if(orb&&sigv(p,'putback')){sigFx(p,'putback');if(hoopD(p)<100)p.think=0}}if(!orb)TM[p.team].forEach(q=>{if(sigv(q,'transition')){q.trT=3;sigFx(q,'transition')}});if(p.team==0)setCtl(p.k);if(MODE==1){checkBall(p.team);return}say(orb?'OFFENSIVE REBOUND':'REBOUND',orb?'#ffd23f':tcol(0));TM.forEach(t=>t.forEach(d=>d.chk=0));beep(260,.06)}
+function grab(p){pstat(p).reb++;awardP(p,XP_REB,'REBOUND');ALAST=null;const orb=p.team==B.so;if(!orb){TRB.team=1-p.team;TRB.t=3.8;gpBrk(p.team)}B.mode='held';B.vz=0;B.h=p;p.ct0=T;off=p.team;shot=orb?14:24;if(p.sig){if(sigv(p,'glass'))sigFx(p,'glass');if(orb&&sigv(p,'putback')){sigFx(p,'putback');if(hoopD(p)<100)p.think=0}}if(!orb)TM[p.team].forEach(q=>{if(sigv(q,'transition')){q.trT=3;sigFx(q,'transition')}});if(p.team==0)setCtl(p.k);if(MODE==1){checkBall(p.team);return}say(orb?'OFFENSIVE REBOUND':'REBOUND',orb?'#ffd23f':tcol(0));TM.forEach(t=>t.forEach(d=>d.chk=0));beep(260,.06)}
 // SPEED RATING (p.rt.spd, 25-100) scales every movement speed: 70 = the old baseline (x1.0), 25 = x0.80, 100 = x1.20
 const spdF=p=>.8+.4*Math.max(0,Math.min(1,((p&&p.rt&&p.rt.spd>0?p.rt.spd:70)-25)/75)),SPD_REF=.8+.4*(45/75);
 // Above 90 the rating grows exponentially: x1.10 at 90, ~x1.22 at 95, ~x1.50 at 99, ~x1.63 at 100
@@ -709,6 +709,7 @@ function passType(p,tg,o){const dx=tg.x-p.x,dy=tg.y-p.y,L=Math.hypot(dx,dy)||1,s
  return{ty,k}}
 function pass(p,tg,o){
  if(!tg)tg=passTarget(p);if(!tg)return; // (1v1: nobody to pass to)
+ if(p.ai)p.ai.pcT=T; // (for PASS AND CUT)
  if(p.ps&&!p.ps.go)return; // already winding up
  const hold=(B.mode=='held'||B.mode=='inbound')&&B.h===p,{ty,k}=passType(p,tg,o),P=PASS_T[ty],now=!hold||(o&&o.now);
  p.ps={ty,k,t:0,wu:now?0:P.wu,d:(now?0:P.wu)+.38,go:0,fa:P.face?Math.atan2(tg.x-p.x,tg.y-p.y):null,tg};p.bm=null;
@@ -1722,8 +1723,14 @@ function offBall(p,i,dt){
  else if(ai.t<=0){
   ai.t=.6+Math.random()*.5;
   if((role=='WG'||(ck_>0&&role!='BG'&&!(role=='SH'&&tpV(p)>=80)&&!gw(p,'hub')))&&bh&&B.mode=='held'&&!dv&&ai.ct<=0){ai.ct=(2.5+Math.random()*3)*(1-.45*ck_);if(Math.random()<(/ATHLETIC|ACROBATIC/.test(p.arch)?.7:.4)+.3*ck_){ai.cut=1.25;const c=lc(p,46,-side*42);ai.cx=c[0];ai.cy=c[1]}} // backdoor cut to the rim
+  if(bh&&B.mode=='held'&&!(ai.cut>0)&&Math.hypot(H-bh.x,HY-bh.y)<430){const dm=TM[1-p.team][gdf(1-p.team,p.k)],pd=Math.hypot(H-p.x,HY-p.y);
+   if(dv&&dm){const hd=Math.hypot(dm.x-bh.x,dm.y-bh.y),md=Math.hypot(dm.x-p.x,dm.y-p.y),fin=Math.max((p.rt&&p.rt.dnk)||50,(p.rt&&p.rt.lay)||50);
+    if((role=='BG'||fin>=72)&&hd<md&&hd<80&&pd<260&&T>(ai.dvT||0)){ai.dvT=T+3.5;ai.cut=1;const c=lc(p,28,-side*26);ai.cx=c[0];ai.cy=c[1];gpLbl(p,'DIVE')} // his man helped on the drive: dive to the rim
+    else if(role!='BG'&&tpV(p)<62&&fin>=66&&Math.sign(toLoc(p,p.x,p.y)[1])==-side&&Math.random()<.5){ai.cut=1;const c=lc(p,36,-side*60);ai.cx=c[0];ai.cy=c[1]}} // weak-side finisher: baseline cut
+   else if(!dv&&ai.pcT!=null&&T-ai.pcT<.4&&role!='BG'&&pd<380){ai.pcT=null;const bw=dm&&(Math.hypot(H-dm.x,HY-dm.y)>pd-5||Math.hypot(dm.x-p.x,dm.y-p.y)>55); // just passed it: his man ball-watching?
+    if(bw&&Math.random()<.55){ai.cut=1.2;const c=lc(p,40,(toLoc(p,p.x,p.y)[1]>0?1:-1)*20);ai.cx=c[0];ai.cy=c[1];gpLbl(p,'GIVE AND GO')}else ai.rel=1}} // ...cut to the rim, or relocate
   const bcH=bh&&role=='PM'&&Math.hypot(H-bh.x,HY-bh.y)>430;
-  if(bcH){ai.t=.3;ai.tx=Math.max(60,Math.min(880,bh.x+D*125));ai.ty=HY-(bh.y>=HY?1:-1)*80} // the playmaker drops back / angles over to be the outlet
+  if(bcH){ai.t=.25;ai.tx=Math.max(60,Math.min(880,bh.x+D*140));ai.ty=Math.max(70,Math.min(CW-70,bh.y+(bh.y>=HY?1:-1)*110));if(Math.hypot(ai.tx-p.x,ai.ty-p.y)>120)ai.pop=.4} // the point guard comes back for the OUTLET: ball-side wing, a step up the floor, sprinting
   else if(!(ai.cut>0)){
    const R=R3+14,arc=(deg,r)=>[r*Math.cos(deg*Math.PI/180),r*Math.sin(deg*Math.PI/180)],C=[];
    if(role=='SH'){const mm=p.arch=='MID-RANGE MAESTRO';(mm?[-50,-25,0,25,50]:p.arch=='STRETCH BIG'?[-35,0,35,-60,60]:[-82,-58,-32,0,32,58,82]).forEach(d=>C.push(arc(d,mm?175:R)))}
@@ -1743,6 +1750,8 @@ function offBall(p,i,dt){
      if(bh&&bh===sP&&stk&&Math.sign(c[1])==-side)sc+=35*stk; // the star isolates: the others go weak side
      if(bh&&bh.ai&&bh.ai.pu&&cd<130)sc-=80} // a teammate is posting up: clear the block
     if(dv&&segD(bh.x,bh.y,H,HY,x,y)<90)sc-=250; // keep out of the driver's lane
+    if(dv&&tpV(p)>=68&&(role=='SH'||role=='WG')){sc+=openness(p.team,x,y)*.7;const a1=Math.atan2(y-HY,x-H),a2=Math.atan2(bh.y-HY,bh.x-H);let da=Math.abs(Math.atan2(Math.sin(a1-a2),Math.cos(a1-a2)));sc+=Math.min(da,1.6)*40; // DRIFT: open kick-out angles away from the driver
+     if(Math.hypot(x-p.x,y-p.y)<40&&openness(p.team,p.x,p.y)>80)sc+=90} // his man left to help: stay put, hands ready
     if(role=='BG'&&!dv)sc+=(160-c[0])*.5; // bigs live near the basket
     if(dv&&role=='BG'&&c[0]<100)sc+=45; // bigs wait at the dunker spot / short corner for the dump-off
     if(role=='BG'&&c[0]<100&&!dv&&bh&&Math.sign(c[1])==side)sc+=25; // ball-side block
@@ -1887,6 +1896,27 @@ function scrStep(dt){const t=off,S=TM[t].filter(q=>T-(q.scrS||-9)<.12&&B.h!==q);
 // ---- on the ball (CPU handler): bring it up, then read the floor - shoot if it is a good shot, pass to a better one, otherwise use moves / a drive to create
 // FAST BREAK tuning: pass = chance he throws the hit-ahead pass when a runner is open (a fast-paced game plan raises it towards 1), think = how often he re-reads (s)
 const FBRK={pass:.85,think:[.15,.1]};
+// ===== BASKETBALL IQ (v2.07) - reads every AI player makes, from how the game is coached:
+//  OUTLET: a rebounder who isn't a ball handler secures it and outlets to the point guard (who comes back to the ball-side wing for it); only a wide-open runner
+//   ahead beats that (the hit-ahead pass). A wing with an elite handle (82+) or anyone 88+ may grab-and-go himself.
+//  HELP-DEFENCE READ on a drive: when a second defender steps in to stop the ball, the driver finds the man that defender left - a kick-out to the shooter,
+//   or the dump-off / lob to the big - more surely the better a passer he is. No help: keep going to the rim.
+//  DRIFT / DIVE / CUT off a drive: shooters slide into the open kick-out spots behind the help (and stay put when their man has left them), bigs whose man
+//   helps dive to the rim for the dump-off or lob, athletic finishers on the weak side cut along the baseline.
+//  PASS AND CUT / PASS AND MOVE: after giving it up he cuts to the rim if his man is ball-watching (give-and-go), otherwise he relocates.
+//  QUICK DECISIONS: role players shoot, drive or swing it within about a second of the catch instead of holding it; a hard closeout gets attacked off the dribble.
+//  CROWDED OFFENSIVE REBOUND: kick it back out to an open shooter instead of forcing a shot into three bodies.
+const IQ={outlet:.95,push:[82,88],helpR:58,kick:[.5,.45],hold:1.15,close:115,crowd:.5};
+const canPush=p=>{const b=(p.rt&&p.rt.bh)||50;return roleOf(p)=='PM'||(roleOf(p)!='BG'&&b>=IQ.push[0])||b>=IQ.push[1]};
+const pasN=p=>Math.max(0,Math.min(1,(((p.rt&&p.rt.pas)||50)-25)/75));
+function manOf(t,dq){for(const q of TM[t]){if(TM[1-t][gdf(1-t,q.k)]===dq)return q}return null} // the attacker this defender is assigned to
+function helpD(p){const H=hx(p.team),own=TM[1-p.team][gdf(1-p.team,p.k)],dr_=Math.hypot(H-p.x,HY-p.y);let b=null,bd=1e9; // a SECOND defender stepping in front of the driver
+ for(const d of TM[1-p.team]){if(d===own||d.stun>0)continue;const l=Math.hypot(d.x-p.x,d.y-p.y),dh=Math.hypot(H-d.x,HY-d.y);if(l<IQ.helpR+20&&dh<dr_+6&&segD(p.x,p.y,H,HY,d.x,d.y)<40&&l<bd){bd=l;b=d}}return b}
+function driveRead(p,ai,r){const hp=helpD(p);if(!hp)return false;const q=manOf(p.team,hp);if(!q||q===p||q.stun>0||q.dunk||q.lay)return false;
+ const ql=Math.hypot(q.x-p.x,q.y-p.y);if(ql<35||ql>520||laneClr(p.team,p.x,p.y,q.x,q.y)<20)return false;
+ const pr=IQ.kick[0]+IQ.kick[1]*pasN(p);if(r>pr)return false;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);
+ if(qd<110&&((q.rt&&q.rt.dnk)||50)>=70&&Math.random()<.4&&throwOop(p,q)){ai.drive=0;return true} // the big's man helped: lob it up
+ ai.drive=0;pass(p,q);return true}
 function cpuH(p,dt){
  p.think-=dt;
  const ai=p.ai||(p.ai={t:0,tx:p.x,ty:p.y,cut:0,ct:2,cx:0,cy:0,dv:0}),H=hx(p.team),D=dr(p.team),d=Math.hypot(H-p.x,HY-p.y),role=roleOf(p),drA=isDR(p),st=drA?Object.assign({},styleOf(p),{mv:DR_AI.mv}):styleOf(p),bc=d>430,lt=toLoc(p,p.x,p.y)[1];
@@ -1895,6 +1925,7 @@ function cpuH(p,dt){
  if(gp&&ai.pu){if(!p.fire&&!p.lay&&!p.dunk){gpPost(p,dt);return}ai.pu=null} // backing his man down in the post
  let tx,ty,spd=108;const pT=!bc&&!(ai.drive>0)?plyT(p):null;
  if(pT){tx=pT[0];ty=pT[1];spd=pT[2]} // running the set play: dribble to his spot
+ else if(bc&&!canPush(p)){const pm=primaryPM(p.team);if(pm&&pm!==p){tx=p.x+(pm.x-p.x)*.3;ty=p.y+(pm.y-p.y)*.3}else{tx=p.x;ty=p.y}spd=55} // OUTLET: he secures it and turns to find the point guard (no dribbling the length of the floor)
  else if(bc){const c=lc(p,300,lt*.4+Math.sin(T*.9+p.n)*60);tx=c[0];ty=c[1];spd=gp?(brk?128+45*gk(p.team,'pace'):near(p,TM[1-p.team],70)?128:128-25*Math.max(0,gk(p.team,'slow'))):128} // push the ball up the middle (sprint it on the break, walk it up when patient)
  else if(ai.drive>0){const c=lc(p,40,ai.dy);tx=c[0];ty=c[1];spd=122}
  else if(role=='PM'||role=='WG'){const c=lc(p,170+Math.sin(T*.5+p.n)*30,Math.sin(T*.9+p.n)*110);tx=c[0];ty=c[1]}
@@ -1918,13 +1949,14 @@ function cpuH(p,dt){
  if(brkOn(p.team)&&d>150){const pace=gp?Math.max(0,gk(p.team,'pace')):0;let tg=null,bs=-1e9;if(gp&&ai.fbk!==gp.brk){ai.fbk=gp.brk;gpLbl(p,'FAST BREAK')}
   for(const q of TM[p.team]){if(q===p||q.stun>0||q.dunk||q.lay)continue;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y),ql=Math.hypot(q.x-p.x,q.y-p.y);if(qd>d-90||ql<70||ql>(gp&&gw(q,'leak')?760:680))continue;
    const lc_=laneClr(p.team,p.x,p.y,q.x,q.y),op=openness(p.team,q.x,q.y);if(lc_<26||op<46)continue;const s_=(d-qd)*.6+op*2+Math.min(lc_,80)-Math.max(0,qd-160)*.15;if(s_>bs){bs=s_;tg=q}}
-  if(tg&&Math.random()<FBRK.pass+(1-FBRK.pass)*pace){pass(p,tg);return}p.think=FBRK.think[0]+Math.random()*FBRK.think[1];if(bc)return}
+  if(tg&&Math.random()<FBRK.pass+(1-FBRK.pass)*pace){pass(p,tg);return}p.think=FBRK.think[0]+Math.random()*FBRK.think[1];if(bc&&canPush(p))return} // (a rebounder who can't push it falls through to the OUTLET below)
  const c=cont(p),r=Math.random(),late=shot<4+10*fgOf(p),th=1-Math.max(0,14-shot)*.02+(gp?gk(p.team,'slow')*.25*Math.max(0,(shot-10)/14):0),dn0=near(p,TM[1-p.team],48);if(dn0)p.think=Math.min(p.think,.3+Math.random()*.15); // pressed: decide faster; the longer the clock runs the more he settles
 if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoever is open further up the floor) - non-playmakers don't dribble it up
-  if(role!='PM'){const pm=primaryPM(p.team);let tg=null;
-   if(pm!==p&&Math.hypot(pm.x-p.x,pm.y-p.y)<460&&laneClr(p.team,p.x,p.y,pm.x,pm.y)>22)tg=pm;
+  if(!canPush(p)||role!='PM'&&Math.random()<.6){const pm=primaryPM(p.team);let tg=null;
+   if(pm&&pm!==p&&pm.stun<=0&&Math.hypot(pm.x-p.x,pm.y-p.y)<640&&laneClr(p.team,p.x,p.y,pm.x,pm.y)>20)tg=pm;
+   else if(!canPush(p)){let bb=-1;for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const qb=((q.rt&&q.rt.bh)||50)+(roleOf(q)=='PM'?20:0);if(qb>((p.rt&&p.rt.bh)||50)&&qb>bb&&Math.hypot(q.x-p.x,q.y-p.y)<520&&laneClr(p.team,p.x,p.y,q.x,q.y)>22){bb=qb;tg=q}}} // no PG: the best ball handler in reach
    else{let bd=1e9;for(const q of TM[p.team]){if(q===p||q.stun>0)continue;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);if(qd<d-60&&Math.hypot(q.x-p.x,q.y-p.y)<460&&laneClr(p.team,p.x,p.y,q.x,q.y)>26&&qd<bd){bd=qd;tg=q}}}
-   if(tg&&r<.95)pass(p,tg)}
+   if(tg&&r<IQ.outlet)pass(p,tg)}
   return}
  if(!late&&plyH(p,ai,d))return; // SET PLAY: call one / run it (his passes, hand-offs and drives come from the play)
  if(gp&&gpHalf(p,ai,r,d,lt,late))return; // the game plan's read first: a post-up, early offence, the pick and roll
@@ -1949,8 +1981,12 @@ if(bc){p.think=.28+Math.random()*.2; // get the ball to the playmaker (or whoeve
   if(dm&&(ai.isoN||0)<DR_AI.moves&&shot>4&&r<DR_AI.iso){ai.isoN=(ai.isoN||0)+1;move(p,d>R3-30&&d<R3+70&&r<.45?'V':DR_AI.mv[Math.random()*DR_AI.mv.length|0]);p.think=.1+Math.random()*.08;return} // ISO
   if(own+DR_AI.thr>=th){release(p,qpick(c,p));return}} // contested, but he knows he can hit it
  const k3=gp?gk(p.team,'three'):0;
- if(ai.drive>0&&!late){if(best&&bs>=th+.3-.2*k3&&r<.3+.35*k3)pass(p,best);return} // committed to the drive: only a kick-out to a clearly open man (drive-and-kick teams kick it more)
- const thr=th+(d>R3&&role!='SH'?.15:0)-(role=='SH'?.05:0)+(gp?gpThr(p,d,c):0); // non-shooters need a better look from deep; shooters let it fly sooner
+ if(ai.drive>0&&!late){if(driveRead(p,ai,r))return;if(best&&bs>=th+.3-.2*k3&&r<.3+.35*k3)pass(p,best);return} // committed to the drive: read the help first // committed to the drive: only a kick-out to a clearly open man (drive-and-kick teams kick it more)
+ const thr=th+(d>R3&&role!='SH'?.15:0)-(role=='SH'?.05:0)+(gp?gpThr(p,d,c):0);
+ if(d<140&&!late&&best&&bs>=th-.1){let nd=0;for(const q of TM[1-p.team])if(Math.hypot(q.x-p.x,q.y-p.y)<52)nd++;if(nd>=2&&r<IQ.crowd){pass(p,best);return}} // crowded under the rim: kick it back out
+ if(!late&&!(ai.drive>0)&&dn0&&own<thr+.2){const vx=p.x-dn0.x,vy=p.y-dn0.y,vl=Math.hypot(vx,vy)||1,cs=(dn0.vx*vx+dn0.vy*vy)/vl,fin=Math.max((p.rt&&p.rt.lay)||50,(p.rt&&p.rt.dnk)||50,(p.rt&&p.rt.bh)||50);
+  if(cs>IQ.close&&fin>=62&&d>150&&r<.7){ai.drive=1.2;ai.dy=lt*.3+(dn0.y>p.y?-1:1)*35;gpLbl(p,'ATTACK THE CLOSEOUT');return}} // a defender flying at him: put it on the floor past him
+ if(role!='PM'&&!(ai.drive>0)&&!late&&p.ct0!=null&&T-p.ct0>IQ.hold&&own<thr&&best&&bs>own-.25&&r<.8){pass(p,best);return} // no shot after a second: swing it, don't hold it // non-shooters need a better look from deep; shooters let it fly sooner
  if(!late&&st.drv>=.8&&d>=130&&own<thr+.35&&r<.55){ai.drive=1.4;ai.dy=lt*.3+(Math.random()<.5?-1:1)*30;if(dn0)move(p,st.mv[Math.random()*st.mv.length|0]);return} // slashers attack the rim unless the shot is wide open
  if(late||(own>=thr&&own>=bs-.05&&r<.9)){if(gp&&!drA&&!late&&d>=MIDS&&Math.hypot(p.vx,p.vy)>60&&!(ai.set>T)&&!near(p,TM[1-p.team],70)){ai.set=T+.3;p.think=.1;return} // open: set his feet before a jump shot
   release(p,qpick(c,p));return}
@@ -5479,10 +5515,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.06'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.07'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.07','Basketball IQ',['OUTLET: a big (or any player who is not a ball handler) who grabs a defensive rebound secures it and outlets it to the point guard, who comes back to the ball-side wing to get it - no more bigs dribbling the length of the floor (the fast break used to skip this). A wide-open runner ahead still gets the hit-ahead pass first; wings with an elite handle (82+) can grab and go.','HELP-DEFENCE READS: when a second defender steps in to stop a drive, the driver finds the man that defender left - kick-out to the shooter, or the dump-off / lob to the big. Better passers read it more often.','OFF-BALL IQ: on a drive, shooters drift to open kick-out spots behind the help (and stay put when their man leaves them); bigs whose man helps DIVE to the rim; athletic weak-side finishers cut along the baseline. After passing, players cut to the rim when their man is ball-watching (GIVE AND GO) or relocate to a new spot.','QUICK DECISIONS: role players shoot, drive or swing the ball within about a second of catching it instead of holding it; a defender flying at them gets beaten off the dribble (ATTACK THE CLOSEOUT); a crowded offensive rebound gets kicked back out to an open shooter.']],
  ['v2.06','ULTRA graphics + 5 new trails',['NEW GRAPHICS PRESET: ULTRA (VISUALS, one step above SUPER) - a cinematic HDR pipeline with bloom on every light, trail and impact; image-based lighting and physically based materials on everything; a lacquered clear-coat floor with sharp full-resolution mirror reflections; a 4K court texture and a 4K wood-grain detail map; 8K shadows; ambient occlusion; a soft depth of field on the far background; colour grading, a lens vignette, chromatic aberration and film grain; volumetric light beams and drifting dust on night and indoor courts. It needs a powerful graphics card - the first time you pick it, the game warns you.','5 NEW BALL TRAILS: FROSTFIRE (ice-blue flames), LAVA (molten rock that drips), SYNTHWAVE (an 80s neon ribbon), ZEUS (golden lightning) and HEARTBREAKER (a trail of red hearts). 33 trails in all.','Make explosions on ball trails are ~60% smaller (the SUN GOD keeps its full size).']],
  ['v2.05','Dribble moves eased back',['The v2.03 dribble-move nerf was too harsh: moves now cover only about 12% less ground than they did before it (they had been cut by ~40%).','Moves still cost a little momentum (going in and just after), but much less: running or sprinting into a move now keeps ~85-90% of the ground you would have covered running straight (was ~65%).']],
  ['v2.04','Rarer, smarter ankle breakers',['Ankle breakers are rare now (they used to land on a quarter to half of all moves). Against a defender guarding you normally: about 2% of moves with no signature, 5% with ANKLE BREAKER bronze, 10% silver, 18% gold (the signature counts on crossovers, step-backs and between-the-legs).','They depend on the moment: a defender flying at you or running hard one way, when your move sends you the other way, is far more likely to go down (up to ~2.5x). A set, still defender almost never does. Catching him reaching for the ball or off his feet makes it 1.6x likelier; the closer he is, the likelier.','A better ball handle helps a little (x0.75 at 25 up to x1.25 at 100). Crossovers are the best ankle breaker, then step-backs, between-the-legs, hesitations, behind-the-back and spins.']],
