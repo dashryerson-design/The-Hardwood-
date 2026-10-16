@@ -329,7 +329,8 @@ function adEnd(){try{if(document.pointerLockElement)document.exitPointerLock()}c
 function adStep(dt){if(P.Digit6||P.Numpad6){AD.ss=AD.ss?0:1;beep(AD.ss?880:440,.06,'triangle')}if(P.ArrowDown)AD.sp=.25;if(P.ArrowUp)AD.sp=1;if(P.KeyT){AD.play=AD.play?0:1;const c=AD.clip;if(AD.play&&c&&AD.t>=c[c.length-1].t-.01){AD.t=c[0].t;repApply(c,AD.t,1)}} // (T at the very end: play it from the start)
  const f=_CV.set(Math.sin(AD.yaw)*Math.cos(AD.pit),Math.sin(AD.pit),Math.cos(AD.yaw)*Math.cos(AD.pit)),rx=-Math.cos(AD.yaw),rz=Math.sin(AD.yaw), // (right = forward x up)
   v=(K.ShiftLeft||K.ShiftRight?60:24)*dt,fw=(K.KeyW?1:0)-(K.KeyS?1:0),sd=(K.KeyD?1:0)-(K.KeyA?1:0);
- AD.x=Math.max(-40,Math.min(134,AD.x+(f.x*fw+rx*sd)*v));AD.y=Math.max(.5,Math.min(90,AD.y+f.y*fw*v+(K.Space?v:0))); // (Space: straight up)AD.z=Math.max(-40,Math.min(104,AD.z+(f.z*fw+rz*sd)*v));
+ AD.x=Math.max(-40,Math.min(134,AD.x+(f.x*fw+rx*sd)*v));AD.y=Math.max(.5,Math.min(90,AD.y+f.y*fw*v+(K.Space?v:0)));
+ AD.z=Math.max(-40,Math.min(104,AD.z+(f.z*fw+rz*sd)*v)); // (Space: straight up · v2.11: this line used to be swallowed by that comment, so the camera could never move along z - A / D strafing and most of W / S did nothing)
  const c=AD.clip;AD.mv=0;if(!c)return;const tm=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0)||AD.play; // (an arrow held wins over play)
  if(AD.play&&!K.ArrowRight&&!K.ArrowLeft&&AD.t>=c[c.length-1].t)AD.play=0; // played to the end: stop there
  if(tm){const t2=Math.max(c[0].t,Math.min(c[c.length-1].t,AD.t+tm*dt*AD.sp));AD.mv=t2!==AD.t?tm:0;repApply(c,t2,tm<0||AD.st);AD.t=t2;AD.st=0}}
@@ -5532,10 +5533,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.10'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.11'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.11','Admin camera: strafe',['ADMIN CAMERA: A / D now slide the camera left / right relative to where it is facing, and W / S fly properly in every direction (a bug had locked the camera to one axis of the court, so only forward / back along the length of the court worked).']],
  ['v2.10','Admin camera: super sensitivity',['ADMIN CAMERA: press 6 to switch SUPER SENSITIVITY on or off - the mouse turns the camera 7x as far (shown top right while it is on).']],
  ['v2.09','Admin camera everywhere',['The ADMIN CAMERA (pause, then press 1 three times) now works in 1v1 and in every practice drill too - the last ~12 seconds of play are always recorded now. (1v1 and the half-court drill still have no T replays after a bucket.)']],
  ['v2.08','Take the free points + 5 OUT',['Fast breaks: a ball handler with nobody between him and the rim now takes it all the way - no more pulling up or passing it back to a trailer. A good dunker (75+) throws it down 9 times in 10 (S.Waqas went from passing back 14 times in 20 test breaks to dunking all 20).','NEW: press 0 to call 5 OUT. Your teammates clear the paint and spread round the 3-point arc (corners, wings, top), leaving the lane open for you to drive. It lasts the possession; press 0 again to call it off.']],
