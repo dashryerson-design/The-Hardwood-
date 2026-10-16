@@ -1699,12 +1699,21 @@ function gpLeak(p,dt){const t=p.team;if(!gk(t,'leak')||!gw(p,'leak')||B.mode!='s
  if(!p.lk)return false;const c=[hx(t)-dr(t)*330,HY+(p.y>=HY?1:-1)*110],dx=c[0]-p.x,dy=c[1]-p.y,dl=Math.hypot(dx,dy)||1,mv=dl>6?Math.min(150*spdM(p),dl*3):0,a=Math.min(1,dt*5);
  p.vx+=(dx/dl*mv-p.vx)*a;p.vy+=(dy/dl*mv-p.vy)*a;p.fx=dx/dl;p.fy=dy/dl;return true}
 // ---- off the ball: every second or so each player scores a handful of spots for his role and runs to the best one
+// ===== 5 OUT (v2.08): press 0 - your teammates clear the paint and spread round the 3-point arc (both corners, both wings, the top; the spot nearest the ball
+// is left to the handler), giving him the lane to drive. It lasts for the possession, or press 0 again to call it off.
+const FIVE={on:0,t:0,c:null,ct:-1};
+function fiveSpots(t){if(FIVE.ct===T)return FIVE.c;FIVE.ct=T;const F=TM[t],h=B.mode=='held'||B.mode=='inbound'?B.h:B.mode=='pass'?B.to:null,R=R3+16,S=[-88,-45,0,45,88].map(a=>[R*Math.cos(a*Math.PI/180),R*Math.sin(a*Math.PI/180)]);
+ const mates=F.filter(q=>q!==h&&!isHum(q));let sp=S.map(c=>lc(F[0],c[0],c[1]));if(h&&h.team==t){let k=0,b=1e9;sp.forEach((c,i)=>{const l=Math.hypot(c[0]-h.x,c[1]-h.y);if(l<b){b=l;k=i}});sp.splice(k,1)}
+ for(const q of F)if(isHum(q)&&q!==h){let k=0,b=1e9;sp.forEach((c,i)=>{const l=Math.hypot(c[0]-q.x,c[1]-q.y);if(l<b){b=l;k=i}});sp.splice(k,1)} // (you take a spot too, wherever you stand)
+ const A=new Map();for(const q of mates){let k=-1,b=1e9;sp.forEach((c,i)=>{const l=Math.hypot(c[0]-q.x,c[1]-q.y);if(l<b){b=l;k=i}});if(k>=0){A.set(q,sp[k]);sp.splice(k,1)}}return FIVE.c=A}
 function offBall(p,i,dt){
  const ai=p.ai||(p.ai={t:0,tx:p.x,ty:p.y,cut:0,ct:1+Math.random()*3,cx:0,cy:0,dv:0}),role=roleOf(p),H=hx(p.team),D=dr(p.team);
  const hb=(B.mode=='held'||B.mode=='inbound')?B.h:B.mode=='pass'?B.to:null,bh=hb&&hb.team==p.team&&hb!==p?hb:null;
  ai.t-=dt;ai.ct-=dt;ai.cut=Math.max(0,ai.cut-dt);
  const dv=driving(bh)?1:0,side=bh?(toLoc(p,bh.x,bh.y)[1]>=0?1:-1):(p.y>=HY?1:-1);
  if(dv!=ai.dv){ai.dv=dv;ai.t=0} // a teammate starts (or stops) driving: re-think straight away
+ if(FIVE.on&&p.team==0&&B.mode!='shot'){const hb_=B.mode=='held'||B.mode=='inbound'?B.h:B.mode=='pass'?B.to:null;if(hb_&&hb_.team==0&&Math.hypot(hx(0)-hb_.x,HY-hb_.y)<470){const c=fiveSpots(0).get(p);if(c){const dx=c[0]-p.x,dy=c[1]-p.y,dl=Math.hypot(dx,dy)||1,mv=dl>6?Math.min(140*spdM(p)*trk(p),dl*3.2):0;
+  p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);const fx=hb_.x-p.x,fy=hb_.y-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;ai.t=Math.min(ai.t,.15);return}}} // 5 OUT: his spot on the arc
  {const pT=B.mode!='shot'?plyT(p):null;if(pT){const dx=pT[0]-p.x,dy=pT[1]-p.y,dl=Math.hypot(dx,dy)||1,mv=dl>6&&pT[2]?Math.min(pT[2]*spdM(p)*trk(p),dl*3.2):0; // SET PLAY: his part in it
   p.vx+=(dx/dl*mv-p.vx)*Math.min(1,dt*6);p.vy+=(dy/dl*mv-p.vy)*Math.min(1,dt*6);const fx=(bh?bh.x:H)-p.x,fy=(bh?bh.y:HY)-p.y,l=Math.hypot(fx,fy)||1;p.fx=fx/l;p.fy=fy/l;ai.t=Math.min(ai.t,.15);return}}
  const gp=GP[p.team],sp_=gp?gk(p.team,'space'):0,mv_=gp?gk(p.team,'move'):0,ck_=gp?gk(p.team,'cut'):0;if(ai.pu)ai.pu=null; // (his post-up ended when he gave the ball up)
@@ -1917,6 +1926,10 @@ function driveRead(p,ai,r){const hp=helpD(p);if(!hp)return false;const q=manOf(p
  const pr=IQ.kick[0]+IQ.kick[1]*pasN(p);if(r>pr)return false;const qd=Math.hypot(hx(q.team)-q.x,HY-q.y);
  if(qd<110&&((q.rt&&q.rt.dnk)||50)>=70&&Math.random()<.4&&throwOop(p,q)){ai.drive=0;return true} // the big's man helped: lob it up
  ai.drive=0;pass(p,q);return true}
+// OPEN LANE (v2.08): nobody between him and the rim (no defender in a corridor that widens towards the rim, none right in front of him) = take it all the way.
+// On a break or a clear lane he sprints to the rim and finishes - a good dunker (75+) dunks it 9 times in 10 - instead of pulling up or passing it back.
+function rimOpen(p){const H=hx(p.team),ux=H-p.x,uy=HY-p.y,L=Math.hypot(ux,uy)||1;if(L>520)return false;
+ for(const d of TM[1-p.team]){if(d.stun>0)continue;const rx=d.x-p.x,ry=d.y-p.y,t=(rx*ux+ry*uy)/L;if(t<-10)continue;const w=Math.abs(rx*uy-ry*ux)/L;if(t<L+20&&w<34+t*.12)return false;if(Math.hypot(rx,ry)<40)return false}return true}
 function cpuH(p,dt){
  p.think-=dt;
  const ai=p.ai||(p.ai={t:0,tx:p.x,ty:p.y,cut:0,ct:2,cx:0,cy:0,dv:0}),H=hx(p.team),D=dr(p.team),d=Math.hypot(H-p.x,HY-p.y),role=roleOf(p),drA=isDR(p),st=drA?Object.assign({},styleOf(p),{mv:DR_AI.mv}):styleOf(p),bc=d>430,lt=toLoc(p,p.x,p.y)[1];
@@ -1927,7 +1940,7 @@ function cpuH(p,dt){
  if(pT){tx=pT[0];ty=pT[1];spd=pT[2]} // running the set play: dribble to his spot
  else if(bc&&!canPush(p)){const pm=primaryPM(p.team);if(pm&&pm!==p){tx=p.x+(pm.x-p.x)*.3;ty=p.y+(pm.y-p.y)*.3}else{tx=p.x;ty=p.y}spd=55} // OUTLET: he secures it and turns to find the point guard (no dribbling the length of the floor)
  else if(bc){const c=lc(p,300,lt*.4+Math.sin(T*.9+p.n)*60);tx=c[0];ty=c[1];spd=gp?(brk?128+45*gk(p.team,'pace'):near(p,TM[1-p.team],70)?128:128-25*Math.max(0,gk(p.team,'slow'))):128} // push the ball up the middle (sprint it on the break, walk it up when patient)
- else if(ai.drive>0){const c=lc(p,40,ai.dy);tx=c[0];ty=c[1];spd=122}
+ else if(ai.drive>0){const c=lc(p,ai.open?18:40,ai.dy);tx=c[0];ty=c[1];spd=ai.open?150:122}
  else if(role=='PM'||role=='WG'){const c=lc(p,170+Math.sin(T*.5+p.n)*30,Math.sin(T*.9+p.n)*110);tx=c[0];ty=c[1]}
  else{tx=p.x;ty=p.y} // shooters and bigs who catch it: stay set
  let dx=tx-p.x,dy=ty-p.y,l=Math.hypot(dx,dy)||1,sp=l>8?spd:0;
@@ -1939,7 +1952,9 @@ function cpuH(p,dt){
  if(p.team==0&&CALL.n>0&&CLK()&&CALL.rd!==CALL.last&&T-CALL.last>.2){const me=TM[0][ctl];if(me&&me!==p&&me.stun<=0&&!me.dunk&&!me.lay){CALL.rd=CALL.last;const ql=Math.hypot(me.x-p.x,me.y-p.y);
   if(cont(me)<.45&&ql>=45&&ql<650&&laneClr(0,p.x,p.y,me.x,me.y)>=22&&Math.random()<.97){CALL.n=0;CALL.t=0;pass(p,me);return}}}
  // finish the drive: dunk (if he can) or layup as soon as he is in range
- if(ai.drive>0&&d<115){if(((p.rt&&p.rt.dnk)||50)>=62&&Math.random()<.5)startDunk(p);else if(layOK(p))startLayup(p);if(p.dunk||p.lay){ai.drive=0;return}}
+ {const op=!p.fire&&!p.lay&&!p.dunk&&!(p.ps&&!p.ps.go)&&B.h===p&&rimOpen(p);if(op&&!ai.open)p.think=0;ai.open=op;if(op){ai.drive=Math.max(ai.drive,.5);ai.dy=0}} // a clear lane: go
+ if(ai.drive>0&&d<(ai.open?125:115)){const dk=(p.rt&&p.rt.dnk)||50;if(dk>=62&&Math.random()<(ai.open?(dk>=75?.9:.6):.5))startDunk(p);else if(layOK(p))startLayup(p);if(p.dunk||p.lay){ai.drive=0;ai.open=0;return}}
+ if(ai.open&&p.think<=0){p.think=.12;return} // ...and no pass-backs or pull-ups on the way
  if(p.think>0)return;
  p.think=(role=='PM'?.35:.45)+Math.random()*.4;
  {const r=PLY[p.team]&&PLY[p.team].ph==0?null:oopTarget(p),df=r&&near(r,TM[1-p.team],200);if(r&&(!df||Math.hypot(df.x-r.x,df.y-r.y)>35)&&Math.hypot(hx(p.team)-r.x,HY-r.y)<120&&Math.random()<.25){throwOop(p,r);return}} // throw the lob to an open dunker
@@ -3684,6 +3699,8 @@ function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one fra
  if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+3)%4;if(P.ArrowDown||P.KeyS)PM=(PM+1)%4;
   if(P.Enter)pauseGo(PM);
   if(P.KeyK||P.Escape)S='play'}else if(P.KeyK&&S=='play'&&!NET.on)S='pause'; // (online there is no pause: K asks to leave, see onlStep)
+ if(S=='play'&&(P.Digit0||P.Numpad0)&&MODE!=1&&TM[0].length>1){FIVE.on=FIVE.on?0:1;say(FIVE.on?'5 OUT - SPREAD THE FLOOR':'5 OUT OFF',FIVE.on?'#7fffa0':'#cfd3dc');beep(FIVE.on?660:330,.08,'triangle')}
+ if(FIVE.on&&off!=0)FIVE.on=0; // (the call lasts the possession)
  if(P.KeyT&&!HC){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
  if(RP.want&&RP.has&&S=='play'){RP.want=0;startRep()}
  musUpd();navBlip();crowdUpd();if(S=='admin')adStep(dt);else if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S)&&!(S=='playnow'&&MM.ps==5))blankGL();else render(S=='intro'?dt*IN.ts:S=='replay'?dt*(RP.sp||1):S=='admin'&&AD.mv?dt*AD.sp:dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
@@ -5515,10 +5532,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.07'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.08'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.08','Take the free points + 5 OUT',['Fast breaks: a ball handler with nobody between him and the rim now takes it all the way - no more pulling up or passing it back to a trailer. A good dunker (75+) throws it down 9 times in 10 (S.Waqas went from passing back 14 times in 20 test breaks to dunking all 20).','NEW: press 0 to call 5 OUT. Your teammates clear the paint and spread round the 3-point arc (corners, wings, top), leaving the lane open for you to drive. It lasts the possession; press 0 again to call it off.']],
  ['v2.07','Basketball IQ',['OUTLET: a big (or any player who is not a ball handler) who grabs a defensive rebound secures it and outlets it to the point guard, who comes back to the ball-side wing to get it - no more bigs dribbling the length of the floor (the fast break used to skip this). A wide-open runner ahead still gets the hit-ahead pass first; wings with an elite handle (82+) can grab and go.','HELP-DEFENCE READS: when a second defender steps in to stop a drive, the driver finds the man that defender left - kick-out to the shooter, or the dump-off / lob to the big. Better passers read it more often.','OFF-BALL IQ: on a drive, shooters drift to open kick-out spots behind the help (and stay put when their man leaves them); bigs whose man helps DIVE to the rim; athletic weak-side finishers cut along the baseline. After passing, players cut to the rim when their man is ball-watching (GIVE AND GO) or relocate to a new spot.','QUICK DECISIONS: role players shoot, drive or swing the ball within about a second of catching it instead of holding it; a defender flying at them gets beaten off the dribble (ATTACK THE CLOSEOUT); a crowded offensive rebound gets kicked back out to an open shooter.']],
  ['v2.06','ULTRA graphics + 5 new trails',['NEW GRAPHICS PRESET: ULTRA (VISUALS, one step above SUPER) - a cinematic HDR pipeline with bloom on every light, trail and impact; image-based lighting and physically based materials on everything; a lacquered clear-coat floor with sharp full-resolution mirror reflections; a 4K court texture and a 4K wood-grain detail map; 8K shadows; ambient occlusion; a soft depth of field on the far background; colour grading, a lens vignette, chromatic aberration and film grain; volumetric light beams and drifting dust on night and indoor courts. It needs a powerful graphics card - the first time you pick it, the game warns you.','5 NEW BALL TRAILS: FROSTFIRE (ice-blue flames), LAVA (molten rock that drips), SYNTHWAVE (an 80s neon ribbon), ZEUS (golden lightning) and HEARTBREAKER (a trail of red hearts). 33 trails in all.','Make explosions on ball trails are ~60% smaller (the SUN GOD keeps its full size).']],
  ['v2.05','Dribble moves eased back',['The v2.03 dribble-move nerf was too harsh: moves now cover only about 12% less ground than they did before it (they had been cut by ~40%).','Moves still cost a little momentum (going in and just after), but much less: running or sprinting into a move now keeps ~85-90% of the ground you would have covered running straight (was ~65%).']],
@@ -6160,7 +6178,7 @@ const HL_MOVES=[
  {t:'JUMP / BLOCK',tag:'SPACE (DEFENCE)',d:'Jump to contest or block. A layup or dunk is only blocked if your hand actually gets to the ball, so get in the shooter\'s path and time your jump so your hand meets the ball on its way up: go a touch early rather than late, because a late jump almost never gets there.\nEven when you don\'t get a hand on it, being IN THE AIR close to a layup or dunk bothers it a lot (the closer you are, the higher your hand gets compared with the ball and the better your BLOCKING, the bigger the effect): layups get a much smaller meter window and lower odds, and dunks can rim out (ALTERED).'},
  {t:'GUARD STANCE',tag:'HOLD G (DEFENCE)',d:'Get low with your hands up: your contests are much bigger but you move slower (less slow with a high PERIMETER DEFENSE rating).'},
  {t:'SET PLAYS AND SCREENS',tag:'AI',d:'In the half court the AI offence runs real set plays instead of just moving around: FLASH CUT, ISO, FAKE HANDOFF, DRIBBLE HANDOFF, SPAIN PICK AND ROLL, STACK, KANSAS, GIVE AND GO, HORNS, FLOPPY, HAMMER, ELEVATOR DOORS, UCLA CUT and PRINCETON BACKDOOR (the play\'s name shows over the ball handler). Players cut off screens, set ball screens, roll to the rim, hand the ball off, and the handler hits the man the play gets open.\n• SCREENS are real: a defender who runs into one is held up. How long depends on the screener\'s STRENGTH and the defender\'s PERIMETER DEFENSE (a strong screen on a poor defender holds him over a second, an elite defender slides round a weak one almost straight away).\n• Teams lean towards plays that suit their game plan: pick-and-roll teams run Spain, Kansas and Horns, star teams run ISO, shooting teams run Floppy, Hammer, Stack and Elevator Doors, cutting teams run Flash Cut, Give and Go, UCLA Cut and Princeton Backdoor.'},
- {t:'CAMERA, PAUSE AND REPLAYS',tag:'1 · K · T',d:'• 1: switch camera (COURT / COURT LOW).\n• K: pause menu (RESUME, AUDIO, VISUALS, QUIT).\n• T: watch a replay after a bucket (every replay picks one of 7 camera angles: broadcast, baseline, backboard, sideline rail, spidercam, courtside fan, chase. 1 switches to the next angle, T goes back). T also skips the match intro. No replays in 1v1.'}];
+ {t:'CAMERA, PAUSE AND REPLAYS',tag:'1 · K · T · 0',d:'• 1: switch camera (COURT / COURT LOW).\n• 0: call 5 OUT - your teammates clear the paint and spread round the 3-point arc so you have the lane to drive (lasts the possession; press 0 again to call it off).\n• K: pause menu (RESUME, AUDIO, VISUALS, QUIT).\n• T: watch a replay after a bucket (every replay picks one of 7 camera angles: broadcast, baseline, backboard, sideline rail, spidercam, courtside fan, chase. 1 switches to the next angle, T goes back). T also skips the match intro. No replays in 1v1.'}];
 const HL_MODES=[
  {t:'CAREER',tag:'MAIN MENU',d:'Create up to 3 players, sign with a team, and level up by playing 5v5, 3v3 or 1v1 games against the AI (pick the mode, the team you face, then the court), or play a friend online. See CREATE A PLAYER for the details.'},
  {t:'PLAY NOW',tag:'MAIN MENU',d:'A quick game with the league\'s players (no created player, no EXP). Pick a mode, then the two teams, which side you play for and, last, the COURT (it shows live behind the list):\n• 5V5: full squads, four quarters.\n• 3V3: each side plays its three highest-rated players.\n• 1V1: pick any player from each team. First to 11, check ball at the top after every possession.'},
