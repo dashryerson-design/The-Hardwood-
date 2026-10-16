@@ -1917,7 +1917,9 @@ const FBRK={pass:.85,think:[.15,.1]};
 //  QUICK DECISIONS: role players shoot, drive or swing it within about a second of the catch instead of holding it; a hard closeout gets attacked off the dribble.
 //  CROWDED OFFENSIVE REBOUND: kick it back out to an open shooter instead of forcing a shot into three bodies.
 const IQ={outlet:.95,push:[82,88],helpR:58,kick:[.5,.45],hold:1.15,close:115,crowd:.5};
-const canPush=p=>{const b=(p.rt&&p.rt.bh)||50;return roleOf(p)=='PM'||(roleOf(p)!='BG'&&b>=IQ.push[0])||b>=IQ.push[1]};
+const canPush=p=>{const b=(p.rt&&p.rt.bh)||50;if(roleOf(p)=='PM'||(roleOf(p)!='BG'&&b>=IQ.push[0])||b>=IQ.push[1])return true;
+ if(primaryPM(p.team)===p||T-(p.ct0==null?-99:p.ct0)>2.5)return true; // he IS the team's ball handler (no point guard to find), or nobody's come for the outlet in 2.5s: bring it up himself (he used to stand there waiting for himself)
+ return TM[p.team].every(q=>q===p||((q.rt&&q.rt.bh)||50)+(roleOf(q)=='PM'?20:0)<=b)}; // (nobody on the floor handles it better)
 const pasN=p=>Math.max(0,Math.min(1,(((p.rt&&p.rt.pas)||50)-25)/75));
 function manOf(t,dq){for(const q of TM[t]){if(TM[1-t][gdf(1-t,q.k)]===dq)return q}return null} // the attacker this defender is assigned to
 function helpD(p){const H=hx(p.team),own=TM[1-p.team][gdf(1-p.team,p.k)],dr_=Math.hypot(H-p.x,HY-p.y);let b=null,bd=1e9; // a SECOND defender stepping in front of the driver
@@ -1942,7 +1944,7 @@ function cpuH(p,dt){
  else if(bc&&!canPush(p)){const pm=primaryPM(p.team);if(pm&&pm!==p){tx=p.x+(pm.x-p.x)*.3;ty=p.y+(pm.y-p.y)*.3}else{tx=p.x;ty=p.y}spd=55} // OUTLET: he secures it and turns to find the point guard (no dribbling the length of the floor)
  else if(bc){const c=lc(p,300,lt*.4+Math.sin(T*.9+p.n)*60);tx=c[0];ty=c[1];spd=gp?(brk?128+45*gk(p.team,'pace'):near(p,TM[1-p.team],70)?128:128-25*Math.max(0,gk(p.team,'slow'))):128} // push the ball up the middle (sprint it on the break, walk it up when patient)
  else if(ai.drive>0){const c=lc(p,ai.open?18:40,ai.dy);tx=c[0];ty=c[1];spd=ai.open?150:122}
- else if(role=='PM'||role=='WG'){const c=lc(p,170+Math.sin(T*.5+p.n)*30,Math.sin(T*.9+p.n)*110);tx=c[0];ty=c[1]}
+ else if(role=='PM'||role=='WG'||d>300){const c=lc(p,170+Math.sin(T*.5+p.n)*30,Math.sin(T*.9+p.n)*110);tx=c[0];ty=c[1]} // (a shooter / big who brought it up keeps coming into the half court - he used to stop dead just past half court)
  else{tx=p.x;ty=p.y} // shooters and bigs who catch it: stay set
  let dx=tx-p.x,dy=ty-p.y,l=Math.hypot(dx,dy)||1,sp=l>8?spd:0;
  if(p.burst>0){dx=p.bx;dy=p.by;l=1;sp=p.bs/Math.sqrt(spdM(p))}else if(p.burst<=0&&p.rec>0)sp*=p.rm; // (times spdM below = bs x sqrt(spdM), same as the human path) // a dribble move drives the burst
@@ -5714,10 +5716,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.13'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.14'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.14','Point guard stall fix',['Fixed: a point guard who got the ball off a defensive rebound or an inbound could just stand at half court','Ball handlers who are their team\'s best (or only) handler now bring it up themselves instead of waiting for an outlet to themselves','Nobody waits more than 2.5s in the backcourt for an outlet pass that isn\'t coming']],
  ['v2.13','Continuous online 3v3',['NEW: ONLINE · CONTINUOUS - online 3v3 matches that never stop, between two random current-roster teams','Server list: LOBBY 1, 2 and 3 are always there; the first player in starts the lobby (the AI plays every empty spot)','Pick a side when you join: you take an AI player\'s spot on that team (max 6 players, 3 a side)','Join mid-match and you spectate until the next quarter starts','Quarter breaks are 3 seconds and automatic; 15 seconds after the final the next match starts with new random teams','HOST MATCH makes your own lobby with a 4-digit code (on the list as LOBBY - CODE; the code is in the pause menu, K / Esc)','Every Continuous match counts towards ONLINE WINS - even playing the AI alone','If the host leaves, the lobby carries on: another player takes it over and a new match starts']],
  ['v2.12','The Store costs Court Credits',['Everything in the STORE now costs COURT CREDITS (CC), earned in Career games (about 1,000 CC a game). Press Enter / click once to see the price, again to buy. Purchases are for your whole account (and go in your cloud backup); rating requirements still apply on top.','BALL TRAILS: none are free any more - everyone starts with NO TRAIL. Team lasers 2,500 · Fire 3,000 · Ice 3,500 ... Dragon 80,000 · Zeus 90,000 · SUN GOD 150,000.','DRIBBLE PACKAGES: Basic 1 free · Basic 2 2,000 · Pro 1 8,000 · Pro 2 15,000 · Elite 1 30,000 · Elite 2 50,000 · Flashy 1 85,000 · FLASHY 2 130,000.','DUNK PACKAGES: Basic Two-Handers free · Basic Tomahawks 3,000 · Alley-Oops 12,000 · Athletic Two-Handers 25,000 · Long Tomahawks 45,000 · Spins & Windmills 80,000 · SUPERMAN 130,000.','JUMP SHOTS: Basic 1-2 free, then 500 up to 38,000 (Pro 10); the signature jumpers L.Scott 45,000 · M.Allen 55,000 · C.King 65,000 · M.Johnson 75,000 · E.Lewis 80,000 · D.RYERSON 90,000. LAYUPS 4,000-18,000, PASSES 3,000-20,000, FADEAWAYS 6,000-9,000.','In games your player only uses what you have bought (anything else falls back to the free basics). The Store preview still shows everything, so you can try before you buy.']],
  ['v2.11','Admin camera: strafe',['ADMIN CAMERA: A / D now slide the camera left / right relative to where it is facing, and W / S fly properly in every direction (a bug had locked the camera to one axis of the court, so only forward / back along the length of the court worked).']],
