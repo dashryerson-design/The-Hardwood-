@@ -302,8 +302,8 @@ function introDraw(){
   if(y=='sl'){g.textAlign='left';g.fillStyle=GOLD;g.font='bold 12px system-ui';g.fillText('●  SLOW MO',24,540-bh/2+5)}g.globalAlpha=1}
  if(IN.rt<.7){g.fillStyle='rgba(0,0,0,'+(1-IN.rt/.7)+')';g.fillRect(0,0,960,540)}
 }
-function endQ(){S='qend';qt=2.5;ms.on=false}
-function nextQ(){if(qn>=4&&sc[0]!=sc[1]){S='over';finishGame();endInit();return}qn++;qc=qn>4?45:QL;reset(qn%2==0?1:0);S='play'}
+function endQ(){S='qend';qt=NET.cm?CONT.qb:2.5;ms.on=false} // (CONTINUOUS: a 3s break, then straight on)
+function nextQ(){if(qn>=4&&sc[0]!=sc[1]){S='over';finishGame();endInit();return}qn++;qc=qn>4?45:QL;reset(qn%2==0?1:0);S='play';if(NET.cm&&NET.host)contQ()}
 
 function grab(p){pstat(p).reb++;awardP(p,XP_REB,'REBOUND');ALAST=null;const orb=p.team==B.so;if(!orb){TRB.team=1-p.team;TRB.t=3.8;gpBrk(p.team)}B.mode='held';B.vz=0;B.h=p;p.ct0=T;off=p.team;shot=orb?14:24;if(p.sig){if(sigv(p,'glass'))sigFx(p,'glass');if(orb&&sigv(p,'putback')){sigFx(p,'putback');if(hoopD(p)<100)p.think=0}}if(!orb)TM[p.team].forEach(q=>{if(sigv(q,'transition')){q.trT=3;sigFx(q,'transition')}});if(p.team==0)setCtl(p.k);if(MODE==1){checkBall(p.team);return}say(orb?'OFFENSIVE REBOUND':'REBOUND',orb?'#ffd23f':tcol(0));TM.forEach(t=>t.forEach(d=>d.chk=0));beep(260,.06)}
 // SPEED RATING (p.rt.spd, 25-100) scales every movement speed: 70 = the old baseline (x1.0), 25 = x0.80, 100 = x1.20
@@ -1386,7 +1386,7 @@ function release(p,qq){p.shT=T; // (after the shot he keeps facing the rim for a
  const d=Math.hypot(hx(p.team)-p.x,HY-p.y),three=d>R3,c0=cont(p),c=shotC(p,d,c0),e=ms.t-1,ae=Math.abs(e);p.cby=CBY;
  let q=qq,txt='';
  if(q==null){const pw=perfW(p,d,c);if(ae<pw){q=2;txt='PERFECT!'}else if(ae<.11){q=1;txt='GOOD'}else{q=0;txt=e<0?'EARLY':'LATE'}}
- if(qq==null&&(p.team==0||NET.host&&p.team==1))shotStat(p,three?'3PT JUMPER':d>=MIDS?'MID-RANGE':'CLOSE JUMPER',{q,ms:e*p.st*1000},c,shV(p,d),d);shotFx(p,d,c0);p.perfRun=q==2?(p.perfRun||0)+1:0;
+ if(qq==null&&(NET.cm?isYou(p):p.team==0||NET.host&&p.team==1))shotStat(p,three?'3PT JUMPER':d>=MIDS?'MID-RANGE':'CLOSE JUMPER',{q,ms:e*p.st*1000},c,shV(p,d),d);shotFx(p,d,c0);p.perfRun=q==2?(p.perfRun||0)+1:0;
  let bl=near(p,TM[1-p.team],45);if(!(bl&&bl.jump>0))bl=chaser(p,45)||bl;const bm=blkMul(bl,p,0);
  if(bl&&bl.jump>0&&Math.random()<blkP(bl,.4*bm,Math.min(.9,.65*bm))){p.hot=0;ccBlock(bl);if(bm>1)sigFx(bl,'chase');shotAtt(p,three);say('BLOCKED!','#ff6b6b');shake=.4;gpShot(p.team,three?'3':'M',0);post('tov',bl,bl.team);return}
  let pr=[.12,.62,.97][q]-c*[.05,.3,.3][q];
@@ -1401,7 +1401,7 @@ const hs=Math.max(6,9.5-2.5*c)*jsOf(p).jh*(p.fdk?1+(FADE.jump-1)*Math.max(p.fdk,
  p.sjm=tf;p.sjp=.26;p.sj=tf+.26;
  {const l=Math.hypot(hx(p.team)-p.x,HY-p.y)||1;p.fx=(hx(p.team)-p.x)/l;p.fy=(HY-p.y)/l}const mk_=q==2||Math.random()<pr&&!(needOpen(p,d)&&c>=WOPEN),pts=three?3:2; /* a PERFECT release always goes in (a block above still stops it). Otherwise: under 60 for this shot type (3pt rating from deep, mid rating from mid-range): no make unless wide open */
  p.fire={t:tf,f:()=>{if(p.m&&!p.dunk)shotBall(p);B.make=mk_;B.perf=q==2;B.pts=pts;B.xk=three?'3':d>=MIDS?'M':null;B.bk=0;B.bc=0;B.txt=null;B.mode='shot';B.t=0;B.sx=B.x;B.sy=B.y;B.dur=.7+d/500;B.z=Math.max(B.z,40);B.z0=B.z;{const a=Math.random()*6.28,ro=mk_?0:9+Math.random()*5;B.tx=hx(p.team)+Math.cos(a)*ro;B.ty=HY+Math.sin(a)*ro}B.vz0=(RZ-B.z0+.5*G*B.dur*B.dur)/B.dur;B.so=p.team;B.bd=dr(p.team);B.sh=p;B.as=asstFor(p);RP.rel=RT;RP.who=p;shotAtt(p,three)}};
- if(isYou(p)||NET.host&&p.team==1){ms.pw=perfW(p,d,c);ms.show=1;ms.res=q;ms.last=ms.t;ms.who=p;say(txt+(p.fdk?' FADEAWAY':'')+(three?' (3PT)':''),q==2?'#4cff7a':q?'#ffd23f':'#ff6b6b')}
+ if(isYou(p)||netH(p)){ms.pw=perfW(p,d,c);ms.show=1;ms.res=q;ms.last=ms.t;ms.who=p;say(txt+(p.fdk?' FADEAWAY':'')+(three?' (3PT)':''),q==2?'#4cff7a':q?'#ffd23f':'#ff6b6b')}
  beep(300,.05);
 }
 // POST EXIT (human and CPU post-ups): a small speed boost and a short spin that curves the drive towards the rim
@@ -2076,9 +2076,9 @@ function step(dt){
   if(p.bb){const b=p.bb;b.t+=dt;if(b.t>=b.d||p.stun>0||p.lock>0)p.bb=null;else if(b.lk){bbStep(p,b);return}}
   if(p.lock>0){p.lock-=dt;p.vx=p.vy=0;p.avx=p.avy=0;return}
   if(p.stun>0){p.stun-=dt;if(p.stun<=0){p.stb=0;p.akk=0}if(p.akk){p.akt+=dt;const f=Math.exp(-AK_FR[p.akk]*dt);p.vx*=f;p.vy*=f}else{p.vx*=.8;p.vy*=.8}if(p.z>0||p.air){p.vz=(p.vz||0)-G*dt;p.z=Math.max(0,p.z+p.vz*dt);if(!p.z){p.vz=0;p.air=0;p.avx*=.3;p.avy*=.3}}return} // (hit in the air: he still comes down)
-  if((t==0&&i==ctl&&!AUTO||NET.host&&t==1)&&B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt); // a pass is on its way to you: you're steered onto it (control comes back on the catch)
+  if((t==0&&i==ctl&&!AUTO||netH(p))&&B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt); // a pass is on its way to you: you're steered onto it (control comes back on the catch)
   else if(t==0&&i==ctl&&!AUTO)ctrl(p,dt);
-  else if(NET.host&&t==1)netCtrl(p,dt); // online: the guest's player, on his own keys
+  else if(netH(p)){if(NET.cm)contCtrl(p,dt);else netCtrl(p,dt)} // online: a guest's player, on his own keys
   else if(B.mode=='loose'&&CH.includes(p))chase(p,dt);
   // (on offence: the handler's AI only while he still has it - his own jump shot can leave his hands earlier in this frame)
   else if(t==off){if(p===hp&&B.mode=='held'&&B.h===p&&(t==1||AUTO||CLK()))cpuH(p,dt);else if(B.mode=='inbound'&&p===B.h){p.vx=p.vy=0;p.fx=-dr(off);p.fy=0}else if(B.mode=='pass'&&!B.oop&&B.to===p)passRun(p,dt);else offBall(p,i,dt)}
@@ -3523,7 +3523,7 @@ function render(dt){
  flash.visible=FX.t>0;if(FX.t>0){FX.t-=dt;flash.position.set(FX.x,FX.y,FX.z);const u=1-FX.t/.4;flash.scale.setScalar(.6+u*3);flash.material.opacity=.85*(1-u)}
  netUpd(dt);
  cring.visible=cglow.visible=!!hb&&S!='intro'&&S!='replay'&&S!='admin';if(hb){const c=hb.ct,pl=1+(c>.66?.07*Math.sin(T*14):0);cring.position.set(hb.x/10,.08,(hb.y/10-ZO));cglow.position.set(hb.x/10,.07,(hb.y/10-ZO));ctCol(c,cring.material.color);cglow.material.color.copy(cring.material.color);cring.material.opacity=.7+.3*c;cglow.material.opacity=.2+.6*c;cring.scale.setScalar((1+.3*c)*pl);cglow.scale.setScalar(1+.4*c)}
- const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play';arrow.visible=S=='play';ring.position.set(me.x/10,.06,(me.y/10-ZO));arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,(me.y/10-ZO));
+ const me=S=='replay'?RP.who:TM[0][ctl];ring.visible=S=='play'&&!(NET.cm&&NET.spec);arrow.visible=ring.visible;ring.position.set(me.x/10,.06,(me.y/10-ZO));arrow.position.set(me.x/10,(me.ht*6.2+2)+Math.sin(T*6)*.3+me.z/10,(me.y/10-ZO));
  {const m=S=='play'&&CLK()&&off==1?myMark():null;markArrow.visible=!!m;if(m)markArrow.position.set(m.x/10,m.ht*6.2+2+Math.sin(T*6)*.3+m.z/10,(m.y/10-ZO))}
  if(S=='replay')repCam(); // CINEMATIC replay camera (see repCam)
  else if(S=='admin')adCam(); // ADMIN free camera
@@ -3672,12 +3672,12 @@ function draw(){
   PAUSE_L.forEach((t,i)=>{const y=170+i*46,on=i==PM;if(on){g.fillStyle='rgba(255,210,63,.16)';g.fillRect(240,y-30,480,44)}g.font='bold 24px Georgia';g.fillStyle=on?'#fff':'#8a90a0';g.fillText(t,480,y)});
   g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('W/S or ↑/↓ select · Enter to choose · K to close',480,462);g.fillText('AUDIO and VISUALS are saved on this device',480,486)}
  if(S=='replay'){g.fillStyle='#000';g.fillRect(0,0,960,46);g.fillRect(0,494,960,46);g.textAlign='left';g.fillStyle='#ff3b3b';g.font='bold 22px Georgia';g.fillText('● REPLAY  ·  #'+RP.who.n+' '+POS[RP.who.i],24,32);if((RP.sp||1)<.8){g.textAlign='right';g.fillStyle='rgba(255,255,255,'+(.55+.35*Math.sin(performance.now()/180))+')';g.font='italic bold 16px Georgia';g.fillText('SLOW MOTION',936,30)}g.textAlign='right';g.fillStyle='#fff';g.font='15px system-ui';g.fillText('T RESUME',936,525);g.textAlign='left';g.fillStyle='rgba(255,255,255,.75)';g.fillText(REP_CAMS[RP.sty||0]+'  ·  1 NEXT ANGLE',24,525);g.textAlign='center'}
- if(S=='play'&&!HC&&(RP.has||RP.mk)&&RP.show>0){g.fillStyle='rgba(10,12,18,.8)';g.beginPath();g.roundRect(360,486,240,34,17);g.fill();g.fillStyle='#ffd23f';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('PRESS T FOR REPLAY',480,508)}
+ if(S=='play'&&!HC&&!NET.on&&(RP.has||RP.mk)&&RP.show>0){g.fillStyle='rgba(10,12,18,.8)';g.beginPath();g.roundRect(360,486,240,34,17);g.fill();g.fillStyle='#ffd23f';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('PRESS T FOR REPLAY',480,508)}
  if(S=='look')renderLook();
  if(S=='rteam')renderRTeam();
  if(S=='career'||S=='slotact'||S=='archq')renderCareer();
  {const o1=pageOff('cpos'),o2=pageOff('cbio');if(o1!=null)renderCPos(o1);if(o2!=null)renderBio(o2)}
- if(S=='qend')overlay(qn>4?'END OF OT':'END OF Q'+qn,TEAMS[TI[0]].n+' '+sc[0]+'  -  '+sc[1]+' '+TEAMS[TI[1]].n);
+ if(S=='qend'||S=='play'&&NET.guest&&NET.qe)overlay(qn>4?'END OF OT':'END OF Q'+qn,TEAMS[TI[0]].n+' '+sc[0]+'  -  '+sc[1]+' '+TEAMS[TI[1]].n);
  if(S=='over'&&ES)drawEnd();
  if(performance.now()<introFadeEnd){g.fillStyle='rgba(0,0,0,'+Math.min(1,(introFadeEnd-performance.now())/450)+')';g.fillRect(0,0,960,540)}
  fpsDraw()
@@ -3702,7 +3702,7 @@ function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one fra
   if(P.KeyK||P.Escape)S='play'}else if(P.KeyK&&S=='play'&&!NET.on)S='pause'; // (online there is no pause: K asks to leave, see onlStep)
  if(S=='play'&&(P.Digit0||P.Numpad0)&&MODE!=1&&TM[0].length>1){FIVE.on=FIVE.on?0:1;say(FIVE.on?'5 OUT - SPREAD THE FLOOR':'5 OUT OFF',FIVE.on?'#7fffa0':'#cfd3dc');beep(FIVE.on?660:330,.08,'triangle')}
  if(FIVE.on&&off!=0)FIVE.on=0; // (the call lasts the possession)
- if(P.KeyT&&!HC){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
+ if(P.KeyT&&!HC&&!NET.on){if(S=='replay')endRep();else if(S=='play'){if(RP.has)RP.want=1;else if(RP.mk)RP.want=1}}
  if(RP.want&&RP.has&&S=='play'){RP.want=0;startRep()}
  musUpd();navBlip();crowdUpd();if(S=='admin')adStep(dt);else if(S=='replay')repStep(dt);else if(S=='intro')introStep(dt);else if(NET.guest&&S=='play')netGuestStep(dt);else step(dt);if(!document.hidden){if(NO_COURT.has(S)&&!(S=='playnow'&&MM.ps==5))blankGL();else render(S=='intro'?dt*IN.ts:S=='replay'?dt*(RP.sp||1):S=='admin'&&AD.mv?dt*AD.sp:dt);draw()}for(const k in P)delete P[k];for(const k in Rl)delete Rl[k]}
 const floorL=floor.material,floorS=new THREE.MeshStandardMaterial({map:floorL.map,roughness:.28,metalness:.08}),hemi=new THREE.HemisphereLight(0xdde8ff,0x3a2a1a,.55),spots=[7,87].map(x=>{const l=new THREE.SpotLight(0xfff1dc,1.1,160,.9,.6,1);l.position.set(x,45,32);l.target.position.set(x,0,32);sc3.add(l,l.target);l.visible=false;return l});
@@ -4240,7 +4240,7 @@ function endInit(){profRecord();
  ES={t:0,p:fp,won,a,sel:1,box:false,cc:ccMatch(fp)};ms.on=false;B.mode='over';B.h=null; // (the ball is put away)
 beep(won?520:200,.25,'triangle')}
 function endLeave(){if(IN&&IN.pz){poseReset(IN.pz);IN.pz=null}ES=null}
-function endPick(i){if(!ES)return;beep(440,.06,'triangle');if(NET.on&&i<2){endLeave();netAfter(i);return} // online: LEAVE ONLINE / BACK TO LOBBY
+function endPick(i){if(!ES)return;beep(440,.06,'triangle');if(NET.on&&i<2){if(NET.cm&&i==1)return;endLeave();netAfter(i);return} // online: LEAVE ONLINE / BACK TO LOBBY
  if(i==0){endLeave();toMenu()}else if(i==1){endLeave();start()}else ES.box=true}
 function endStep(dt){if(!ES)return;ES.t+=dt;IN.rt=ES.t;IN.rdt=dt;
  if(ES.box){if(P.Escape||P.Backspace||P.Enter||P.Space||P.KeyB)ES.box=false;return}
@@ -5166,7 +5166,7 @@ function crowdRoar(){const a=AC;if(!a||a.state!='running'||!CRW.cheer||!CRW.src)
 // Distance: from the hoop to where the ball was released, in feet (10 court units = 1 ft: the arc at R3 = 237 is the NBA's 23.75 ft).
 // Slides in from the right, holds SST_T seconds of game time, then fades. A new shot replaces it.
 const SST={t:-99,typ:'',q:0,rel:null,c:0,ft:0},SST_T=4.5;
-function shotStat(p,typ,rel,c,rating,d){const X=NET.host&&p.team==1?SST2:SST;X.ft=Math.round(d/10);const o=1-Math.max(0,Math.min(1,c)),rn=Math.max(0,Math.min(1,(rating-25)/75));X.t=T;X.typ=typ;X.rel=rel;X.c=c;X.q=Math.round(100*(.5*o+.5*rn))} // (online, the guest's own shots fill SST2, which goes to him)
+function shotStat(p,typ,rel,c,rating,d){const X=NET.host&&!NET.cm&&p.team==1?SST2:SST;X.ft=Math.round(d/10);const o=1-Math.max(0,Math.min(1,c)),rn=Math.max(0,Math.min(1,(rating-25)/75));X.t=T;X.typ=typ;X.rel=rel;X.c=c;X.q=Math.round(100*(.5*o+.5*rn))} // (online, the guest's own shots fill SST2, which goes to him)
 function shotStats(){const age=T-SST.t;if(age<0||age>SST_T+.5)return;
  const W=168,H=94,x0=960-W-10,y=540-H-10,sl=Math.min(1,age/.25),x=x0+(1-(1-Math.pow(1-sl,3)))*(W+20),a=age>SST_T?1-(age-SST_T)/.5:1,G_='#4cff7a',Y_=GOLD,O_='#ff9f43',R_='#ff6b6b';
  const qc=SST.q>=70?G_:SST.q>=45?Y_:R_,qw=SST.q>=85?'GREAT LOOK':SST.q>=70?'GOOD LOOK':SST.q>=50?'OKAY':SST.q>=35?'TOUGH':'BAD SHOT',c=SST.c,cp=Math.round(c*100),
@@ -5193,13 +5193,14 @@ function shotStats(){const age=T-SST.t;if(age<0||age>SST_T+.5)return;
 // No EXP is earned online (for now).
 const NET={on:0,host:0,guest:0,via:'',room:null,code:'',busy:0,msg:'',err:'',set:{c:'STREET',w:11},gid:0,oppSeen:0,codeIn:'',ask:0,
  rin:{K:{},P:{},Rl:{}},lp:[],lr:[],pc:[],rc:[],rt:0,spT:0,relSent:0,mid:0,lastMsg:null,m2n:0,ssn:0,sstT:-99,snaps:[],lastT:null,lastRx:0,seen:null},
- ONL_S=new Set(['onsel','onmode','olob','oroom']),ONL={sel:0},NET_HELD=['KeyW','KeyA','KeyS','KeyD','ShiftLeft','KeyG'],
+ ONL_S=new Set(['onsel','onmode','olob','oroom','oclob','cside']),ONL={sel:0},NET_HELD=['KeyW','KeyA','KeyS','KeyD','ShiftLeft','KeyG'],
  NET_ACT=['KeyZ','KeyX','KeyC','KeyV','KeyB','KeyN','KeyE','KeyF','Space','KeyG'],NET_REL=['Space','KeyG'],NET_WINS=[7,11,15,21],NET_COURTS=COURTS,
  NET_DELAY=90,SST2={t:-99,typ:'',q:0,rel:null,c:0,ft:0};
 let ONE_WIN=11,MS2={on:false,t:0,show:0,res:0,last:0,who:null,pw:0},ROOM_NS;
 ONL_S.forEach(s=>NO_COURT.add(s));
 // who is driven by a person: your own player, and (on the host, online) the guest's; and that person's shot meter
-const isHum=p=>(p.team==0&&p.k==ctl&&!AUTO)||(NET.host&&p.team==1),msOf=p=>p.team==0&&p.k==ctl&&!AUTO?ms:NET.host&&p.team==1?MS2:null;
+const netH=p=>NET.host?(NET.cm?p.nh||null:p.team==1?1:null):null, // (on the host: the online person driving this player - 1v1: the guest's; CONTINUOUS: p.nh, that person's record)
+ isHum=p=>(p.team==0&&p.k==ctl&&!AUTO)||!!netH(p),msOf=p=>p.team==0&&p.k==ctl&&!AUTO?ms:netH(p)?(NET.cm?p.nh.ms:MS2):null;
 function roomNS(){if(ROOM_NS===undefined)ROOM_NS=(async()=>{try{return window.claude&&window.claude.use?await window.claude.use('room'):null}catch(e){return null}})();return ROOM_NS}
 roomNS();
 // what the claude.ai room accepts as presence (its documented rules), checked here too so the same-browser stand-in fails exactly where the real room would
@@ -5315,7 +5316,7 @@ async function netJoin(code){if(NET.tp=='p2p'){NET.via='p2p';return p2pRoom('h27
 const netWait=t=>new Promise(r=>setTimeout(r,t)),netErr=e=>e&&e.code=='not_permitted'?'ONLINE PLAY IS NOT AVAILABLE ON THIS VIEW':e&&e.code=='limit_reached'?'TOO MANY LOBBIES OPEN - TRY AGAIN':'COULD NOT CONNECT - TRY AGAIN';
 const netPres=patch=>{if(NET.room)NET.room.presence(patch).catch(e=>{NET.perr=(e&&(e.code+(e.message?': '+e.message:'')))||'error';NET.perrT=performance.now()})},netB=()=>JSON.parse(JSON.stringify(SLOTS[MM.slot]||{})),
  netOthers=()=>NET.room?NET.room.peers().filter(p=>!p.sameTab&&p.presence&&(p.presence.r=='h'||p.presence.r=='g')):[],netOpp=()=>netOthers().find(p=>p.presence.r==(NET.host?'g':'h'));
-function netReset(){Object.assign(NET,{on:0,host:0,guest:0,room:null,code:'',ask:0,snaps:[],lastT:null});ES_LBL[0]='MAIN MENU';ES_LBL[1]='RUN IT BACK';ONE_WIN=11;MS2.on=false}
+function netReset(){if(NET.cm)contClean();Object.assign(NET,{on:0,host:0,guest:0,room:null,code:'',ask:0,snaps:[],lastT:null,cm:0,mir:0,spec:0,played:0,qe:0,lu:null,pre:null,side:null,hum:new Map(),lun:-1,wT:null,ciK:null});for(const p of FULL.flat())p.nh=null;ES_LBL[0]='MAIN MENU';ES_LBL[1]='RUN IT BACK';ONE_WIN=11;MS2.on=false}
 function netLeave(){const r=NET.room;netReset();if(r)r.leave().catch(()=>{})}
 async function netHost(){if(NET.busy)return;NET.busy=1;NET.err='';NET.msg='CREATING A LOBBY';
  try{await netLobby();for(let n=0;n<6;n++){const code=String(1000+(Math.random()*9000|0)),r=await netJoin(code);await netWait(1500);
@@ -5358,12 +5359,13 @@ function netSnap(){const R=v=>typeof v=='number'?Math.round(v*100)/100:v,o2=o=>{
  return{t:Math.round(performance.now()),p:TM.map(tm=>tm.map(p=>{const o=SF.map(k=>R(p[k]));o.push(o2(p.dunk),o2(p.lay),R(p.grd||0),R(p.st||0),p.bm?{k:p.bm.k,t:R(p.bm.t),d:R(p.bm.d),v:p.bm.v}:null,p.ps?{ty:p.ps.ty,k:p.ps.k,t:R(p.ps.t),wu:p.ps.wu,d:p.ps.d,go:p.ps.go,fa:p.ps.fa==null?null:R(p.ps.fa)}:null,o2(p.rdh),p.rd?1:0,p.bb?{k:p.bb.k,st:p.bb.st,r:p.bb.r,t:R(p.bb.t),d:p.bb.d,s:p.bb.s}:null);return o})), // (+ the last ragdoll hit and whether he is ragdolled now)
   b:{x:R(B.x),y:R(B.y),z:R(B.z),mode:B.mode,perf:B.perf?1:0,ht:B.h?[B.h.team,B.h.k]:null},o:off,sc:sc.slice(),ck:R(CHK.t),sh:R(shot),m:[msg.s,msg.c,NET.mid],
   m2:[MS2.on?1:0,MS2.res,R(MS2.pw||0),R(MS2.last||0),NET.m2n],ss:NET.ssn?{typ:SST2.typ,q:SST2.q,rel:SST2.rel&&{q:SST2.rel.q,ms:R(SST2.rel.ms)},c:R(SST2.c),ft:SST2.ft,n:NET.ssn}:null,
-  ps:TM.map(tm=>{const s=pstat(tm[0]);return[s.pts,s.ast,s.reb,s.stl,s.tpm,s.tpa,s.fgm,s.fga,s.dfa||0,s.dfm||0]}),ov:S=='over'?1:0}}
+  ps:NET.cm?TM.map(tm=>tm.map(p=>{const s=pstat(p);return[s.pts,s.ast,s.reb,s.stl,s.tpm,s.tpa,s.fgm,s.fga,s.dfa||0,s.dfm||0]})):TM.map(tm=>{const s=pstat(tm[0]);return[s.pts,s.ast,s.reb,s.stl,s.tpm,s.tpa,s.fgm,s.fga,s.dfa||0,s.dfm||0]}),ov:S=='over'?1:0,
+  q:NET.cm?[qn,R(qc),S=='qend'?1:0]:null,mm:NET.cm?contMeters(R):null}}
 // ----- guest: keys out (resolved to the host's world: camera mode applied here, then mirrored), snapshots in
 addEventListener('keydown',e=>{if(!NET.guest||S!='play'||e.repeat)return;const c=e.code=='ShiftRight'?'ShiftLeft':e.code,j=NET_ACT.indexOf(c);if(j>=0)NET.pc[j]=((NET.pc[j]||0)+1)&255;if(c=='Space')NET.spT=performance.now()});
-addEventListener('keyup',e=>{if(!NET.guest||S!='play')return;const j=NET_REL.indexOf(e.code);if(j<0)return;if(e.code=='Space'&&B.h===TM[0][0]){NET.rt=(performance.now()-NET.spT)/1000/(TM[0][0].st||.55);NET.relSent=1;ms.on=false}NET.rc[j]=((NET.rc[j]||0)+1)&255});
+addEventListener('keyup',e=>{if(!NET.guest||S!='play')return;const j=NET_REL.indexOf(e.code);if(j<0)return;if(e.code=='Space'&&B.h===TM[0][ctl]){NET.rt=(performance.now()-NET.spT)/1000/(TM[0][ctl].st||.55);NET.relSent=1;ms.on=false}NET.rc[j]=((NET.rc[j]||0)+1)&255});
 function netGuestIn(){let ix=(K.KeyD||K.ArrowRight?1:0)-(K.KeyA||K.ArrowLeft?1:0),iy=(K.KeyS||K.ArrowDown?1:0)-(K.KeyW||K.ArrowUp?1:0);
- if(CAMM==1){const d=Math.cos(lowA)>=0?1:-1,a=ix;ix=-iy*d;iy=a*d}ix=-ix;
+ if(CAMM==1){const d=Math.cos(lowA)>=0?1:-1,a=ix;ix=-iy*d;iy=a*d}if(!NET.cm||NET.mir)ix=-ix;
  const h={KeyW:iy<0,KeyA:ix<0,KeyS:iy>0,KeyD:ix>0,ShiftLeft:K.ShiftLeft||K.ShiftRight,KeyG:K.KeyG};let b=0;NET_HELD.forEach((k,j)=>{if(h[k])b|=1<<j});
  netPres({in:{b,p:NET_ACT.map((_,j)=>NET.pc[j]||0),r:NET_REL.map((_,j)=>NET.rc[j]||0),t:Math.round(NET.rt*1000)/1000}})}
 function netGuestStep(dt){T+=dt;msg.t-=dt;ms.show-=dt;shake=Math.max(0,shake-dt*3);rim=Math.max(0,rim-dt);netGuestIn();
@@ -5374,25 +5376,30 @@ function netGuestStep(dt){T+=dt;msg.t-=dt;ms.show-=dt;shake=Math.max(0,shake-dt*
  const rt=now-off_-(NET.via=='p2p'?NET.dl:NET_DELAY);let a=S_[S_.length-1],b=a,u=0;for(let i=0;i<S_.length-1;i++)if(S_[i].t<=rt&&S_[i+1].t>rt){a=S_[i];b=S_[i+1];u=(rt-a.t)/Math.max(1,b.t-a.t);break}
  netApply(a.f,b.f,u)}
 const NET_DISC=new Set(['jph','air','side','sfs','akk','aks']);
-function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen;
- for(let lt=0;lt<2;lt++){const p=TM[lt][0],oa=a.p[1-lt][0],ob=b.p[1-lt][0];if(!p||!oa||!ob)continue;
-  SF.forEach((k,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(k)?L(oa[j],ob[j]):ob[j];if(k=='x')v=940-v;else if(k=='vx'||k=='fx'||k=='ls'||k=='side'||k=='sfs'||k=='aks')v=-v;p[k]=v});
+function netApply(a,b,u){const L=(x,y)=>x+(y-x)*u,sn=NET.seen,cm=NET.cm,M=cm?NET.mir:1; // M: the guest sees the world mirrored (1v1 always; CONTINUOUS when he is on the other side from the host)
+ for(let lt=0;lt<2;lt++){const rt=M?1-lt:lt,nk=cm?TM[lt].length:1;for(let k=0;k<nk;k++){const p=TM[lt][k],oa=a.p[rt]&&a.p[rt][k],ob=b.p[rt]&&b.p[rt][k];if(!p||!oa||!ob)continue;
+  SF.forEach((key,j)=>{let v=typeof oa[j]=='number'&&typeof ob[j]=='number'&&!NET_DISC.has(key)?L(oa[j],ob[j]):ob[j];if(M){if(key=='x')v=940-v;else if(key=='vx'||key=='fx'||key=='ls'||key=='side'||key=='sfs'||key=='aks')v=-v}p[key]=v});
   const n=SF.length;p.dunk=ob[n];p.lay=ob[n+1]||null;p.grd=ob[n+2]||0;if(ob[n+3])p.st=ob[n+3];p.bm=ob[n+4]?Object.assign({},ob[n+4]):null;p.ps=ob[n+5]&&PASS_T[ob[n+5].ty]?Object.assign({},ob[n+5]):null;
-  {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,-h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}p.bb=ob[n+8]?Object.assign({},ob[n+8],{s:-ob[n+8].s}):null} // RAGDOLL: the host's hit (mirrored) is run through the same physics here; when the host lets him up, so does the guest
- B.x=940-L(a.b.x,b.b.x);B.y=L(a.b.y,b.b.y);B.z=L(a.b.z,b.b.z);B.mode=b.b.mode;B.perf=!!b.b.perf;B.h=b.b.ht?TM[1-b.b.ht[0]][b.b.ht[1]]||null:null;
- off=1-b.o;CHK.t=b.ck;shot=b.sh;
- const ns=[b.sc[1],b.sc[0]];if(sn.sc&&(ns[0]>sn.sc[0]||ns[1]>sn.sc[1]))crowdRoar();sc=ns;sn.sc=ns;
- if(b.m[2]!==sn.mid){sn.mid=b.m[2];let s=b.m[0];if(s&&s.startsWith('CHECK BALL'))s=off==0?'CHECK BALL  ·  YOUR BALL':'CHECK BALL  ·  DEFEND';if(s)say(s,b.m[1])}
- const m2=b.m2,me=TM[0][0];
- if(m2[4]!==sn.m2){if(sn.m2!==-1){ms.res=m2[1];ms.pw=m2[2];ms.last=m2[3];ms.show=1;ms.who=me}sn.m2=m2[4];ms.on=false}
+  {const h=ob[n+6];if(ob[n+7]&&h&&h.n!==p.rdN){p.rdN=h.n;rdHit(p,M?-h.dx:h.dx,h.dz,h.mag,h.tone,h.full)}else if(!ob[n+7]&&p.rd)rdOff(p)}p.bb=ob[n+8]?Object.assign({},ob[n+8],{s:M?-ob[n+8].s:ob[n+8].s}):null}} // RAGDOLL: the host's hit (mirrored if need be) is run through the same physics here; when the host lets him up, so does the guest
+ B.x=L(a.b.x,b.b.x);if(M)B.x=940-B.x;B.y=L(a.b.y,b.b.y);B.z=L(a.b.z,b.b.z);B.mode=b.b.mode;B.perf=!!b.b.perf;B.h=b.b.ht?TM[M?1-b.b.ht[0]:b.b.ht[0]][b.b.ht[1]]||null:null;
+ off=M?1-b.o:b.o;CHK.t=b.ck;shot=b.sh;if(cm&&b.q){qn=b.q[0];qc=b.q[1];NET.qe=b.q[2]}
+ const ns=M?[b.sc[1],b.sc[0]]:[b.sc[0],b.sc[1]];if(sn.sc&&(ns[0]>sn.sc[0]||ns[1]>sn.sc[1]))crowdRoar();sc=ns;sn.sc=ns;
+ if(b.m[2]!==sn.mid){sn.mid=b.m[2];let s=b.m[0];if(s&&s.startsWith('CHECK BALL'))s=off==0?'CHECK BALL  ·  YOUR BALL':'CHECK BALL  ·  DEFEND';
+  else if(s&&cm&&M){if(s.startsWith('YOUR BALL'))s=TEAMS[TI[1]].n+' BALL - DEFEND!';else if(s.endsWith(' BALL - DEFEND!'))s='YOUR BALL'} // (the host's messages are worded for his side)
+  if(s)say(s,b.m[1])}
+ const m2=cm?(b.mm&&b.mm[NET.me])||null:b.m2,me=TM[0][ctl];
+ if(!m2)ms.on=false;
+ else if(m2[4]!==sn.m2){if(sn.m2!==-1){ms.res=m2[1];ms.pw=m2[2];ms.last=m2[3];ms.show=1;ms.who=me}sn.m2=m2[4];ms.on=false}
  else if(m2[0]&&!NET.relSent&&B.h===me){ms.on=true;ms.who=me;ms.t=(performance.now()-NET.spT)/1000/(me.st||.55)}else if(!m2[0]){NET.relSent=0;ms.on=false}
  if(b.ss&&b.ss.n!==sn.ss){if(b.ss.n>sn.ss)Object.assign(SST,{typ:b.ss.typ,q:b.ss.q,rel:b.ss.rel,c:b.ss.c,ft:b.ss.ft,t:T});sn.ss=b.ss.n}
- const K_=['pts','ast','reb','stl','tpm','tpa','fgm','fga','dfa','dfm'];for(let lt=0;lt<2;lt++){const s=pstat(TM[lt][0]),v=b.ps[1-lt];K_.forEach((k,j)=>s[k]=v[j]|0)}
+ const K_=['pts','ast','reb','stl','tpm','tpa','fgm','fga','dfa','dfm'];
+ if(cm){for(let lt=0;lt<2;lt++)TM[lt].forEach((p,k)=>{const v=b.ps[M?1-lt:lt]&&b.ps[M?1-lt:lt][k];if(!v)return;const s=pstat(p);K_.forEach((key,j)=>s[key]=v[j]|0)})}
+ else for(let lt=0;lt<2;lt++){const s=pstat(TM[lt][0]),v=b.ps[1-lt];K_.forEach((k,j)=>s[k]=v[j]|0)}
  if(b.ov&&S=='play'){S='over';ms.on=false;endInit();netPres({st:'over'})}}
 // ----- every frame: the menus, and the connection
 function onlStep(dt){
  if(ONL_S.has(S)&&ONL.last===S)onlKeys();ONL.last=S;netAdvert(); // (not on the frame a screen is entered: the key that opened it was already handled)
- if(!NET.on)return;const op=netOpp(),now=performance.now();if(op)NET.oppSeen=now;
+ if(!NET.on)return;if(NET.cm){contStep(dt);return}const op=netOpp(),now=performance.now();if(op)NET.oppSeen=now;
  if(NET.host){NET.rin.P={};NET.rin.Rl={};
   if(op&&S=='play')netHostIn(op.presence);
   if(!op&&now-NET.oppSeen>2500&&(S=='play'||S=='over')){netAbort('YOUR OPPONENT LEFT THE MATCH');return}
@@ -5404,16 +5411,16 @@ function onlStep(dt){
   if(S=='play'&&now-NET.lastRx>5000){netAbort('LOST THE CONNECTION TO THE HOST');return}}
  if(S=='play'){if(P.KeyK)NET.ask=!NET.ask;if(NET.ask){if(P.Enter){netLeave();toMenu()}else if(P.Escape)NET.ask=0}}}
 // ----- the screens: ONLINE / CAREER · ONLINE 1V1 · server finder · lobby
-const ONC=i=>[150+i*360,140,300,300],ONM=[348,140,264,300],OLR=k=>[150,206+k*52,660,46],OL_N=4,ORM=i=>i<2?[280,300+i*46,400,38]:[i==2?280:490,400,190,48],ON_BACK=PN_BACK;
+const ONC=i=>[150+i*360,140,300,300],OLR=k=>[150,206+k*52,660,46],OL_N=4,ORM=i=>i<2?[280,300+i*46,400,38]:[i==2?280:490,400,190,48],ON_BACK=PN_BACK;
 // ----- SERVER LIST: every host advertises his lobby in the room everyone viewing the game shares (presence field 'lb'; the platform clears it when he leaves),
 // and the finder lists those adverts live. The lobby's name is its 4-digit code. Local test mode uses a same-browser stand-in for that shared room.
 async function netLobby(){if(NET.lob)return NET.lob;if(NET.lobP)return NET.lobP;return NET.lobP=(async()=>{
  if(p2pOk()){try{const L=p2pRoom('h27-lobby');for(let i=0;i<40&&!p2pRelays();i++)await netWait(150);if(p2pRelays()){NET.tp='p2p';return NET.lob=L}L.leave()}catch(e){}} // (no relay answered in 6s: fall back)
  const ns=await roomNS();if(ns&&ROOM_OK!==false){NET.tp='room';return NET.lob=ns}NET.tp='local';return NET.lob=bcRoom('h27-lobby')})()}
-function netList(){const L=NET.lob;if(!L)return[];return L.peers().filter(p=>!p.sameTab&&p.presence&&p.presence.lb&&p.presence.lb.v===GAME_VER&&/^\d{4}$/.test(p.presence.lb.c)).map(p=>p.presence.lb)
+function netList(){const L=NET.lob;if(!L)return[];return L.peers().filter(p=>!p.sameTab&&p.presence&&p.presence.lb&&!p.presence.lb.k&&p.presence.lb.v===GAME_VER&&/^\d{4}$/.test(p.presence.lb.c)).map(p=>p.presence.lb)
  .sort((a,b)=>(a.s=='open'?0:1)-(b.s=='open'?0:1)||String(a.c).localeCompare(String(b.c)))}
 function netAdvert(){const L=NET.lob;if(!L)return;let lb=null;
- if(NET.on&&NET.host){const b=SLOTS[MM.slot]||{},op=netOpp();lb={c:NET.code,h:String(b.name||'PLAYER').slice(0,12),p:b.pos|0,o:ovrOf(b.st||{}),n:op?2:1,s:S=='play'||S=='over'?'game':op?'full':'open',cs:NET.set.c,w:NET.set.w,v:GAME_VER}}
+ if(NET.on&&NET.host&&NET.cm)lb=contAdv();else if(NET.on&&NET.host){const b=SLOTS[MM.slot]||{},op=netOpp();lb={c:NET.code,h:String(b.name||'PLAYER').slice(0,12),p:b.pos|0,o:ovrOf(b.st||{}),n:op?2:1,s:S=='play'||S=='over'?'game':op?'full':'open',cs:NET.set.c,w:NET.set.w,v:GAME_VER}}
  const k=JSON.stringify(lb);if(k!==NET.lbK){NET.lbK=k;L.presence({lb}).catch(()=>{})}}
 function onlOpen(){ONL.sel=0;S='onsel'}
 // ----- SERVER LIST extras: REFRESH (asks everyone in the online lobby to re-send their lobby right now, drops anyone not heard from lately, and
@@ -5426,10 +5433,10 @@ function netRefresh(){if(NET.busy)return;ONL.rf=performance.now();NET.err='';con
 function codeOpen(){ONL.ce={d:''};NET.err=''}
 function codeKey(k){const c=ONL.ce;if(!c)return;if(k!='JOIN')NET.err='';
  if(k=='DEL'){c.d=c.d.slice(0,-1);return}
- if(k=='JOIN'){if(c.d.length<4){NET.err='TYPE ALL 4 DIGITS OF THE LOBBY CODE';beep(160,.08,'square');return}const d=c.d;ONL.ce=null;netJoinCode(d);return}
+ if(k=='JOIN'){if(c.d.length<4){NET.err='TYPE ALL 4 DIGITS OF THE LOBBY CODE';beep(160,.08,'square');return}const d=c.d;ONL.ce=null;if(S=='oclob')contJoin(d);else netJoinCode(d);return}
  if(/^\d$/.test(k)&&c.d.length<4){c.d+=k;beep(880,.03,'triangle')}}
 function codeKeys(){} // (keys reach the code pad straight from keydown below, one by one, however fast they come; nothing else sees them)
-addEventListener('keydown',e=>{if(S!='olob'||!ONL.ce)return;const m=/^(?:Digit|Numpad)(\d)$/.exec(e.code),c=e.code=='Backquote'?'Escape':e.code;
+addEventListener('keydown',e=>{if((S!='olob'&&S!='oclob')||!ONL.ce)return;const m=/^(?:Digit|Numpad)(\d)$/.exec(e.code),c=e.code=='Backquote'?'Escape':e.code;
  if(m)codeKey(m[1]);else if(c=='Backspace')codeKey('DEL');else if(c=='Enter'||c=='NumpadEnter')codeKey('JOIN');else if(c=='Escape')ONL.ce=null;else return;
  P[e.code]=0;P[c]=0;e.preventDefault()});
 function codePtr(x,y,type){if(type!=0)return;for(let i=0;i<12;i++)if(mIn(x,y,CK_R(i))){codeKey(CK_L[i]);return}if(!mIn(x,y,CK_P))ONL.ce=null} // (a click outside the panel closes it)
@@ -5440,15 +5447,15 @@ function codeDraw(){const c=ONL.ce;g.fillStyle='rgba(0,0,0,.72)';g.fillRect(0,0,
  CK_L.forEach((l,i)=>{const r=CK_R(i),j=l=='JOIN',ok=!j||c.d.length==4;mRR(r[0],r[1],r[2],r[3],8,j&&ok?'rgba(76,255,122,.18)':'rgba(255,255,255,.07)',j&&ok?'#4cff7a':'rgba(255,255,255,.18)');
   g.save();if(!ok)g.globalAlpha=.4;g.fillStyle=j?'#7fffa0':'#fff';g.font=(j||l=='DEL'?'bold 14px system-ui':'bold 20px Georgia');g.fillText(l=='DEL'?'⌫ DELETE':l,r[0]+r[2]/2,r[1]+27);g.restore()});
  if(NET.err){g.fillStyle='#ff7b7b';g.font='bold 12px system-ui';g.fillText(NET.err,480,py+ph-14)}else{g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('type the digits  ·  Enter join  ·  Backspace delete  ·  Esc cancel',480,py+ph-14)}}
-function onlRows(){return S=='onsel'?2:S=='onmode'?1:S=='olob'?OL_T+netList().length:NET.host?4:1}
+function onlRows(){return S=='onsel'?2:S=='onmode'?2:S=='olob'?OL_T+netList().length:NET.host?4:1}
 function onlEnter(){const i=ONL.sel;
  if(S=='onsel'){if(i==0){S='onmode';ONL.sel=0}else openModes('car')}
- else if(S=='onmode'){S='olob';ONL.sel=0;ONL.top=0;NET.err='';netLobby()}
+ else if(S=='onmode'){S=i==1?'oclob':'olob';ONL.sel=0;ONL.top=0;NET.err='';netLobby()}
  else if(S=='olob'){if(i==0)netHost();else if(i==1)codeOpen();else if(i==2)netRefresh();else{const l=netList()[i-OL_T];if(!l)return;if(l.s!='open'){NET.err=l.s=='game'?'LOBBY '+l.c+' IS IN THE MIDDLE OF A GAME':'LOBBY '+l.c+' IS FULL';return}netJoinCode(l.c)}}
  else if(S=='oroom'){if(!NET.host||i==3){netLeave();S='olob';ONL.sel=0;NET.err=''}else if(i==2)netStartHost();else onlSet(i,1)}}
-function onlBack(){if(S=='onsel')S='slotact';else if(S=='onmode'){S='onsel';ONL.sel=0}else if(S=='olob'){if(ONL.ce)ONL.ce=null;else if(!NET.busy){S='onmode';ONL.sel=0}}else if(S=='oroom'){netLeave();S='olob';ONL.sel=0;NET.err=''}}
+function onlBack(){if(S=='oclob'){if(ONL.ce)ONL.ce=null;else if(!NET.busy){S='onmode';ONL.sel=1}return}if(S=='cside'){netLeave();S='oclob';ONL.sel=0;NET.err='';return}if(S=='onsel')S='slotact';else if(S=='onmode'){S='onsel';ONL.sel=0}else if(S=='olob'){if(ONL.ce)ONL.ce=null;else if(!NET.busy){S='onmode';ONL.sel=0}}else if(S=='oroom'){netLeave();S='olob';ONL.sel=0;NET.err=''}}
 function onlSet(r,d){const s=Object.assign({},NET.set);if(r==0)s.c=NET_COURTS[(NET_COURTS.indexOf(s.c)+d+NET_COURTS.length)%NET_COURTS.length];else s.w=NET_WINS[(NET_WINS.indexOf(s.w)+d+4)%4];NET.set=s;netPres({set:s})}
-function onlKeys(){if(S=='olob'&&ONL.ce){codeKeys();return}const up=P.ArrowUp||P.KeyW,dn=P.ArrowDown||P.KeyS,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space,n=onlRows();
+function onlKeys(){if(S=='oclob'||S=='cside'){contKeys();return}if(S=='olob'&&ONL.ce){codeKeys();return}const up=P.ArrowUp||P.KeyW,dn=P.ArrowDown||P.KeyS,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space,n=onlRows();
  if(P.Backspace){onlBack();return}
  if(ONL.sel>=n)ONL.sel=n-1;if(S=='onsel'||S=='onmode'){if(lr)ONL.sel=(ONL.sel+lr+n)%n}
  else if(S=='olob'){const s=ONL.sel; // the top row (HOST / JOIN BY CODE / REFRESH): left / right; down drops into the lobby list, up from its first row goes back up
@@ -5457,9 +5464,10 @@ function onlKeys(){if(S=='olob'&&ONL.ce){codeKeys();return}const up=P.ArrowUp||P
  if(S=='oroom'&&!NET.host)ONL.sel=0;
  if(ok)onlEnter();else if(P.Escape)onlBack()}
 function onlPtr(x,y,type){const hit=(i,r)=>{if(!mIn(x,y,r))return false;ONL.sel=i;if(type==0)onlEnter();return true};
- if(S=='olob'&&ONL.ce){codePtr(x,y,type);return}
+ if((S=='olob'||S=='oclob')&&ONL.ce){codePtr(x,y,type);return}
+ if(S=='oclob'||S=='cside'){contPtr(x,y,type);return}
  if(type==0&&S!='oroom'&&mIn(x,y,ON_BACK)){onlBack();return}
- if(S=='onsel'){for(let i=0;i<2;i++)if(hit(i,ONC(i)))return}else if(S=='onmode')hit(0,ONM);else if(S=='olob'){for(let i=0;i<OL_T;i++)if(hit(i,OLB(i)))return;const L=netList();for(let k=0;k<Math.min(OL_N,L.length-(ONL.top|0));k++)if(hit((ONL.top|0)+k+OL_T,OLR(k)))return}
+ if(S=='onsel'){for(let i=0;i<2;i++)if(hit(i,ONC(i)))return}else if(S=='onmode'){for(let i=0;i<2;i++)if(hit(i,ONC(i)))return}else if(S=='olob'){for(let i=0;i<OL_T;i++)if(hit(i,OLB(i)))return;const L=netList();for(let k=0;k<Math.min(OL_N,L.length-(ONL.top|0));k++)if(hit((ONL.top|0)+k+OL_T,OLR(k)))return}
  else if(S=='oroom'){if(!NET.host){hit(0,ORM(3));return}for(let i=0;i<4;i++){const r=ORM(i);if(mIn(x,y,r)){ONL.sel=i;if(type==0){if(i<2)onlSet(i,x<r[0]+r[2]/2?-1:1);else onlEnter()}return}}}}
 const tcolOf=tm=>'#'+((TEAMS[tm]||TEAMS[0]).jc>>>0).toString(16).padStart(6,'0');
 function onlCard(x,y,w,h,on,big,sub,lines,dim){if(on){g.save();g.shadowColor=GOLD;g.shadowBlur=20;mRR(x,y,w,h,16,'rgba(255,210,63,.1)',GOLD);g.restore()}else mRR(x,y,w,h,16,'rgba(255,255,255,.05)','rgba(255,255,255,.14)');
@@ -5471,11 +5479,12 @@ function onlPlayer(x,y,w,role,b,me){mRR(x,y,w,130,14,'rgba(255,255,255,.05)',b?'
  if(!b){g.font='italic 16px Georgia';g.fillStyle='#8a90a0';g.fillText('Waiting for a player'+'.'.repeat(1+(performance.now()/400|0)%3),x+18,y+70);g.font='12px system-ui';g.fillText('Your lobby is on the SERVER LIST as LOBBY '+NET.code,x+18,y+96);return}
  const tm=b.tm!=null?b.tm:0;g.font='bold 30px Georgia';g.fillStyle='#fff';g.fillText(String(b.name||'PLAYER').slice(0,12),x+18,y+62);
  g.font='bold 13px system-ui';g.fillStyle='#cfd3dc';g.fillText(POS[b.pos|0]+'  ·  OVR '+ovrOf(b.st||{})+'  ·  LEVEL '+lvInfo(b.xp|0).lv,x+18,y+88);g.fillStyle=tcolOf(tm);g.fillText((TEAMS[tm]||TEAMS[0]).n,x+18,y+110)}
-function onlDraw(){g.fillStyle='#000';g.fillRect(0,0,960,540);g.textAlign='center';const b=SLOTS[MM.slot];
+function onlDraw(){g.fillStyle='#000';g.fillRect(0,0,960,540);g.textAlign='center';const b=SLOTS[MM.slot];if(S=='oclob'||S=='cside'){contDraw();return}
  if(S=='onsel'){g.fillStyle=GOLD;g.font='bold 44px Georgia';g.fillText('PLAY  ·  '+(b?b.name:''),480,74);g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('Take your created player online, or into the usual career games',480,104);
-  onlCard(...ONC(0),ONL.sel==0,'ONLINE','PLAY A FRIEND',['Host or join a lobby with','a 4-digit code  ·  1V1']);onlCard(...ONC(1),ONL.sel==1,'CAREER','PLAY THE LEAGUE',['5V5  ·  3V3  ·  1V1','against the AI teams']);}
+  onlCard(...ONC(0),ONL.sel==0,'ONLINE','PLAY A FRIEND',['1V1 against a friend, or the','always-on CONTINUOUS 3V3']);onlCard(...ONC(1),ONL.sel==1,'CAREER','PLAY THE LEAGUE',['5V5  ·  3V3  ·  1V1','against the AI teams']);}
  else if(S=='onmode'){g.fillStyle=GOLD;g.font='bold 44px Georgia';g.fillText('ONLINE  ·  CHOOSE A MODE',480,74);g.font='14px system-ui';g.fillStyle='#9aa';g.fillText((b?b.name:'')+' takes the floor  ·  your created player only',480,104);
-  onlCard(...ONM,true,'ONLINE 1V1','ONE ON ONE',['Your created player against','a friend\'s  ·  check ball up top','after every possession.'])}
+  onlCard(...ONC(0),ONL.sel==0,'ONLINE 1V1','ONE ON ONE',['Your created player against','a friend\'s  ·  check ball up top','after every possession.']);
+  onlCard(...ONC(1),ONL.sel==1,'CONTINUOUS','3V3  ·  ALWAYS ON',['Matches that never stop: random','teams, AI in every empty spot.','Grind ONLINE WINS, even solo.'])}
  else if(S=='olob'){const L=netList();g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('ONLINE 1V1  ·  SERVER LIST',480,64);g.font='13px system-ui';g.fillStyle='#9aa';
   {const[t,c]=netStatus();g.fillStyle=c;g.fillText(t,480,92)}
   {const rf=ONL.rf&&performance.now()-ONL.rf<1500;onlBtn(OLB(0),'HOST A LOBBY',ONL.sel==0);onlBtn(OLB(1),'JOIN BY CODE',ONL.sel==1);onlBtn(OLB(2),rf?'REFRESHING'+'.'.repeat(1+(performance.now()/300|0)%3):'⟳  REFRESH',ONL.sel==2);
@@ -5522,10 +5531,182 @@ const netOldLobbies=()=>NET.lob?NET.lob.peers().filter(p=>!p.sameTab&&p.presence
  const tick=()=>{if(document.hidden&&NET.on)frame(performance.now())};if(wk)wk.onmessage=tick;else setInterval(tick,33)}
 addEventListener('blur',()=>{for(const k in K)K[k]=0});document.addEventListener('visibilitychange',()=>{if(document.hidden)for(const k in K)K[k]=0});
 
+// ===== CONTINUOUS: online 3v3 that never stops. LOBBY 1-3 are always on the server list, but a lobby only really exists while somebody is in it:
+// the first player in starts it, and his page runs the match (like a 1v1 host). HOST MATCH opens a private one with a 4-digit code (LOBBY - CODE on
+// the list; the code is in the pause menu, K). Every match: two random current-roster teams; each person replaces an AI on the side he picked (6 people
+// at most, 3 a side); joining mid-match = spectating until the next quarter starts; 3s automatic quarter breaks; 15s after the final buzzer the next
+// match starts with two new random teams. Sides are absolute (0 / 1): the host's page always plays its own side as team 0 (lu.hs = the host's side),
+// so a guest on the other side sees the world mirrored, exactly like a 1v1 guest. If the host leaves, the person with the lowest id takes the lobby over.
+// lu (the line-up, in the host's presence): g match id · n change count · hs host's side · ti teams · ids each team's roster players · h who plays each spot.
+const CONT={max:6,side:3,wait:15,qb:3},CL_N=4,CLR=k=>[140,206+k*52,680,46],CSC=i=>[[90,150,370,240],[500,150,370,240]][i],CS_LV=[380,420,200,46];
+const contName=c=>/^\d{4}$/.test(c)?'LOBBY - '+c:'LOBBY '+c,contPair=()=>{const n=TEAMS.length,a=Math.random()*n|0;let b=Math.random()*(n-1)|0;if(b>=a)b++;return[a,b]};
+function contList(){const L=NET.lob,ad=L?L.peers().filter(p=>!p.sameTab&&p.presence&&p.presence.lb&&p.presence.lb.k=='c'&&p.presence.lb.v===GAME_VER&&/^([123]|\d{4})$/.test(p.presence.lb.c)).map(p=>p.presence.lb):[];
+ const rows=['1','2','3'].map(c=>Object.assign({c,n:0,s:'empty'},ad.find(l=>l.c===c)||{}));
+ ad.filter(l=>l.c.length==4).sort((a,b)=>a.c.localeCompare(b.c)).forEach(l=>{if(!rows.some(r=>r.c===l.c))rows.push(l)});return rows}
+function contAdv(){const n=1+netOthers().length,lu=NET.lu,t=s=>s==NET.side?0:1;
+ return{k:'c',c:NET.code,n,s:n>=CONT.max?'full':'open',t:lu?[TI[t(0)],TI[t(1)]]:null,sc:lu?[sc[t(0)],sc[t(1)]]:null,q:lu?qn:0,st:!lu?'start':S=='over'?'over':'play',v:GAME_VER}}
+// ----- joining: a listed lobby (or a code). Nobody answering in a base lobby = it's empty: you start it. A code needs its host.
+async function contJoin(id){if(NET.busy)return;const base=/^[123]$/.test(id);NET.busy=1;NET.err='';NET.msg=(base?'JOINING ':'LOOKING FOR ')+contName(id);
+ try{await netLobby();const adv=contList().find(l=>l.c===id&&l.n>0),r=await netJoin('c'+id);let h=null;const n=adv||!base?(NET.tp=='p2p'?60:20):(NET.tp=='p2p'?14:8);
+  for(let i=0;i<n&&!h;i++){await netWait(200);h=r.peers().find(p=>!p.sameTab&&p.presence&&p.presence.r=='h')}
+  if(S!='oclob'){await r.leave();return}
+  if(!h&&!base){await r.leave();NET.err='NO LOBBY FOUND WITH CODE '+id;return}
+  if(h&&h.presence.v!==GAME_VER){await r.leave();NET.err='THAT LOBBY IS ON '+String(h.presence.v).slice(0,8)+' - RELOAD THE GAME';return}
+  if(r.peers().filter(p=>!p.sameTab&&p.presence&&(p.presence.r=='h'||p.presence.r=='g')).length>=CONT.max){await r.leave();NET.err=contName(id)+' IS FULL (6 PLAYERS)';return}
+  contIn(r,id,!h)}catch(e){NET.err=netErr(e)}finally{NET.busy=0;NET.msg=''}}
+async function contHost(){if(NET.busy)return;NET.busy=1;NET.err='';NET.msg='CREATING A LOBBY';
+ try{await netLobby();for(let n=0;n<6;n++){const code=String(1000+(Math.random()*9000|0)),r=await netJoin('c'+code);await netWait(1500);
+   if(S!='oclob'){await r.leave();return}
+   if(r.peers().some(p=>!p.sameTab&&p.presence&&p.presence.r)){await r.leave();continue}
+   contIn(r,code,1);return}
+  NET.err='NO FREE LOBBY CODE - TRY AGAIN'}catch(e){NET.err=netErr(e)}finally{NET.busy=0;NET.msg=''}}
+function contIn(r,code,host){const m=r.peers().find(p=>p.isMe);
+ Object.assign(NET,{room:r,code,on:1,cm:1,host:host?1:0,guest:host?0:1,gid:0,lun:-1,lu:null,side:null,spec:1,played:0,hum:new Map(),wT:null,ciK:null,me:m?String(m.peer):'me',oppSeen:performance.now(),pre:host?{ti:contPair()}:null});
+ ONL.sel=0;netPres({r:host?'h':'g',v:GAME_VER,b:netB(),st:'side',pre:host?NET.pre.ti:null});S='cside'}
+// ----- the match on both pages: teams, the roster players on the floor (top 3 by rating, the host's pick), people on their spots
+function contSetup(lu){if(!SLOTS[MM.slot])return false;const mt=NET.host?0:NET.side==lu.hs?0:1,o=mt?[1,0]:[0,1];NET.mir=mt;
+ ACTIVE=-1;MODE=3;PR=0;
+ contClean();setTeams(lu.ti[o[0]],lu.ti[o[1]]);newLooks();start();introEnd(1);
+ if(lu.ids)TM=[0,1].map(t=>{const ids=lu.ids[o[t]];FULL[t].forEach((p,i)=>{p.m.visible=ids.includes(i)});return ids.map((i,k)=>{const p=FULL[t][i];p.k=k;return p})});
+ ACTIVE=MM.slot;ctl=0;ES_LBL[0]='LEAVE ONLINE';ES_LBL[1]='NEXT MATCH';MS2={on:false,t:0,show:0,res:0,last:0,who:null,pw:0};
+ Object.assign(NET,{ask:0,snaps:[],lastT:null,dl:null,lastRx:performance.now(),seen:{mid:-1,m2:-1,ss:0,sc:null},lp:[],lr:[],pc:[],rc:[],rt:0,relSent:0,m2n:0,ssn:0,sstT:-99,rin:{K:{},P:{},Rl:{}},hum:new Map(),lun:-1,qe:0,spec:1,played:0,wT:null});
+ return true}
+function contClean(){FULL.forEach((tm,t)=>tm.forEach((p,i)=>{p.nh=null;if(!p.build&&!p._np)return;p.build=null;p.attr=null;p.wgt=p.wsp=null;p._np=null; // (last match's people: back to the roster players they replaced)
+ const l=TLK[TI[t]][i];setLook(p,l.sk,l.hs,l.hc);p.ht=htFor(t,i);const w=widFor(t,i);p.m.scale.set(p.ht*w,p.ht,p.ht*w);p.m.aL.scale.y=p.m.aR.scale.y=1}))}
+function contHum(id){let H=NET.hum.get(id);if(!H){H={id,rin:{K:{},P:{},Rl:{}},lp:[],lr:[],prt:0,m2n:0,ms:{on:false,t:0,show:0,res:0,last:0,who:null,pw:0}};NET.hum.set(id,H)}return H}
+// the line-up onto this page's players: each person's created player on his spot (the host also hooks up their keys); a spot a person left keeps his look, the AI plays it
+function contLu(lu){const o=NET.mir?[1,0]:[0,1];let miss=0,mine=-1;
+ for(let t=0;t<2;t++){const H=lu.h[o[t]]||[];TM[t].forEach((p,k)=>{const id=H[k]||null;if(id===NET.me&&t==0)mine=k;
+  if(NET.host)p.nh=id&&id!==NET.me?contHum(id):null;
+  if(p._np===id||!id){if(!id)p._np=null;return}
+  let b=null;if(id===NET.me)b=SLOTS[MM.slot];else{const q=netOthers().find(x=>String(x.peer)===id);b=q&&q.presence.b?sanitize(q.presence.b):null}
+  if(!b){miss=1;return}p._np=id;netApplyBuild(p,b)})}
+ NET.lun=lu.n;NET.luMiss=miss;if(mine>=0){ctl=mine;NET.spec=0;NET.played=1}else NET.spec=1}
+function contWith(H,fn){const sv=[NET.rin,NET.lp,NET.lr,NET.prt,NET.m2n,MS2];NET.rin=H.rin;NET.lp=H.lp;NET.lr=H.lr;NET.prt=H.prt;NET.m2n=H.m2n;MS2=H.ms;
+ try{fn()}finally{H.prt=NET.prt;H.m2n=NET.m2n;H.ms=MS2;[NET.rin,NET.lp,NET.lr,NET.prt,NET.m2n,MS2]=sv}}
+function contCtrl(p,dt){contWith(p.nh,()=>netCtrl(p,dt))}
+function contMeters(R){const o={};for(const p of TM.flat())if(p.nh){const m=p.nh.ms;o[p.nh.id]=[m.on?1:0,m.res,R(m.pw||0),R(m.last||0),p.nh.m2n]}return o}
+// ----- host: who goes where. A person takes the spot of his own position if it's an AI, else the weakest AI on his side.
+function contPlace(lu,t,id,b){const h=lu.h[t];if(h.includes(id))return false;let bk=-1,bs=1e9;
+ TM[t].forEach((p,k)=>{if(h[k])return;const v=(FULL[t].indexOf(p)===(b.pos|0)?-1000:0)+pOvr(p);if(v<bs){bs=v;bk=k}});if(bk<0)return false;h[bk]=id;return true}
+function contFill(lu){let ch=0;if(!lu.h[0].includes(NET.me)&&contPlace(lu,0,NET.me,SLOTS[MM.slot]))ch=1;
+ for(const q of netOthers()){const pr=q.presence,id=String(q.peer);if(pr.r!='g'||(pr.side!==0&&pr.side!==1)||lu.h[0].includes(id)||lu.h[1].includes(id))continue;
+  const b=sanitize(pr.b);if(b&&contPlace(lu,pr.side==NET.side?0:1,id,b))ch=1}return ch}
+function contDrop(lu){const ids=new Set(netOthers().map(q=>String(q.peer)));let ch=0;for(const h of lu.h)h.forEach((id,k)=>{if(id&&id!==NET.me&&!ids.has(id)){h[k]=null;ch=1}});return ch}
+function contPub(){NET.lu.n++;contLu(NET.lu);netPres({lu:JSON.parse(JSON.stringify(NET.lu))})}
+function contNew(){if(ES)endLeave();const pr=NET.pre||{ti:contPair()},s=NET.side|0;NET.pre=null;
+ const lu={g:(NET.gid|0)+1+(Math.random()*1000|0),n:0,hs:s,ti:[pr.ti[s],pr.ti[1-s]],ids:null,h:[[null,null,null],[null,null,null]]};
+ if(!contSetup(lu)){netLeave();toMenu();return}
+ NET.gid=lu.g;lu.ids=TM.map((tm,t)=>tm.map(p=>FULL[t].indexOf(p)));NET.lu=lu;contFill(lu);contPub();S='play';
+ netPres({st:'play',pre:null,s:null});say(TEAMS[TI[0]].n+'  vs  '+TEAMS[TI[1]].n,'#ffd23f')}
+function contQ(){const lu=NET.lu;if(lu&&(contDrop(lu)|contFill(lu)))contPub()} // a new quarter: spectators come in
+function contTakeOver(){Object.assign(NET,{host:1,guest:0,lu:null,snaps:[],ciK:null});if(ES)endLeave();
+ if(S=='cside'&&NET.side==null){NET.pre={ti:contPair()};netPres({r:'h',s:null,lu:null,st:'side',in:null,pre:NET.pre.ti});return}
+ NET.pre=null;netPres({r:'h',s:null,lu:null,in:null});contNew();say('THE HOST LEFT  ·  THIS LOBBY RUNS ON YOUR GAME NOW','#ffd23f')}
+function contDemote(){Object.assign(NET,{host:0,guest:1,lu:null,pre:null,gid:-1,lun:-1,snaps:[],lastT:null,oppSeen:performance.now()});for(const p of FULL.flat())p.nh=null;
+ netPres({r:'g',s:null,lu:null,ci:null,pre:null,st:S=='cside'?'side':'in',side:NET.side})} // two people started the same empty lobby at once: the one with the higher id joins the other
+function contLost(t){if(ES)endLeave();netLeave();S='oclob';ONL.sel=0;NET.err=t}
+function contBegin(lu){if(ES)endLeave();NET.gid=lu.g;if(!contSetup(lu)){contLost('COULD NOT START THE MATCH');return}contLu(lu);S='play';netPres({st:'in'})}
+function contPick(s){const sd=contSides()[s];if(!sd||(sd.n>=CONT.side&&NET.side!==s)){NET.err='THAT SIDE IS FULL - PICK THE OTHER ONE';beep(160,.08,'square');return}
+ NET.side=s;NET.err='';beep(660,.06,'triangle');if(NET.host)contNew();else netPres({side:s,st:'in'})}
+// ----- every frame while in a Continuous lobby
+function contStep(dt){const now=performance.now(),G=netOthers();
+ if(S=='play'){if(P.KeyK||P.Escape)NET.ask=NET.ask?0:1;if(NET.ask&&P.Enter){netLeave();toMenu();return}}else NET.ask=0;
+ if(NET.host){const rv=G.find(q=>q.presence.r=='h');if(rv&&String(rv.peer)<NET.me){contDemote();return}
+  if(!NET.lu)return; // (still on the side screen)
+  if(contDrop(NET.lu))contPub();
+  if(S=='play'||S=='qend'){for(const H of NET.hum.values()){H.rin.P={};H.rin.Rl={}}
+   if(S=='play')for(const q of G){const H=NET.hum.get(String(q.peer));if(H&&q.presence.in)contWith(H,()=>netHostIn(q.presence))}}
+  if(S=='play'||S=='qend'||S=='over'){if(msg!==NET.lastMsg){NET.lastMsg=msg;NET.mid++}netPres({s:JSON.parse(JSON.stringify(netSnap())),st:S=='over'?'over':'play'})}
+  if(S=='over'){if(NET.wT==null)NET.wT=CONT.wait;NET.wT=Math.max(0,NET.wT-dt);ES_LBL[1]='NEXT MATCH IN '+Math.ceil(NET.wT)+'s';if(NET.wT<=0){contNew();return}}
+  const t=s=>s==NET.side?0:1,ci={sc:[sc[t(0)],sc[t(1)]],q:qn,st:S=='over'?'over':'play',wt:S=='over'?Math.ceil(NET.wT):0},k=JSON.stringify(ci);if(k!==NET.ciK){NET.ciK=k;netPres({ci})}
+  return}
+ const hp=G.find(q=>q.presence.r=='h');
+ if(!hp){if(now-NET.oppSeen>3000){const c=[NET.me,...G.filter(q=>q.presence.r=='g').map(q=>String(q.peer))].sort()[0];if(c===NET.me){contTakeOver();return}
+   if(now-NET.oppSeen>15000)contLost(contName(NET.code)+' CLOSED')}return}
+ NET.oppSeen=now;const h=hp.presence,lu=h.lu&&h.lu.ids&&Array.isArray(h.lu.h)?h.lu:null;
+ if(S=='cside'){if(NET.side!=null&&h.st=='play'&&lu)contBegin(lu);return}
+ if(lu&&lu.g!==NET.gid){contBegin(lu);return}
+ if(lu&&(lu.n!==NET.lun||NET.luMiss))contLu(lu);
+ if(S=='over'&&h.ci)ES_LBL[1]='NEXT MATCH IN '+(h.ci.wt|0)+'s';
+ if((S=='play'||S=='over')&&h.s&&h.s.t>(NET.lastT==null?-1:NET.lastT)){NET.lastT=h.s.t;NET.snaps.push({t:h.s.t,rx:now,f:h.s});if(NET.snaps.length>30)NET.snaps.shift();NET.lastRx=now}}
+// ----- the two sides as the side screen shows them (absolute sides): team, the people on it, and how many spots are taken
+function contSides(){const r=[0,1].map(()=>({ti:null,pl:[],n:0}));
+ if(NET.host){if(NET.pre)[0,1].forEach(s=>r[s].ti=NET.pre.ti[s]);return r}
+ const G=netOthers(),hp=G.find(q=>q.presence.r=='h');if(!hp)return r;const h=hp.presence,lu=h.lu&&Array.isArray(h.lu.h)&&Array.isArray(h.lu.ti)?h.lu:null,hid=String(hp.peer);
+ const nm=id=>{const q=id===hid?hp:G.find(x=>String(x.peer)===id);return q&&q.presence.b?String(q.presence.b.name||'PLAYER').slice(0,12):'PLAYER'};
+ if(lu)[0,1].forEach(s=>{const t=s==lu.hs?0:1;r[s].ti=lu.ti[t];(lu.h[t]||[]).forEach(id=>{if(id){r[s].pl.push(nm(id));r[s].n++}})});
+ else if(Array.isArray(h.pre))[0,1].forEach(s=>r[s].ti=h.pre[s]);
+ const inLu=id=>lu&&(lu.h[0].includes(id)||lu.h[1].includes(id));
+ for(const q of G){const pr=q.presence,id=String(q.peer);if(pr.r=='g'&&(pr.side===0||pr.side===1)&&!inLu(id)){r[pr.side].n++;r[pr.side].pl.push(nm(id)+'  (next quarter)')}}
+ if(NET.side!=null&&!inLu(NET.me)){r[NET.side].n++;r[NET.side].pl.push(((SLOTS[MM.slot]||{}).name||'YOU')+'  (you)')}
+ return r}
+// ----- the screens: SERVER LIST (oclob) and CHOOSE YOUR SIDE (cside)
+function contRows(){return S=='oclob'?OL_T+contList().length:3}
+function contEnter(){const i=ONL.sel;
+ if(S=='oclob'){if(i==0)contHost();else if(i==1)codeOpen();else if(i==2)netRefresh();else{const l=contList()[i-OL_T];if(!l)return;if(l.s=='full'){NET.err=contName(l.c)+' IS FULL (6 PLAYERS)';return}contJoin(l.c)}}
+ else if(i<2){if(NET.side==null)contPick(i)}else onlBack()}
+function contKeys(){if(S=='oclob'&&ONL.ce)return;const up=P.ArrowUp||P.KeyW,dn=P.ArrowDown||P.KeyS,lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space,n=contRows();
+ if(P.Backspace||P.Escape){onlBack();return}if(ONL.sel>=n)ONL.sel=n-1;const s=ONL.sel;
+ if(S=='oclob'){if(s<OL_T){if(lr)ONL.sel=(s+lr+OL_T)%OL_T;if(dn)ONL.sel=OL_T;if(up)ONL.sel=n-1}else{if(up)ONL.sel=s==OL_T?0:s-1;if(dn)ONL.sel=s>=n-1?0:s+1}}
+ else{if(s<2&&lr)ONL.sel=1-s;if(dn)ONL.sel=s<2?2:0;if(up)ONL.sel=s<2?2:0}
+ if(ok)contEnter()}
+function contPtr(x,y,type){const hit=(i,r)=>{if(!mIn(x,y,r))return false;ONL.sel=i;if(type==0)contEnter();return true};
+ if(S=='oclob'){if(type==0&&mIn(x,y,ON_BACK)){onlBack();return}for(let i=0;i<OL_T;i++)if(hit(i,OLB(i)))return;const L=contList();for(let k=0;k<Math.min(CL_N,L.length-(ONL.top|0));k++)if(hit((ONL.top|0)+k+OL_T,CLR(k)))return}
+ else{for(let i=0;i<2;i++)if(hit(i,CSC(i)))return;hit(2,CS_LV)}}
+function contDraw(){const b=SLOTS[MM.slot];g.textAlign='center';
+ if(S=='oclob'){const L=contList();g.fillStyle=GOLD;g.font='bold 40px Georgia';g.fillText('CONTINUOUS 3V3  ·  SERVER LIST',480,64);g.font='13px system-ui';
+  {const[t,c]=netStatus();g.fillStyle=c;g.fillText(t,480,92)}
+  {const rf=ONL.rf&&performance.now()-ONL.rf<1500;onlBtn(OLB(0),'HOST MATCH',ONL.sel==0);onlBtn(OLB(1),'JOIN BY CODE',ONL.sel==1);onlBtn(OLB(2),rf?'REFRESHING'+'.'.repeat(1+(performance.now()/300|0)%3):'⟳  REFRESH',ONL.sel==2)}
+  mRR(140,166,680,262,12,'rgba(255,255,255,.03)','rgba(255,255,255,.1)');
+  g.font='bold 10px system-ui';g.fillStyle='#8a90a0';[[160,'LOBBY'],[300,'MATCHUP'],[560,'SCORE'],[680,'PLAYERS'],[802,'STATUS']].forEach(([x,t],j)=>{g.textAlign=j==4?'right':'left';g.fillText(t,x,192)});
+  const se=ONL.sel-OL_T;if(se>=0){if(se<(ONL.top|0))ONL.top=se;if(se>=(ONL.top|0)+CL_N)ONL.top=se-CL_N+1}ONL.top=Math.max(0,Math.min(ONL.top|0,L.length-CL_N));
+  L.slice(ONL.top,ONL.top+CL_N).forEach((l,k)=>{const r=CLR(k),on=ONL.sel==ONL.top+k+OL_T,em=l.s=='empty'||!(l.n>0),full=l.s=='full';
+   mRR(r[0],r[1],r[2],r[3],8,on?'rgba(40,32,8,.9)':'rgba(255,255,255,.05)',on?GOLD:'rgba(255,255,255,.1)');g.save();if(full)g.globalAlpha=.55;
+   g.textAlign='left';g.font='bold 17px Georgia';g.fillStyle='#fff';g.fillText(contName(l.c),160,r[1]+29);
+   const tm=Array.isArray(l.t)&&TEAMS[l.t[0]]&&TEAMS[l.t[1]];g.font='bold 13px system-ui';g.fillStyle=em?'#8a90a0':'#cfd3dc';g.fillText(tm?TEAMS[l.t[0]].n+'  vs  '+TEAMS[l.t[1]].n:em?'nobody here yet  ·  random teams':'starting up',300,r[1]+29);
+   g.fillStyle='#cfd3dc';if(tm&&Array.isArray(l.sc))g.fillText((l.sc[0]|0)+' - '+(l.sc[1]|0)+(l.st=='over'?'  FINAL':'  ·  '+((l.q|0)>4?'OT':'Q'+(l.q|0))),560,r[1]+29);
+   g.fillText((l.n|0)+' / '+CONT.max,680,r[1]+29);
+   g.textAlign='right';g.fillStyle=full?GOLD:em?'#9fd8ff':'#7fffa0';g.fillText(full?'FULL':em?'START IT':'OPEN',802,r[1]+29);g.restore()});
+  g.textAlign='center';if(L.length>CL_N){g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText((ONL.top+1)+'-'+Math.min(L.length,ONL.top+CL_N)+' of '+L.length+' lobbies  ·  ↑/↓ to scroll',480,446)}
+  if(NET.busy){g.font='bold 15px system-ui';g.fillStyle=GOLD;g.fillText(NET.msg+'.'.repeat(1+(performance.now()/350|0)%3),480,472)}
+  else if(NET.err){g.font='bold 15px system-ui';g.fillStyle='#ff7b7b';g.fillText(NET.err,480,472)}
+  else{g.font='12px system-ui';g.fillStyle='#8a90a0';g.fillText('Every match counts towards your ONLINE WINS  ·  alone, you play the AI until somebody joins',480,472)}
+  g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('←/→ ↑/↓ choose  ·  Enter select  ·  Esc back  ·  or click',480,508);
+  mRR(ON_BACK[0],ON_BACK[1],ON_BACK[2],ON_BACK[3],8,'rgba(255,255,255,.07)');g.font='bold 16px Georgia';g.fillStyle='#cfd3dc';g.fillText('BACK',ON_BACK[0]+ON_BACK[2]/2,ON_BACK[1]+24);
+  if(ONL.ce)codeDraw();return}
+ const sd=contSides(),hp=NET.host?null:netOthers().find(q=>q.presence.r=='h'),ci=hp&&hp.presence.ci;
+ g.fillStyle=GOLD;g.font='bold 22px Georgia';g.fillText('CONTINUOUS 3V3  ·  '+contName(NET.code),480,48);g.font='bold 42px Georgia';g.fillStyle='#fff';g.fillText(NET.side==null?'CHOOSE YOUR SIDE':'YOU\'RE IN',480,98);
+ g.font='13px system-ui';g.fillStyle='#9aa';
+ g.fillText(NET.host?'You started this lobby  ·  you play the AI until somebody joins':!hp?'Connecting to the lobby'+'.'.repeat(1+(performance.now()/400|0)%3):ci&&ci.st=='over'?'The match just ended  ·  the next one starts in '+(ci.wt|0)+'s':ci&&Array.isArray(ci.sc)?'Match on  ·  '+(ci.sc[0]|0)+' - '+(ci.sc[1]|0)+'  ·  '+((ci.q|0)>4?'OT':'Q'+(ci.q|0))+'  ·  you come in at the start of the next quarter':'The lobby is starting up',480,126);
+ for(let s=0;s<2;s++){const[x,y,w,h]=CSC(s),d=sd[s],on=ONL.sel==s&&NET.side==null,me=NET.side===s,full=d.n>=CONT.side&&!me,tm=d.ti!=null&&TEAMS[d.ti];
+  if(on||me){g.save();g.shadowColor=me?'#4cff7a':GOLD;g.shadowBlur=20;mRR(x,y,w,h,16,me?'rgba(76,255,122,.08)':'rgba(255,210,63,.1)',me?'#4cff7a':GOLD);g.restore()}else mRR(x,y,w,h,16,'rgba(255,255,255,.05)','rgba(255,255,255,.14)');
+  g.save();if(full||(NET.side!=null&&!me))g.globalAlpha=.45;g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText(s?'AWAY':'HOME',x+w/2,y+26);
+  let fz=40;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif';const nm=tm?tm.n:'RANDOM TEAM';while(g.measureText(nm).width>w-30&&fz>20){fz-=2;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif'}
+  g.lineWidth=7;g.lineJoin='round';g.strokeStyle='#000';g.strokeText(nm,x+w/2,y+72);g.fillStyle=tm?tcolOf(d.ti):'#e6e9f0';g.fillText(nm,x+w/2,y+72);
+  g.font='bold 13px system-ui';g.fillStyle='#cfd3dc';g.fillText(d.n+' / '+CONT.side+' PLAYERS  ·  AI fills the rest',x+w/2,y+100);
+  g.font='14px system-ui';g.fillStyle='#fff';(d.pl.length?d.pl:['no players yet']).slice(0,4).forEach((l,k)=>{g.fillStyle=d.pl.length?'#fff':'#8a90a0';g.fillText(l,x+w/2,y+132+k*22)});
+  g.font='bold 16px Georgia';g.fillStyle=me?'#7fffa0':full?'#ff9f43':on?GOLD:'#cfd3dc';g.fillText(me?'✓ YOUR SIDE':full?'FULL':'JOIN THIS SIDE',x+w/2,y+h-18);g.restore()}
+ onlBtn(CS_LV,'LEAVE',ONL.sel==2);
+ g.textAlign='center';g.font='bold 14px system-ui';if(NET.err){g.fillStyle='#ff7b7b';g.fillText(NET.err,480,496)}
+ else if(NET.side!=null){g.fillStyle=GOLD;g.fillText('Waiting for the match'+'.'.repeat(1+(performance.now()/400|0)%3),480,496)}
+ g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('←/→ choose a side  ·  Enter join  ·  Esc leave',480,522)}
+// ----- in the match: spectating banner, and the pause menu (K / Esc): the match keeps going, the lobby code is shown so friends can join
+function contOverlay(){const now=performance.now();g.textAlign='center';
+ if(NET.spec&&NET.guest&&!NET.ask){g.fillStyle='rgba(8,10,16,.7)';g.fillRect(0,58,960,44);g.fillStyle=GOLD;g.font='bold 18px Georgia';g.fillText('SPECTATING',480,78);g.font='12px system-ui';g.fillStyle='#cfd3dc';g.fillText('You come in at the start of the next quarter'+(NET.side!=null?'  ·  '+(NET.side?'AWAY':'HOME')+' side':''),480,95)}
+ if(!NET.ask)return;g.fillStyle='rgba(8,10,16,.84)';g.fillRect(0,0,960,540);g.fillStyle=GOLD;g.font='bold 48px Georgia';g.fillText('PAUSED',480,140);
+ g.font='14px system-ui';g.fillStyle='#9aa';g.fillText('The match keeps going  ·  online games never stop',480,170);
+ const cd=/^\d{4}$/.test(NET.code);mRR(300,200,360,150,16,'rgba(255,255,255,.05)',GOLD);g.font='bold 12px system-ui';g.fillStyle='#8a90a0';g.fillText(cd?'LOBBY CODE':'LOBBY',480,228);
+ g.font='bold 64px Georgia';g.fillStyle='#fff';g.fillText(NET.code,480,296);g.font='12px system-ui';g.fillStyle='#cfd3dc';
+ g.fillText(cd?'Friends: ONLINE  ·  CONTINUOUS  ·  JOIN BY CODE (or LOBBY - '+NET.code+' on the list)':'Friends pick LOBBY '+NET.code+' on the CONTINUOUS server list',480,330);
+ g.font='13px system-ui';g.fillStyle='#cfd3dc';g.fillText((1+netOthers().length)+' / '+CONT.max+' players in the lobby'+(NET.host?'  ·  the match runs on your game':''),480,384);
+ g.font='bold 16px system-ui';g.fillStyle='#fff';g.fillText('Enter  ·  leave the lobby          K / Esc  ·  back to the game',480,430)}
+
 function netOverlay(){g.save();const now=performance.now();
  if(NET.guest&&now-NET.lastRx>1200&&!NET.ask){g.fillStyle='rgba(8,10,16,.6)';g.fillRect(0,200,960,90);g.textAlign='center';g.fillStyle=GOLD;g.font='bold 30px Georgia';g.fillText('WAITING FOR THE HOST'+'.'.repeat(1+(now/400|0)%3),480,245);g.font='14px system-ui';g.fillStyle='#cfd3dc';g.fillText('No game updates from the host\'s page for '+((now-NET.lastRx)/1000).toFixed(1)+'s',480,272)}
  if(NET.perr&&now-NET.perrT<6000){g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#ff7b7b';g.fillText('SYNC ERROR  \u00b7  '+String(NET.perr).slice(0,90),480,516)}
-g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='rgba(255,255,255,.75)';{const rt=NET.room&&NET.room.rtt?NET.room.rtt():null;g.fillText('ONLINE  ·  LOBBY '+NET.code+(rt!=null?'  ·  PING '+Math.round(rt)+' ms':'')+(NET.room&&NET.room.relayed&&NET.room.relayed()?'  ·  VIA RELAY':'')+'  ·  K: LEAVE',480,532)}
+g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='rgba(255,255,255,.75)';{const rt=NET.room&&NET.room.rtt?NET.room.rtt():null;g.fillText((NET.cm?'CONTINUOUS  ·  '+contName(NET.code):'ONLINE  ·  LOBBY '+NET.code)+(rt!=null?'  ·  PING '+Math.round(rt)+' ms':'')+(NET.room&&NET.room.relayed&&NET.room.relayed()?'  ·  VIA RELAY':'')+(NET.cm?'  ·  K: PAUSE':'  ·  K: LEAVE'),480,532)}
+ if(NET.cm){contOverlay();g.restore();return}
  if(NET.ask){g.fillStyle='rgba(8,10,16,.82)';g.fillRect(0,0,960,540);g.textAlign='center';g.fillStyle=GOLD;g.font='bold 44px Georgia';g.fillText('LEAVE THE MATCH?',480,240);g.font='16px system-ui';g.fillStyle='#cfd3dc';g.fillText('Enter  ·  leave (your opponent goes back to the lobby)     K / Esc  ·  keep playing',480,282)}
  g.restore()}
 function renderMainMenu(){if(!msc)return;R.setScissorTest(false);R.setViewport(0,0,960,540);R.render(msc,mcam)}
@@ -5533,10 +5714,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.12'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.13'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.13','Continuous online 3v3',['NEW: ONLINE · CONTINUOUS - online 3v3 matches that never stop, between two random current-roster teams','Server list: LOBBY 1, 2 and 3 are always there; the first player in starts the lobby (the AI plays every empty spot)','Pick a side when you join: you take an AI player\'s spot on that team (max 6 players, 3 a side)','Join mid-match and you spectate until the next quarter starts','Quarter breaks are 3 seconds and automatic; 15 seconds after the final the next match starts with new random teams','HOST MATCH makes your own lobby with a 4-digit code (on the list as LOBBY - CODE; the code is in the pause menu, K / Esc)','Every Continuous match counts towards ONLINE WINS - even playing the AI alone','If the host leaves, the lobby carries on: another player takes it over and a new match starts']],
  ['v2.12','The Store costs Court Credits',['Everything in the STORE now costs COURT CREDITS (CC), earned in Career games (about 1,000 CC a game). Press Enter / click once to see the price, again to buy. Purchases are for your whole account (and go in your cloud backup); rating requirements still apply on top.','BALL TRAILS: none are free any more - everyone starts with NO TRAIL. Team lasers 2,500 · Fire 3,000 · Ice 3,500 ... Dragon 80,000 · Zeus 90,000 · SUN GOD 150,000.','DRIBBLE PACKAGES: Basic 1 free · Basic 2 2,000 · Pro 1 8,000 · Pro 2 15,000 · Elite 1 30,000 · Elite 2 50,000 · Flashy 1 85,000 · FLASHY 2 130,000.','DUNK PACKAGES: Basic Two-Handers free · Basic Tomahawks 3,000 · Alley-Oops 12,000 · Athletic Two-Handers 25,000 · Long Tomahawks 45,000 · Spins & Windmills 80,000 · SUPERMAN 130,000.','JUMP SHOTS: Basic 1-2 free, then 500 up to 38,000 (Pro 10); the signature jumpers L.Scott 45,000 · M.Allen 55,000 · C.King 65,000 · M.Johnson 75,000 · E.Lewis 80,000 · D.RYERSON 90,000. LAYUPS 4,000-18,000, PASSES 3,000-20,000, FADEAWAYS 6,000-9,000.','In games your player only uses what you have bought (anything else falls back to the free basics). The Store preview still shows everything, so you can try before you buy.']],
  ['v2.11','Admin camera: strafe',['ADMIN CAMERA: A / D now slide the camera left / right relative to where it is facing, and W / S fly properly in every direction (a bug had locked the camera to one axis of the court, so only forward / back along the length of the court worked).']],
  ['v2.10','Admin camera: super sensitivity',['ADMIN CAMERA: press 6 to switch SUPER SENSITIVITY on or off - the mouse turns the camera 7x as far (shown top right while it is on).']],
@@ -5777,7 +5959,8 @@ function profLoad(){let v=null;try{v=JSON.parse(localStorage.getItem(PF_KEY)||'n
 function pfLife(){if(PF.d.xp==null)PF.d.xp=SLOTS.reduce((a,b)=>a+(b?b.xp|0:0),0);if(PF.d.cc==null)PF.d.cc=CC}
 function profSave(){try{localStorage.setItem(PF_KEY,JSON.stringify(PF.d))}catch(e){}}
 profLoad();
-function profRecord(){const me=NET.on?null:myP(),k=NET.on?'ONLINE':me?'CAREER':MODE+'v'+MODE,w=sc[0]>sc[1]?'w':'l',m=PF.d.md[k];
+function profRecord(){if(NET.cm&&!NET.played)return; // (CONTINUOUS: only a match you were on the floor for counts)
+ const me=NET.on&&!NET.cm?null:myP(),k=NET.on?'ONLINE':me?'CAREER':MODE+'v'+MODE,w=sc[0]>sc[1]?'w':'l',m=PF.d.md[k];
  [PF.d.st,m].forEach(o=>{if(o){o.gp++;o[w]++}});(me?[me]:TM[0]).forEach(p=>{const s=pstat(p);PF_K.forEach(k=>PF.d.st[k]+=s[k]|0)});profSave()}
 function profOpen(){PF.on=true;PF.ed=false;beep(520,.06,'triangle')}
 function profClose(){PF.on=false;ACCT.in=null;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
