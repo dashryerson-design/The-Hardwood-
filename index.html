@@ -2112,8 +2112,8 @@ const CTX={
  NEON:{base:'#0b0718',line:'#3ff4ff',a:'rgba(255,40,200,.35)',b:'rgba(120,60,255,.35)',txt:'rgba(255,60,220,.85)',glow:'#3ff4ff'},
  HEAVEN:{base:'#fbf2d2',line:'#d49a1c',a:'rgba(160,200,255,.65)',b:'rgba(255,196,186,.65)',txt:'rgba(212,154,28,.7)'}},CTC={};
 const rnd=(s=>()=>(s=(s*1664525+1013904223)>>>0)/4294967296)(20271);
-function courtTex(k){
- const C=CTX[k],c=document.createElement('canvas');c.width=1880;c.height=CW*2;const x=c.getContext('2d');x.scale(2,2);
+function courtTex(k,sc){sc=sc||2; // (sc: pixels per game unit - 2 normally, 4 for ULTRA's 4K courts)
+ const C=CTX[k],c=document.createElement('canvas');c.width=940*sc;c.height=CW*sc;const x=c.getContext('2d');x.scale(sc,sc);
  x.fillStyle=C.base;x.fillRect(0,0,940,CW);
  if(k=='STREET'){
   for(let i=0;i<8000;i++){x.fillStyle=rnd()<.5?'rgba(0,0,0,'+rnd()*.13+')':'rgba(255,255,255,'+rnd()*.08+')';x.fillRect(rnd()*940,rnd()*CW,1+rnd()*2,1+rnd()*2)}
@@ -2596,7 +2596,13 @@ const TS={
  AURORA:{c:[0x3affb0,0x7a5aff,0xffffff],sp:[0x3affb0,0x9a7aff,0xd8fff0],g:0x2affa0,m:0x9a6aff,k:0xf0fff8,add:1,up:1.4,j:.7,L:0x6affc8,n:5,geo:0,fx:'ICE',w:2,rb:1,hr:[.36,.78]},
  DRAGON:{c:[0xb00010,0xff5a00,0xffd040],sp:[0xff2a00,0xff8a10,0xffe070],g:0xd01008,m:0xff7a10,k:0xfff0c0,add:1,up:3,j:.7,L:0xff4010,n:8,geo:1,fx:'FIRE',w:1.5,rs:'roar'},
  GLITCH:{c:[0xff2ad8,0x2af0ff,0xffffff],sp:[0xff2ad8,0x2af0ff,0xffff40],g:0xff2ad8,m:0x2af0ff,k:0xffffff,add:1,up:0,j:.35,L:0xff60e0,n:4,geo:2,fx:'LAZER',zig:1,rb:1,gl:1,ss:1.4},
- CANDY:{ss:1.8,c:[0xff5a9a,0xffffff,0x5ad8ff],sp:[0xff7ab0,0xffffff,0x7ae0ff],g:0xff5aa0,m:0xffd0e4,k:0xffffff,add:1,up:.4,j:.45,L:0xff8ab8,n:4,geo:[3,0,1],fx:'ICE'}};
+ CANDY:{ss:1.8,c:[0xff5a9a,0xffffff,0x5ad8ff],sp:[0xff7ab0,0xffffff,0x7ae0ff],g:0xff5aa0,m:0xffd0e4,k:0xffffff,add:1,up:.4,j:.45,L:0xff8ab8,n:4,geo:[3,0,1],fx:'ICE'},
+ // v2.06
+ FROSTFIRE:{c:[0x2a6aff,0x7ad8ff,0xffffff],sp:[0x3a8aff,0x9ae8ff,0xffffff],g:0x2a7aff,m:0x8ae0ff,k:0xf4fcff,add:1,up:4,j:.4,L:0x6ac0ff,n:6,geo:0,fx:'FIRE',w:1.2},
+ LAVA:{ss:1.5,c:[0x2a0800,0xff4a00,0xffb020],sp:[0xff5a10,0xffa020,0x3a1006],g:0xff3a00,m:0xff8a10,k:0xffe0a0,add:1,up:-2.4,j:.4,L:0xff5a10,n:6,geo:[1,0],fx:'FIRE',w:1.3},
+ SYNTHWAVE:{c:[0xff2a9a,0x8a2aff,0x2ae8ff],sp:[0xff3aaa,0xa04aff,0x3ae8ff],g:0xff2aa0,m:0x9a3aff,k:0xe8fcff,add:1,up:0,j:.25,L:0xd03ad0,n:4,geo:2,fx:'LAZER',w:1.7,rb:1,hr:[.83,.52]},
+ ZEUS:{c:[0xfff2b0,0xffd040,0xffffff],sp:[0xfff4c0,0xffd84a,0xffffff],g:0xffc020,m:0xffe27a,k:0xffffff,add:1,up:.5,j:.95,L:0xffe080,n:7,geo:2,fx:'STORM',zig:1,w:1.1},
+ HEARTBREAKER:{ss:2.2,sn:3,c:[0xff1a4a,0xff6a90,0xffffff],sp:[0xff2a5a,0xff8aa8,0xffd0dc],g:0xff1a4a,m:0xff7a9a,k:0xfff0f4,add:1,up:.8,j:.5,L:0xff4a70,n:4,geo:9,fx:'ICE'}};
 const tb=k=>TS[k].fx||k; // base style of a trail
 // whose trail a perfect release shows: a created player's own (CAREER > CUSTOMISATION), everyone else his team's laser (TEAMS order)
 const TEAM_TRL=['PINK LAZER','GREEN LAZER','YELLOW LAZER','RED LAZER','BLUE LAZER','RAINBOW LAZER'];let TRL_C='FIRE',lastH=null;
@@ -2606,7 +2612,8 @@ const shpG=(...f)=>new THREE.ShapeGeometry(f.map(fn=>{const s=new THREE.Shape();
 const PG=[new THREE.SphereGeometry(1,8,6),new THREE.OctahedronGeometry(1,0),new THREE.BoxGeometry(.5,.5,2.4),
  shpG(s=>{for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,r=i%2?.42:1;i?s.lineTo(Math.cos(a)*r,Math.sin(a)*r):s.moveTo(Math.cos(a)*r,Math.sin(a)*r)}}),
  shpG(...[0,1,2].map(i=>s=>{const a=i*2.094+1.571;s.absarc(Math.cos(a)*.42,Math.sin(a)*.42,.42,0,6.283)}),s=>{s.moveTo(-.06,0);s.lineTo(.06,0);s.lineTo(.12,-1);s.lineTo(0,-1);s.closePath()}),
- new THREE.BoxGeometry(1.7,.03,.8),new THREE.CylinderGeometry(.6,.6,.1,14),shpG(s=>{s.moveTo(0,-1);s.quadraticCurveTo(.75,0,0,1);s.quadraticCurveTo(-.75,0,0,-1)}),new THREE.CylinderGeometry(.14,.14,2.6,6)],TRL=[];let ti=0;
+ new THREE.BoxGeometry(1.7,.03,.8),new THREE.CylinderGeometry(.6,.6,.1,14),shpG(s=>{s.moveTo(0,-1);s.quadraticCurveTo(.75,0,0,1);s.quadraticCurveTo(-.75,0,0,-1)}),new THREE.CylinderGeometry(.14,.14,2.6,6),
+ shpG(s=>{s.moveTo(0,-.9);s.bezierCurveTo(-.2,-.6,-1,-.25,-1,.25);s.bezierCurveTo(-1,.75,-.35,1,0,.6);s.bezierCurveTo(.35,1,1,.75,1,.25);s.bezierCurveTo(1,-.25,.2,-.6,0,-.9)})],TRL=[];let ti=0; // (PG 9 = heart, v2.06)
 for(let i=0;i<280;i++){const m=new THREE.Mesh(PG[0],new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));m.visible=false;sc3.add(m);TRL.push({m,l:0,mx:1,s:1,v:new THREE.Vector3()})}
 const bolt=new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({length:7},()=>new THREE.Vector3())),new THREE.LineBasicMaterial({color:0xdfe9ff}));bolt.visible=false;sc3.add(bolt);
 const tl=new THREE.PointLight(0xffffff,0,40);sc3.add(tl);
@@ -2763,35 +2770,35 @@ imC.material.blending=THREE.NormalBlending;
 const imB=Array.from({length:8},()=>{const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({length:9},()=>new THREE.Vector3())),new THREE.LineBasicMaterial({color:0xdfe9ff,transparent:true,blending:THREE.AdditiveBlending,fog:false,depthTest:false}));l.visible=false;l.frustumCulled=false;l.renderOrder=30;sc3.add(l);return l});
 const IMS={SUN:{F:150,R:170,rc:[0xffffff,0xffd040,0xff6a00]},LAZER:{F:40,R:62,rc:[0xffffff,0xffffff,0xffffff]},FIRE:{F:42,R:54,rc:[0xfff4cf,0xffa31a,0xff4d12]},ICE:{F:34,R:46,rc:[0xffffff,0xbdf2ff,0x59b9ff]},BLACK:{F:38,R:58,rc:[0xb36bff,0x8a3cff,0x5a1ee0]},STORM:{F:46,R:42,rc:[0xffffff,0xbcd0ff,0x6f96ff]}};
 function impactFx(k){
- const st=TS[k],p=IM.p;IM.t=0;IM.k=k;IM.b2=0;sfxImpact(k);k=tb(k);IM.dur=k=='SUN'?2.6:1.3;
- const burst=(n,s0,s1,l0,l1,z0,z1,dg,g)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=s0+Math.random()*(s1-s0);tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,l0+Math.random()*(l1-l0),z0+Math.random()*(z1-z0),st.sp[i%3],dg,g)}};
- const shards=(n,s0,s1)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=s0+Math.random()*(s1-s0);tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.6+Math.random()*.6,.3+Math.random()*.45)}};
- if(k=='FIRE'){burst(120,8,40,.5,1.2,.7,2.3,2.2,-9);shards(36,8,28);shake=Math.max(shake,.75)}
- else if(k=='ICE'){burst(70,6,26,.6,1.3,.5,1.4,2,-3);shards(60,8,34);shake=Math.max(shake,.45)}
- else if(k=='BLACK'){for(let i=0;i<110;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=30+Math.random()*16,dx=Math.sin(b)*Math.cos(a),dy=Math.cos(b),dz=Math.sin(b)*Math.sin(a);tmpA.set(p.x+dx*16,p.y+dy*16,p.z+dz*16);tmpB.set(-dx*sp,-dy*sp,-dz*sp);spawn(tmpA,tmpB,.42,.5+Math.random()*1.1,st.sp[i%3],3,0)}shake=Math.max(shake,.3)}
+ const st=TS[k],p=IM.p;IM.t=0;IM.k=k;IM.b2=0;sfxImpact(k);k=tb(k);IM.dur=k=='SUN'?2.6:1.3;const Q=impQ(k),QZ=k=='SUN'?1:.75; // (v2.06: every impact but the SUN GOD's is ~60% smaller)
+ const burst=(n,s0,s1,l0,l1,z0,z1,dg,g)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=(s0+Math.random()*(s1-s0))*Q;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,l0+Math.random()*(l1-l0),(z0+Math.random()*(z1-z0))*QZ,st.sp[i%3],dg,g)}};
+ const shards=(n,s0,s1)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=(s0+Math.random()*(s1-s0))*Q;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.6+Math.random()*.6,.3+Math.random()*.45)}};
+ if(k=='FIRE'){burst(120,8,40,.5,1.2,.7,2.3,2.2,-9);shards(36,8,28);shake=Math.max(shake,.6*.75)}
+ else if(k=='ICE'){burst(70,6,26,.6,1.3,.5,1.4,2,-3);shards(60,8,34);shake=Math.max(shake,.6*.45)}
+ else if(k=='BLACK'){for(let i=0;i<110;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=30+Math.random()*16,dx=Math.sin(b)*Math.cos(a),dy=Math.cos(b),dz=Math.sin(b)*Math.sin(a);tmpA.set(p.x+dx*16,p.y+dy*16,p.z+dz*16);tmpB.set(-dx*sp,-dy*sp,-dz*sp);spawn(tmpA,tmpB,.42,.5+Math.random()*1.1,st.sp[i%3],3,0)}shake=Math.max(shake,.6*.3)}
  else if(k=='SUN'){burst(320,12,80,.8,2.4,1.2,4.5,1.4,-5);burst(160,4,24,1.5,3,2.5,6,.9,1.5);shards(110,10,60);shake=Math.max(shake,1.8)} // a solar flare: white-hot core, molten spray, rising plasma
- else if(k=='LAZER'){burst(90,14,46,.3,.6,.25,.8,4,0);shards(20,12,36);shake=Math.max(shake,.5)}
- else{burst(60,10,40,.3,.7,.3,1,3,0);shards(30,10,34);shake=Math.max(shake,.55)}
+ else if(k=='LAZER'){burst(90,14,46,.3,.6,.25,.8,4,0);shards(20,12,36);shake=Math.max(shake,.6*.5)}
+ else{burst(60,10,40,.3,.7,.3,1,3,0);shards(30,10,34);shake=Math.max(shake,.6*.55)}
 }
-let SUNR=0;
+let SUNR=0;const impQ=k=>k=='SUN'?1:.4; // impact size: the SUN GOD keeps its full size
 function impUpd(dt){
  if(IM.t<0){SUNR=0;if(imF.visible){[imF,imG,imC,...imR,...imB].forEach(o=>o.visible=false)}return}
  IM.t+=dt;const t=IM.t,u=t/IM.dur,st=TS[IM.k],k=tb(IM.k);SUNR=k=='SUN'?1.6*Math.pow(Math.max(0,1-t/2.4),1.3):0;if(SUNR)shake=Math.max(shake,SUNR); // SUN GOD: the ground keeps rumbling
- const c=IMS[IM.k]||Object.assign({},IMS[k],{rc:[st.add?st.k:st.g,st.m,st.g]});
+ const c=IMS[IM.k]||Object.assign({},IMS[k],{rc:[st.add?st.k:st.g,st.m,st.g]}),Q=impQ(k);
  if(u>=1){IM.t=-1;SUNR=0;[imF,imG,imC,...imR,...imB].forEach(o=>o.visible=false);return}
  if(k=='BLACK'&&!IM.b2&&t>.38){IM.b2=1;const p=IM.p;
-  for(let i=0;i<140;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=12+Math.random()*34;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,.6+Math.random()*.7,.8+Math.random()*1.6,st.sp[i%3],3,0)}
-  for(let i=0;i<40;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=10+Math.random()*28;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.6+Math.random()*.6,.3+Math.random()*.45)}
-  shake=Math.max(shake,.8);sfxVoidBoom()}
+  for(let i=0;i<140;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=(12+Math.random()*34)*Q;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);spawn(p,tmpB,.6+Math.random()*.7,.8+Math.random()*1.6,st.sp[i%3],3,0)}
+  for(let i=0;i<40;i++){const a=Math.random()*6.283,b=Math.acos(2*Math.random()-1),sp=(10+Math.random()*28)*Q;tmpB.set(Math.sin(b)*Math.cos(a)*sp,Math.cos(b)*sp,Math.sin(b)*Math.sin(a)*sp);shard(p,tmpB,st,.6+Math.random()*.6,.3+Math.random()*.45)}
+  shake=Math.max(shake,.5);sfxVoidBoom()}
  const t0=k=='BLACK'?.38:0,te=t-t0; // BLACK: the flash/rings fire when the void detonates
  const fo=te<0?0:Math.pow(Math.max(0,1-te/.55),1.5);
- imF.visible=te>=0&&fo>0.01;if(imF.visible){imF.position.copy(IM.p);imF.scale.setScalar(6+c.F*Math.sqrt(Math.min(1,te/.28)));imF.material.opacity=fo;imF.material.color.setHex(IM.k=='BLACK'?0xd9b8ff:st.add?st.k:st.g)}
- imG.visible=te>=0;if(imG.visible){const ug=Math.min(1,te/(IM.dur-t0));imG.position.copy(IM.p);imG.scale.setScalar(14+c.F*1.1*Math.sqrt(ug));imG.material.opacity=.85*Math.pow(1-ug,1.4);imG.material.color.setHex(st.g)}
- imR.forEach((r,i)=>{const ur=Math.min(1,Math.max(0,(te-[0,.08,.18][i])/.75));r.visible=te>=0&&ur>0&&ur<1;if(r.visible){r.position.copy(IM.p);r.scale.setScalar(2+c.R*Math.sqrt(ur)*(1-i*.12));r.material.opacity=.95*Math.pow(1-ur,1.2);r.material.color.setHex(c.rc[i])}});
+ imF.visible=te>=0&&fo>0.01;if(imF.visible){imF.position.copy(IM.p);imF.scale.setScalar((6+c.F*Math.sqrt(Math.min(1,te/.28)))*Q);imF.material.opacity=fo;imF.material.color.setHex(IM.k=='BLACK'?0xd9b8ff:st.add?st.k:st.g)}
+ imG.visible=te>=0;if(imG.visible){const ug=Math.min(1,te/(IM.dur-t0));imG.position.copy(IM.p);imG.scale.setScalar((14+c.F*1.1*Math.sqrt(ug))*Q);imG.material.opacity=.85*Math.pow(1-ug,1.4);imG.material.color.setHex(st.g)}
+ imR.forEach((r,i)=>{const ur=Math.min(1,Math.max(0,(te-[0,.08,.18][i])/.75));r.visible=te>=0&&ur>0&&ur<1;if(r.visible){r.position.copy(IM.p);r.scale.setScalar((2+c.R*Math.sqrt(ur)*(1-i*.12))*Q);r.material.opacity=.95*Math.pow(1-ur,1.2);r.material.color.setHex(c.rc[i])}});
  imC.visible=k=='BLACK';if(imC.visible){imC.position.copy(IM.p);imC.material.color.setHex(0x000000);
-  if(t<.38){imC.scale.setScalar(2+8*(t/.38));imC.material.opacity=1}else{const q=(t-.38)/.6;imC.scale.setScalar(10+18*Math.min(1,q));imC.material.opacity=Math.max(0,1-q)}}
+  if(t<.38){imC.scale.setScalar((2+8*(t/.38))*Q);imC.material.opacity=1}else{const q=(t-.38)/.6;imC.scale.setScalar((10+18*Math.min(1,q))*Q);imC.material.opacity=Math.max(0,1-q)}}
  imB.forEach((l,i)=>{l.visible=k=='STORM'&&t<.55&&Math.random()<.8;if(!l.visible)return;
-  const a=i*Math.PI/4+(Math.random()-.5)*.6,el=(Math.random()-.3)*1.1,L=14+Math.random()*16,P=l.geometry.attributes.position;
+  const a=i*Math.PI/4+(Math.random()-.5)*.6,el=(Math.random()-.3)*1.1,L=(14+Math.random()*16)*Q,P=l.geometry.attributes.position;
   for(let j=0;j<9;j++){const d=j/8*L,jj=j?1.7:0;P.setXYZ(j,IM.p.x+Math.cos(a)*Math.cos(el)*d+(Math.random()-.5)*jj,IM.p.y+Math.sin(el)*d+(Math.random()-.5)*jj,IM.p.z+Math.sin(a)*Math.cos(el)*d+(Math.random()-.5)*jj)}
   P.needsUpdate=true;l.material.opacity=1-t/.6})
 }
@@ -3488,8 +3495,8 @@ function render(dt){
   else{cam.position.set(dp[0],dp[1],dp[2]);camLk.set(dl[0],dl[1],dl[2])}
   if(Math.abs(cam.fov-fv)>.001){cam.fov=fv;cam.updateProjectionMatrix()}
   cam.lookAt(camLk);if(S=='intro')introBlend()}
- envUpd(dt);if(GFX=='SUPER')superPass();
- R.render(sc3,cam);
+ envUpd(dt);if(GFX=='SUPER'||GFX=='ULTRA')superPass();
+ if(GFX=='ULTRA'){ultraFrame(dt);ultraRender()}else R.render(sc3,cam);
 }
 
 // ---------- 2D overlay ----------
@@ -3659,11 +3666,11 @@ function superPass(){
  SU.m.value.copy(SBIAS).multiply(SMC.projectionMatrix).multiply(SMC.matrixWorldInverse);SU.k.value=CF[COURT].rk;
  const au=R.shadowMap.autoUpdate,fv=floor.visible,av=apron.visible;R.shadowMap.autoUpdate=false;floor.visible=apron.visible=false;
  R.setRenderTarget(SRT);R.render(sc3,SMC);R.setRenderTarget(null);floor.visible=fv;apron.visible=av;R.shadowMap.autoUpdate=au}
-function setGfx(v){GFX=v;const c=v!='LOW',S2=v=='SUPER';R.shadowMap.enabled=c;R.shadowMap.type=THREE.PCFSoftShadowMap;R.toneMapping=c?THREE.ACESFilmicToneMapping:THREE.NoToneMapping;R.toneMappingExposure=S2?1.18:1.25;dl.castShadow=c;
- if(c){dl.position.set(47,70,45);dl.target.position.set(47,0,32);Object.assign(dl.shadow.camera,{left:-55,right:55,top:40,bottom:-40,near:10,far:160});const z=S2?4096:2048;dl.shadow.mapSize.set(z,z);dl.shadow.bias=S2?-.0003:0;dl.shadow.normalBias=S2?.03:0;dl.shadow.camera.updateProjectionMatrix();if(dl.shadow.map){dl.shadow.map.dispose();dl.shadow.map=null}}else dl.position.set(30,60,40);
- spots.forEach((l,i)=>{l.castShadow=S2;if(S2){l.position.set(i?84:10,42,i?74:-10);l.target.position.set(47,0,32);l.shadow.mapSize.set(2048,2048);l.shadow.camera.near=10;l.shadow.camera.far=170;l.shadow.bias=-.0004;l.shadow.normalBias=.03}else{l.position.set(i?87:7,45,32);l.target.position.set(i?87:7,0,32)}if(l.shadow.map){l.shadow.map.dispose();l.shadow.map=null}});
+function setGfx(v){GFX=v;const c=v!='LOW',S2=v=='SUPER'||v=='ULTRA',U=v=='ULTRA';R.shadowMap.enabled=c;R.shadowMap.type=THREE.PCFSoftShadowMap;R.toneMapping=c?THREE.ACESFilmicToneMapping:THREE.NoToneMapping;R.toneMappingExposure=S2?1.18:1.25;dl.castShadow=c;
+ if(c){dl.position.set(47,70,45);dl.target.position.set(47,0,32);Object.assign(dl.shadow.camera,{left:-55,right:55,top:40,bottom:-40,near:10,far:160});const z=U?Math.min(8192,R.capabilities.maxTextureSize):S2?4096:2048;dl.shadow.mapSize.set(z,z);dl.shadow.bias=S2?-.0003:0;dl.shadow.normalBias=S2?.03:0;dl.shadow.camera.updateProjectionMatrix();if(dl.shadow.map){dl.shadow.map.dispose();dl.shadow.map=null}}else dl.position.set(30,60,40);
+ spots.forEach((l,i)=>{l.castShadow=S2;if(S2){l.position.set(i?84:10,42,i?74:-10);l.target.position.set(47,0,32);l.shadow.mapSize.set(U?4096:2048,U?4096:2048);l.shadow.camera.near=10;l.shadow.camera.far=170;l.shadow.bias=-.0004;l.shadow.normalBias=.03}else{l.position.set(i?87:7,45,32);l.target.position.set(i?87:7,0,32)}if(l.shadow.map){l.shadow.map.dispose();l.shadow.map=null}});
  hemi.visible=c;envLights();floor.material=S2?floorX:c?floorS:floorL;floor.receiveShadow=c;shadowM.opacity=S2?.2:c?0:.3;
- sc3.traverse(o=>{if(o.isMesh){if(o!==floor&&o!==apron&&o!==wall&&!o.userData.ns&&!o.material.transparent)o.castShadow=c;if(o.material.isMeshLambertMaterial&&o!==wall)o.receiveShadow=c}});sc3.traverse(o=>{if(o.material)o.material.needsUpdate=true})}
+ sc3.traverse(o=>{if(o.isMesh){if(o!==floor&&o!==apron&&o!==wall&&!o.userData.ns&&!o.material.transparent)o.castShadow=c;if(o.material.isMeshLambertMaterial&&o!==wall)o.receiveShadow=c}});ultraApply();sc3.traverse(o=>{if(o.material)o.material.needsUpdate=true})}
 // ---------- COURT ENVIRONMENTS (Hell / Heaven / Street) ----------
 const CF={
  HELL:{bg:0x2a0a02,fog:[0x3a0f04,90,230],amb:[0xff9a70,.62],dl:[0xff8a50,.42],hemi:[0xff7a40,0x400a00,.5],spot:0xff6a2a,apron:0x2a1410,rg:.45,rk:.45,emi:0x9a4a18,d:'Fire and brimstone arena'},
@@ -3934,11 +3941,118 @@ function mkNeon(){const g=new THREE.Group(),P=[],Q=[];
 
 mkHell();mkHeaven();mkStreet();mkRucker();mkVenice();mkDesert();mkAlpine();mkRooftop();mkGym();mkNeon();for(const k in ENV)sc3.add(ENV[k].g);
 function envLights(){const C=CF[COURT],c=GFX!='LOW';AL.color.set(C.amb[0]);AL.intensity=C.amb[1];dl.color.set(C.dl[0]);dl.intensity=C.dl[1];hemi.color.set(C.hemi[0]);hemi.groundColor.set(C.hemi[1]);hemi.intensity=C.hemi[2];
- const S2=GFX=='SUPER';spots.forEach(l=>{l.visible=c&&(!!C.spot||S2);l.color.set(C.spot||0xb8c8ff);l.intensity=S2?(C.spot?1.3:1.1):1.1});if(S2){hemi.intensity=C.hemi[2]*1.3;hemi.groundColor.lerp(new THREE.Color(0x6a4a2a),.35)}}
+ const S2=GFX=='SUPER'||GFX=='ULTRA';spots.forEach(l=>{l.visible=c&&(!!C.spot||S2);l.color.set(C.spot||0xb8c8ff);l.intensity=S2?(C.spot?1.3:1.1):1.1});if(S2){hemi.intensity=C.hemi[2]*1.3;hemi.groundColor.lerp(new THREE.Color(0x6a4a2a),.35)}if(GFX=='ULTRA'){AL.intensity*=.5;hemi.intensity*=.6;dl.intensity*=1.25}} // (ULTRA: image-based light takes over most of the flat ambient)
+// ===== ULTRA graphics (v2.06): everything SUPER does, plus
+//  - a cinematic pipeline: the game renders into a 16-bit floating-point, 4x MSAA buffer (additive light - trails, impacts, glows - can go past white); bright light
+//    blooms (6-level dual-filter blur), then a final pass does a soft highlight roll-off, colour grading (contrast curve, a touch more saturation, warm highlights / cool shadows), a lens vignette, edge chromatic aberration and fine film grain
+//  - image-based lighting: every court gets its own environment (its sky, its floor, its light banks) baked into a pre-filtered radiance map that lights and reflects off
+//    every surface; every matte (Lambert) material is swapped for a physically based one (players, stands, props), kept in sync with the original
+//  - a lacquered clear-coat hardwood floor with sharp, high-resolution mirror reflections (1920 x 1080 reflection pass), a 4K court texture and a 4K grain / plank detail map
+//  - 8K sun shadows (4K on the arena lights), 16x anisotropic filtering on every texture, a cool rim light that outlines the players
+//  - atmosphere on night / indoor courts: volumetric light beams from the arena lights and dust drifting through them
+const UL={on:0,rt:null,ping:[],q:null,pair:[],seen:new WeakSet(),t:9,envK:'',env:null,beams:null,dust:null,rim:null,ani:0};
+const UL_VS='varying vec2 v;void main(){v=uv;gl_Position=vec4(position.xy,0.,1.);}';
+const ulMat=(fs,u)=>new THREE.ShaderMaterial({uniforms:u,vertexShader:UL_VS,fragmentShader:fs,depthTest:false,depthWrite:false});
+const UL_PASS={ // bright pass -> blur down -> blur up -> composite
+ hi:ulMat('uniform sampler2D t;uniform vec2 px;varying vec2 v;void main(){vec3 c=vec3(0.);for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++)c+=texture2D(t,v+vec2(float(i),float(j))*px).rgb;c/=9.;float l=dot(c,vec3(.2126,.7152,.0722));gl_FragColor=vec4(c*smoothstep(1.,1.6,l),1.);}',{t:{value:null},px:{value:new THREE.Vector2()}}),
+ dn:ulMat('uniform sampler2D t;uniform vec2 px;varying vec2 v;void main(){vec3 c=texture2D(t,v).rgb*4.;c+=texture2D(t,v-px).rgb;c+=texture2D(t,v+px).rgb;c+=texture2D(t,v+vec2(px.x,-px.y)).rgb;c+=texture2D(t,v-vec2(px.x,-px.y)).rgb;gl_FragColor=vec4(c/8.,1.);}',{t:{value:null},px:{value:new THREE.Vector2()}}),
+ up:ulMat('uniform sampler2D t;uniform sampler2D b;uniform vec2 px;varying vec2 v;void main(){vec3 c=texture2D(t,v+vec2(-px.x*2.,0.)).rgb+texture2D(t,v+vec2(-px.x,px.y)).rgb*2.+texture2D(t,v+vec2(0.,px.y*2.)).rgb+texture2D(t,v+vec2(px.x,px.y)).rgb*2.+texture2D(t,v+vec2(px.x*2.,0.)).rgb+texture2D(t,v+vec2(px.x,-px.y)).rgb*2.+texture2D(t,v+vec2(0.,-px.y*2.)).rgb+texture2D(t,v+vec2(-px.x,-px.y)).rgb*2.;gl_FragColor=vec4(c/12.+texture2D(b,v).rgb,1.);}',{t:{value:null},b:{value:null},px:{value:new THREE.Vector2()}}),
+ ao:ulMat(`uniform sampler2D tD;uniform mat4 ip;uniform vec2 px;uniform float rad;varying vec2 v;
+#include <packing>
+vec3 vp(vec2 u){float d=unpackRGBAToDepth(texture2D(tD,u));vec4 q=ip*vec4(u*2.-1.,d*2.-1.,1.);return q.xyz/q.w;}
+float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+void main(){float d0=unpackRGBAToDepth(texture2D(tD,v));if(d0>.9999){gl_FragColor=vec4(1.);return;}
+ vec3 P=vp(v),N=normalize(cross(dFdx(P),dFdy(P)));float r=rad/max(.5,-P.z),o=0.;vec2 g=mod(floor(v/px),4.);float a=(g.x*4.+g.y)/16.*6.283;
+ for(int i=0;i<16;i++){float f=(float(i)+.5)/16.;vec2 dv=vec2(cos(a),sin(a))*r*f;a+=2.39996;vec3 S=vp(v+dv)-P;float l=length(S);o+=max(0.,dot(N,S/max(l,1e-4))-.15)*smoothstep(4.,.0,l);}
+ gl_FragColor=vec4(vec3(clamp(1.-o/16.*2.2,0.,1.)),1.);}`,{tD:{value:null},ip:{value:new THREE.Matrix4()},px:{value:new THREE.Vector2()},rad:{value:.55}}),
+ out:ulMat(`uniform sampler2D t;uniform sampler2D bl;uniform sampler2D ao;uniform sampler2D tD;uniform sampler2D bz;uniform float ex,tm,bk,fz,nr,fr;uniform vec2 rs,apx;varying vec2 v;
+#include <packing>
+float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+void main(){vec2 d=v-.5;float r2=dot(d,d);vec2 ca=d*r2*.012; // chromatic aberration: grows towards the edges
+ vec3 c=vec3(texture2D(t,v-ca).r,texture2D(t,v).g,texture2D(t,v+ca).b);
+ float dz=unpackRGBAToDepth(texture2D(tD,v)),z=nr*fr/((fr-nr)*dz-fr); // view depth (negative)
+ float coc=dz>.9999?.7:clamp((-z-fz*1.6)/(fz*2.5),0.,.7); // depth of field: the play stays sharp, the far background goes soft
+ c=mix(c,texture2D(bz,v).rgb,smoothstep(0.,1.,coc)*.75);
+ float o=0.;for(int i=-2;i<=1;i++)for(int j=-2;j<=1;j++)o+=texture2D(ao,v+(vec2(float(i),float(j))+.5)*apx).r;o/=16.;
+ c*=mix(1.,o,.75); // ambient occlusion (4x4 blur over the 4x4 noise tile)
+ c+=texture2D(bl,v).rgb*bk;
+ c=c*ex;c=c/(1.+max(c-1.,0.)*.6); /* soft roll-off above white (the scene is already filmic tone-mapped; additive glow and bloom can go past white) */
+ float l=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(l),c,1.18); // saturation
+ c=c+(c-c*c)*(c-.5)*.6; // an S-curve: deeper shadows, brighter highlights
+ c*=mix(vec3(.97,.99,1.04),vec3(1.04,1.,.95),smoothstep(.15,.85,l)); // split tone: cool shadows, warm highlights
+ c*=1.-smoothstep(.18,.75,r2)*.42; // lens vignette
+ c+=(h(v*rs+tm)-.5)*.022; // film grain
+ gl_FragColor=vec4(clamp(c,0.,1.),1.);}`,{t:{value:null},bl:{value:null},ex:{value:.96},tm:{value:0},bk:{value:.9},rs:{value:new THREE.Vector2(1,1)},ao:{value:null},tD:{value:null},bz:{value:null},fz:{value:40},nr:{value:.5},fr:{value:300},apx:{value:new THREE.Vector2()}})};
+const UL_DM=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),UL_SC=new THREE.Scene(),UL_CAM=new THREE.OrthographicCamera(-1,1,1,-1,0,1),UL_QD=new THREE.Mesh(new THREE.PlaneGeometry(2,2));UL_QD.frustumCulled=false;UL_SC.add(UL_QD);
+function ulPass(m,dst){UL_QD.material=m;R.setRenderTarget(dst);R.render(UL_SC,UL_CAM)}
+function ulTargets(){const v=R.getDrawingBufferSize(new THREE.Vector2()),w=Math.max(2,v.x|0),h=Math.max(2,v.y|0);if(UL.rt&&UL.rt.width==w&&UL.rt.height==h)return;
+ if(UL.rt){UL.rt.dispose();UL.ping.forEach(p=>{p[0].dispose();p[1].dispose()});UL.dep.dispose();UL.ao.dispose();UL.bz.forEach(t=>t.dispose())}
+ const o={type:THREE.HalfFloatType,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:false};
+ UL.rt=R.capabilities.isWebGL2?new THREE.WebGLMultisampleRenderTarget(w,h,{type:THREE.HalfFloatType,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter}):new THREE.WebGLRenderTarget(w,h,{type:THREE.HalfFloatType});
+ UL.dep=new THREE.WebGLRenderTarget(w>>1,h>>1,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});UL.ao=new THREE.WebGLRenderTarget(w>>1,h>>1,o);UL.bz=[new THREE.WebGLRenderTarget(w>>2,h>>2,o),new THREE.WebGLRenderTarget(w>>3,h>>3,o),new THREE.WebGLRenderTarget(w>>2,h>>2,o)];
+ UL.ping=[];let a=w>>1,b=h>>1;for(let i=0;i<6;i++){UL.ping.push([new THREE.WebGLRenderTarget(Math.max(1,a),Math.max(1,b),o),new THREE.WebGLRenderTarget(Math.max(1,a),Math.max(1,b),o)]);a>>=1;b>>=1}}
+function ultraRender(){ulTargets();const P=UL_PASS,L=UL.ping;
+ R.setRenderTarget(UL.rt);R.clear();R.render(sc3,cam);
+ {const hid=UL.see.filter(o=>o.visible);hid.forEach(o=>o.visible=false);const bg=sc3.background;sc3.background=null;sc3.overrideMaterial=UL_DM;const cc=R.getClearColor(new THREE.Color()),ca=R.getClearAlpha();R.setRenderTarget(UL.dep);R.setClearColor(0xffffff,1);R.clear();R.render(sc3,cam);sc3.overrideMaterial=null;sc3.background=bg;R.setClearColor(cc,ca);hid.forEach(o=>o.visible=true)} // depth (no particles / beams)
+ P.ao.uniforms.tD.value=UL.dep.texture;P.ao.uniforms.ip.value.copy(cam.projectionMatrixInverse);P.ao.uniforms.px.value.set(1/UL.dep.width,1/UL.dep.height);ulPass(P.ao,UL.ao);
+ P.dn.uniforms.t.value=UL.rt.texture;P.dn.uniforms.px.value.set(1/UL.rt.width,1/UL.rt.height);ulPass(P.dn,UL.bz[0]);P.dn.uniforms.t.value=UL.bz[0].texture;P.dn.uniforms.px.value.set(1/UL.bz[0].width,1/UL.bz[0].height);ulPass(P.dn,UL.bz[1]); // (bz[1]: a soft eighth-size copy of the frame, for the depth of field)
+ P.hi.uniforms.t.value=UL.rt.texture;P.hi.uniforms.px.value.set(1/UL.rt.width,1/UL.rt.height);ulPass(P.hi,L[0][0]);
+ for(let i=1;i<L.length;i++){P.dn.uniforms.t.value=L[i-1][0].texture;P.dn.uniforms.px.value.set(1/L[i-1][0].width,1/L[i-1][0].height);ulPass(P.dn,L[i][0])}
+ let src=L[L.length-1][0];for(let i=L.length-2;i>=0;i--){P.up.uniforms.t.value=src.texture;P.up.uniforms.b.value=L[i][0].texture;P.up.uniforms.px.value.set(.5/src.width,.5/src.height);ulPass(P.up,L[i][1]);src=L[i][1]}
+ const O=P.out.uniforms;O.t.value=UL.rt.texture;O.bl.value=src.texture;O.ao.value=UL.ao.texture;O.tD.value=UL.dep.texture;O.bz.value=UL.bz[1].texture;O.apx.value.set(1/UL.ao.width,1/UL.ao.height);O.nr.value=cam.near;O.fr.value=cam.far;O.fz.value=Math.max(12,cam.position.distanceTo(camLk));O.tm.value=(performance.now()%10000)/1000;O.rs.value.set(UL.rt.width,UL.rt.height);
+ const vp=R.getViewport(new THREE.Vector4()),sc=R.getScissorTest();R.setScissorTest(false);ulPass(P.out,null);R.setViewport(vp);R.setScissorTest(sc)}
+// the court's environment, baked to a PMREM radiance map: its sky / background, its floor colour, and its light banks overhead
+const UL_PM=new THREE.PMREMGenerator(R);
+function ulEnv(){if(UL.envK==COURT&&UL.env)return;const C=CF[COURT],s=new THREE.Scene(),[c,x]=cv(512,256),hx=n=>'#'+new THREE.Color(n).getHexString(),gr=x.createLinearGradient(0,0,0,256);
+ gr.addColorStop(0,hx(C.bg));gr.addColorStop(.42,hx(C.hemi[0]));gr.addColorStop(.5,hx(C.fog[0]));gr.addColorStop(.56,hx(C.apron));gr.addColorStop(1,hx(C.hemi[1]));x.fillStyle=gr;x.fillRect(0,0,512,256);
+ s.add(new THREE.Mesh(new THREE.SphereGeometry(50,32,16),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.BackSide})));
+ const lc=new THREE.Color(C.spot||C.dl[0]).multiplyScalar(C.spot?1.6:1.2);for(let i=0;i<6;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(14,5),new THREE.MeshBasicMaterial({color:lc,side:THREE.DoubleSide}));const a=i/6*6.283;m.position.set(Math.cos(a)*24,30,Math.sin(a)*24);m.lookAt(0,0,0);s.add(m)}
+ if(!C.spot){const sun=new THREE.Mesh(new THREE.SphereGeometry(4,16,8),new THREE.MeshBasicMaterial({color:new THREE.Color(C.dl[0]).multiplyScalar(3)}));sun.position.set(20,40,15);s.add(sun)}
+ if(UL.env)UL.env.dispose();UL.env=UL_PM.fromScene(s,.035).texture;UL.envK=COURT;s.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose()}})}
+// matte (Lambert) -> physically based: one shared standard material per original, kept in sync every frame (the game keeps changing colours, opacity, emissive glow)
+function ulMats(){sc3.traverse(o=>{if(!o.isMesh&&!o.isInstancedMesh)return;const m=o.material;if(!m||Array.isArray(m)||!m.isMeshLambertMaterial)return;
+  let s=m.userData.ul;if(!s){s=m.userData.ul=new THREE.MeshStandardMaterial({color:m.color,map:m.map,emissive:m.emissive,emissiveMap:m.emissiveMap,emissiveIntensity:m.emissiveIntensity,vertexColors:m.vertexColors,transparent:m.transparent,opacity:m.opacity,side:m.side,alphaTest:m.alphaTest,depthWrite:m.depthWrite,fog:m.fog,roughness:o===wall?.95:.72,metalness:0,envMapIntensity:o===wall?.2:.38});UL.pair.push([m,s,m.color.getHex(),m.emissive.getHex(),m.opacity,m.emissiveIntensity])}
+  o.userData.ulL=m;o.material=s;if(GFX!='LOW')o.receiveShadow=true})}
+function ulSync(){for(const pr of UL.pair){const[m,s]=pr,c=m.color.getHex(),e=m.emissive.getHex(); // (only what changed on the original is copied: code that changes the mesh's own material is left alone)
+  if(pr[2]!==c){pr[2]=c;s.color.copy(m.color)}if(pr[3]!==e){pr[3]=e;s.emissive.copy(m.emissive)}if(pr[4]!==m.opacity){pr[4]=m.opacity;s.opacity=m.opacity}if(pr[5]!==m.emissiveIntensity){pr[5]=m.emissiveIntensity;s.emissiveIntensity=m.emissiveIntensity}s.visible=m.visible;if(s.map!==m.map){s.map=m.map;s.needsUpdate=true}if(s.transparent!==m.transparent){s.transparent=m.transparent;s.needsUpdate=true}}}
+function ulRestore(){sc3.traverse(o=>{if(o.userData.ulL){o.material=o.userData.ulL;delete o.userData.ulL}})}
+function ulAniso(){const a=R.capabilities.getMaxAnisotropy();sc3.traverse(o=>{const m=o.material;if(!m||Array.isArray(m))return;for(const k of ['map','emissiveMap','bumpMap','roughnessMap']){const t=m[k];if(t&&t.anisotropy<a){t.anisotropy=a;t.needsUpdate=true}}})}
+// 4K: the court texture redrawn at 4x (3760 wide), plus a 4096 detail map (grain, plank seams on wood / grit on the outdoor slabs) as a bump map
+const CTU={};const ctexU=k=>CTU[k]||(CTU[k]=courtTex(k,4));
+let UL_DT=null;const UL_DET=()=>UL_DT||(UL_DT=(()=>{const[c,x]=cv(4096,4096);x.fillStyle='#808080';x.fillRect(0,0,4096,4096);let sd=11;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+ for(let i=0;i<9000;i++){const y=r()*4096,a=.03+r()*.08;x.strokeStyle=r()<.5?'rgba(255,255,255,'+a+')':'rgba(0,0,0,'+a+')';x.lineWidth=.6+r()*1.8;x.beginPath();const x0=r()*4096,L=200+r()*900;x.moveTo(x0,y);x.bezierCurveTo(x0+L*.3,y+(r()-.5)*6,x0+L*.6,y+(r()-.5)*6,x0+L,y+(r()-.5)*4);x.stroke()} // grain streaks
+ for(let i=0;i<60000;i++){x.fillStyle=r()<.5?'rgba(255,255,255,.06)':'rgba(0,0,0,.07)';x.fillRect(r()*4096,r()*4096,1+r()*2,1+r()*2)} // pores / grit
+ x.fillStyle='rgba(0,0,0,.35)';for(let y=0;y<4096;y+=17.4)x.fillRect(0,y,4096,1.1); // plank seams (2.25 in boards)
+ for(let y=0;y<4096;y+=17.4)for(let k=0;k<6;k++)x.fillRect(r()*4096,y,1.1,17.4); // board ends
+ const t=new THREE.CanvasTexture(c);t.anisotropy=16;return t})()); // (drawn the first time ULTRA is switched on)
+const floorU=new THREE.MeshPhysicalMaterial({map:floorL.map,roughness:.16,metalness:.05,clearcoat:1,clearcoatRoughness:.05,bumpScale:.0035,envMapIntensity:.55});
+const SUB={value:.0012};
+floorU.onBeforeCompile=sh=>{sh.uniforms.tRefl=SU.t;sh.uniforms.reflMat=SU.m;sh.uniforms.reflK=SU.k;sh.uniforms.reflB=SUB;
+ sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform mat4 reflMat;varying vec4 vRU;').replace('#include <begin_vertex>','#include <begin_vertex>\nvRU=reflMat*modelMatrix*vec4(transformed,1.0);');
+ sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D tRefl;uniform float reflK;uniform float reflB;varying vec4 vRU;').replace('#include <tonemapping_fragment>','vec2 ru=vRU.xy/vRU.w+normal.xz*.004;float fr=pow(1.0-clamp(dot(normalize(vViewPosition),normal),0.0,1.0),3.0)*.9+.22;vec3 rc=vec3(0.);float ws=0.;for(int i=-2;i<=2;i++)for(int j=-2;j<=2;j++){float w=exp(-float(i*i+j*j)*.35);rc+=texture2D(tRefl,ru+vec2(float(i),float(j))*reflB).rgb*w;ws+=w;}rc/=ws;gl_FragColor.rgb+=rc*fr*reflK*1.7;\n#include <tonemapping_fragment>')};
+// atmosphere: light beams + dust (night / indoor courts)
+const UL_BEAM=new THREE.ShaderMaterial({uniforms:{c:{value:new THREE.Color(0xffffff)},o:{value:.16}},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+ vertexShader:'varying float vy;varying vec3 vn,vv;void main(){vy=uv.y;vec4 mv=modelViewMatrix*vec4(position,1.);vn=normalize(normalMatrix*normal);vv=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
+ fragmentShader:'uniform vec3 c;uniform float o;varying float vy;varying vec3 vn,vv;void main(){float e=abs(dot(normalize(vn),normalize(vv)));gl_FragColor=vec4(c*o*pow(e,2.5)*pow(vy,1.6),1.);}'}); // a soft volumetric cone: bright down its middle, gone at its edges, fading towards the floor
+function ulAtmo(){if(!UL.beams){const[c,x]=cv(64,256),gr=x.createLinearGradient(0,0,0,256);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.6,'rgba(255,255,255,.35)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,64,256);
+  const t=new THREE.CanvasTexture(c),g=new THREE.Group();UL.beams=g;sc3.add(g);
+  for(const[px,pz]of[[10,-10],[84,74],[10,74],[84,-10],[47,-14],[47,78]]){const m=new THREE.Mesh(new THREE.CylinderGeometry(1.2,15,52,40,1,true),UL_BEAM.clone());m.userData.ns=1;const p=new THREE.Vector3(px,44,pz),tg=new THREE.Vector3(47+(px-47)*.3,0,32+(pz-32)*.3),d=tg.clone().sub(p);m.position.copy(p).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),d.normalize());g.add(m)}
+  const n=500,pos=new Float32Array(n*3);for(let i=0;i<n;i++){pos[i*3]=-10+Math.random()*114;pos[i*3+1]=Math.random()*34;pos[i*3+2]=-14+Math.random()*92}
+  const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(pos,3));UL.dust=new THREE.Points(dg,new THREE.PointsMaterial({color:0xfff4e0,size:.05,transparent:true,opacity:.3,blending:THREE.AdditiveBlending,depthWrite:false}));UL.dust.frustumCulled=false;sc3.add(UL.dust);
+  UL.rim=new THREE.DirectionalLight(0xcfe0ff,0);UL.rim.position.set(47,26,-40);UL.rim.target.position.set(47,0,32);sc3.add(UL.rim,UL.rim.target)}
+ const C=CF[COURT],night=new THREE.Color(C.bg).getHSL({}).l<.22||!!C.spot,on=GFX=='ULTRA';
+ UL.beams.visible=on&&night;UL.dust.visible=on&&night;UL.beams.children.forEach(m=>m.material.uniforms.c.value.set(C.spot||0xdfe8ff));UL.rim.intensity=on?.45:0}
+function ulDust(dt){if(!UL.dust||!UL.dust.visible)return;const p=UL.dust.geometry.attributes.position,a=p.array,t=performance.now()/1000;for(let i=0;i<a.length;i+=3){a[i]+=Math.sin(t*.3+i)*.004;a[i+1]+=(Math.sin(t*.2+i*.7)*.5+.15)*dt*.25;if(a[i+1]>34)a[i+1]=0}p.needsUpdate=true}
+// switching in / out (from setGfx) and per court (from setCourt)
+function ultraApply(){const on=GFX=='ULTRA';UL.on=on;ulAtmo();
+ if(on){ulEnv();sc3.environment=UL.env;ulMats();ulAniso();ulCourt();floor.material=floorU;SRT.setSize(1920,1080);UL.t=0}
+ else{sc3.environment=null;ulRestore();SRT.setSize(768,432)}}
+function ulCourt(){if(!UL.on)return;const C=CF[COURT],t=ctexU(COURT),em=C.emi||0;floorU.bumpMap=UL_DET();t.anisotropy=R.capabilities.getMaxAnisotropy();floorU.map=t;floorU.emissiveMap=em?t:null;floorU.emissive.set(em);floorU.roughness=Math.max(.1,C.rg*.45);floorU.clearcoatRoughness=Math.min(.25,.03+C.rg*.12);floorU.bumpScale=C.rg>.5?.003:.0015;floorU.needsUpdate=true;ulEnv();sc3.environment=UL.env;ulAtmo()}
+function ultraFrame(dt){UL.t+=dt;if(UL.t>1||!UL.see){UL.t=0;ulMats();UL.see=[];sc3.traverse(o=>{const m=o.material;if(o.isSprite||o.isPoints||o.isLine||(m&&!Array.isArray(m)&&(m.transparent||m.depthWrite===false||m.blending===THREE.AdditiveBlending)))UL.see.push(o)})} /* (what the depth pass leaves out) */ulSync();ulDust(dt)}
 function setCourt(k){COURT=k;const C=CF[k];
  for(const n in ENV)ENV[n].g.visible=n==k;
  sc3.background.set(C.bg);sc3.fog.color.set(C.fog[0]);sc3.fog.near=C.fog[1];sc3.fog.far=C.fog[2];
- const t=ctex(k),em=C.emi||0;floorL.map=floorS.map=floorX.map=t;floorL.emissiveMap=floorS.emissiveMap=floorX.emissiveMap=em?t:null;floorL.emissive.set(em);floorS.emissive.set(em);floorX.emissive.set(em);floorS.roughness=C.rg;floorX.roughness=Math.max(.12,C.rg*.55);floorL.needsUpdate=floorS.needsUpdate=floorX.needsUpdate=true;
+ const t=ctex(k),em=C.emi||0;floorL.map=floorS.map=floorX.map=t;floorL.emissiveMap=floorS.emissiveMap=floorX.emissiveMap=em?t:null;floorL.emissive.set(em);floorS.emissive.set(em);floorX.emissive.set(em);ulCourt();floorS.roughness=C.rg;floorX.roughness=Math.max(.12,C.rg*.55);floorL.needsUpdate=floorS.needsUpdate=floorX.needsUpdate=true;
  apron.material.color.set(C.apron);apron.scale.set(k=='HEAVEN'?.8:1,k=='HEAVEN'?.8:1,1);apron.visible=true;
  envLights()}
 let ET=0;
@@ -4681,21 +4795,23 @@ const OPT={pg:'audio',sel:0,back:'pause'},OPT_ROWS={
   {l:'CAMERA SHAKE',k:'shake',t:'ch',c:['OFF','LOW','FULL'],d:'Dunks, ankle breakers, the SUN GOD rumble'},{l:'BRIGHTNESS',k:'bright',t:'vol',d:'How bright the court looks'},
   {l:'SHOW FPS',k:'showFps',t:'onoff',d:'A frame counter in the top left corner'}]},
  optRows=()=>OPT_ROWS[OPT.pg],optRect=i=>i<optRows().length?[150,92+i*50,660,44]:[i==optRows().length?150:490,450,320,40];
-function openOpts(pg,back){OPT.pg=pg;OPT.sel=0;OPT.back=back;S='opts'}
+function openOpts(pg,back){OPT.warn=0;OPT.pg=pg;OPT.sel=0;OPT.back=back;S='opts'}
 function optBack(){S=OPT.back;for(const k in P)P[k]=0}
 function optReset(){for(const r of optRows())if(r.k in SET_DEF)SET[r.k]=SET_DEF[r.k];if(OPT.pg=='vis'){setGfx('COOL');savePrefs()}setApply();saveSet();beep(520,.08,'triangle')}
 function optChange(i,dd){const r=optRows()[i];if(!r)return;
- if(r.t=='gfx'){const L=['LOW','COOL','SUPER'];setGfx(L[(L.indexOf(GFX)+dd+3)%3]);savePrefs();return}
+ if(r.t=='gfx'){const L=['LOW','COOL','SUPER','ULTRA'],nv=L[(L.indexOf(GFX)+dd+4)%4];if(nv=='ULTRA'&&!ulWarned()){OPT.warn=1;OPT.wsel=1;return}setGfx(nv);savePrefs();return}
  if(r.t=='onoff')SET[r.k]=SET[r.k]?0:1;else if(r.t=='vol')SET[r.k]=Math.max(0,Math.min(10,SET[r.k]+dd));else SET[r.k]=(SET[r.k]+dd+r.c.length)%r.c.length;
  setApply();saveSet();optHear(r.k)}
 function optHear(k){try{ // a sample of the family just changed, at its new level
  if(k=='vMaster'||k=='vCourt')sfxBounce(240,.9);else if(k=='vSfx')sfxWoosh('C');else if(k=='vTrail')sfxRelease(TS[TRL_S]?TRL_S:'FIRE')}catch(e){}}
-function optStep(up,dn){const n=optRows().length,N=n+2;if(up)OPT.sel=(OPT.sel+N-1)%N;if(dn)OPT.sel=(OPT.sel+1)%N;
+function optStep(up,dn){if(OPT.warn){if(P.ArrowLeft||P.ArrowRight||P.KeyA||P.KeyD)OPT.wsel=1-OPT.wsel;if(P.Escape||P.Backspace||P.KeyK){OPT.warn=0;return}if(P.Enter||P.Space)ulWarnGo(OPT.wsel==0);return}
+ const n=optRows().length,N=n+2;if(up)OPT.sel=(OPT.sel+N-1)%N;if(dn)OPT.sel=(OPT.sel+1)%N;
  if(P.Escape||P.Backspace||P.KeyK){optBack();return}
  const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),ok=P.Enter||P.Space;
  if(OPT.sel<n){if(lr)optChange(OPT.sel,lr);else if(ok&&optRows()[OPT.sel].t!='vol')optChange(OPT.sel,1)}
  else{if(lr)OPT.sel=OPT.sel==n?n+1:n;if(ok){if(OPT.sel==n)optReset();else optBack()}}}
-function optPtr(x,y,type){const n=optRows().length;
+function optPtr(x,y,type){if(OPT.warn){for(let i=0;i<2;i++)if(mIn(x,y,UW_BTN(i))){OPT.wsel=i;if(type==0)ulWarnGo(i==0)}return}
+ const n=optRows().length;
  for(let i=0;i<n+2;i++){const[rx,ry,rw,rh]=optRect(i);if(!mIn(x,y,optRect(i)))continue;OPT.sel=i;if(type!=0)return;
   if(i==n){optReset();return}if(i==n+1){optBack();return}
   const r=optRows()[i],vc=rx+520;
@@ -4708,19 +4824,25 @@ function drawOpts(){
  rows.forEach((r,i)=>{const[x,y,w,h]=optRect(i),on=OPT.sel==i,vc=x+520;
   mRR(x,y,w,h,8,on?HL:'rgba(255,255,255,.05)',on?GOLD:null);
   g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(r.l,x+16,y+20);
-  const d=r.t=='gfx'?(GFX=='SUPER'?'Reflections + multi-light shadows':GFX=='COOL'?'Shadows + glossy court':'Fast and light'):r.d;
+  const d=r.t=='gfx'?(GFX=='ULTRA'?'Cinematic: bloom, real reflections, 4K textures, 8K shadows':GFX=='SUPER'?'Reflections + multi-light shadows':GFX=='COOL'?'Shadows + glossy court':'Fast and light'):r.d;
   g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText(d,x+16,y+36);
   g.fillStyle=on?GOLD:'#5d6372';g.font='bold 15px system-ui';g.textAlign='center';g.fillText('◀',vc-125,y+28);g.fillText('▶',vc+125,y+28);
   if(r.t=='vol'){const v=SET[r.k];for(let j=0;j<10;j++){g.fillStyle=j<v?(on?GOLD:'#b9a35a'):'rgba(255,255,255,.12)';g.fillRect(vc-105+j*16,y+14,13,16)}
    g.fillStyle='#fff';g.font='bold 14px system-ui';g.fillText((r.k=='bright'?50+v*10:v*10)+'%',vc+86,y+28)}
   else{const t=r.t=='gfx'?GFX:r.t=='onoff'?(SET[r.k]?'ON':'OFF'):r.c[SET[r.k]];g.fillStyle=r.t=='onoff'&&!SET[r.k]?'#8a90a0':'#fff';g.font='bold 20px Georgia';g.fillText(t,vc,y+29)}});
  ['RESET','BACK'].forEach((t,j)=>{const i=n+j,[x,y,w,h]=optRect(i),on=OPT.sel==i;mRR(x,y,w,h,10,on?GOLD:'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 18px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText(t,x+w/2,y+27)});
- g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ select  ·  ←/→ change  ·  Esc back  ·  changes apply live and are saved',480,526)}
+ g.textAlign='center';g.font='13px system-ui';g.fillStyle='#8a90a0';g.fillText('↑/↓ select  ·  ←/→ change  ·  Esc back  ·  changes apply live and are saved',480,526);
+ if(OPT.warn){g.fillStyle='rgba(0,0,0,.72)';g.fillRect(0,0,960,540);mRR(190,110,580,320,16,'rgba(16,10,10,.97)','#ff6a3a');g.textAlign='center';g.fillStyle='#ff8a5a';g.font='bold 30px Georgia';g.fillText('⚠  ULTRA GRAPHICS',480,160);
+  g.font='14px system-ui';g.fillStyle='#e8e2dc';['ULTRA is the most demanding setting in the game: a cinematic HDR pipeline','with bloom, image-based lighting, physically based materials everywhere,','4K court textures, 8K shadows and full-resolution mirror reflections.','','It needs a powerful graphics card. On most computers it will run slowly,','and on some it may stutter or fail to keep up. You can switch back','at any time in VISUALS.'].forEach((t,i)=>g.fillText(t,480,198+i*21));
+  ['ENABLE ULTRA','CANCEL'].forEach((t,i)=>{const[x,y,w,h]=UW_BTN(i),on=OPT.wsel==i;mRR(x,y,w,h,10,on?(i?'#cfd3dc':'#ff6a3a'):'rgba(255,255,255,.08)');g.font='bold 17px Georgia';g.fillStyle=on?'#14161d':'#cfd3dc';g.fillText(t,x+w/2,y+26)})}}
+const UW_BTN=i=>[230+i*260,368,240,40];
+function ulWarned(){try{return localStorage.getItem('hardwood27.ultraOK')=='1'}catch(e){return false}}
+function ulWarnGo(yes){OPT.warn=0;if(!yes)return;try{localStorage.setItem('hardwood27.ultraOK','1')}catch(e){}setGfx('ULTRA');savePrefs()} // (asked once: the first time ULTRA is picked)
 // ===== CUSTOMISATION sub-menu: graphics · ball trail · court =====
 const TRL_DESC={FIRE:'Explosion impact',ICE:'Frost shatter impact',BLACK:'Void collapse impact',STORM:'Lightning strike impact',
  'GREEN LAZER':'Green laser beam','RED LAZER':'Red laser beam','BLUE LAZER':'Blue laser beam','PINK LAZER':'Pink laser beam','YELLOW LAZER':'Yellow laser beam','RAINBOW LAZER':'Laser that cycles every colour',MONEY:'Bills and gold coins',DEMONIC:'Hellfire and a blood-red void',
  STARS:'A shower of shooting stars',FAIRY:'Pink fairy dust and sparkles',BULLET:'Gunshot and a smoking round',IRISH:'Lucky clovers and gold',
- 'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs','SUN GOD':'The sun crashes down to earth',AURORA:'Northern lights, green to violet',DRAGON:'Dragon fire with a roar',GLITCH:'Corrupted pixels, flickering',CANDY:'Sweet pink and blue sprinkles'};
+ 'ULTRA AURA':'Silver energy aura, crackling',GOLD:'Solid gold glitter',GHOST:'Pale spectral wisps',TOXIC:'Bubbling acid green',SAKURA:'Cherry blossom petals',GALAXY:'Stars from deep space',PLASMA:'Pink-violet plasma arcs','SUN GOD':'The sun crashes down to earth',AURORA:'Northern lights, green to violet',DRAGON:'Dragon fire with a roar',GLITCH:'Corrupted pixels, flickering',FROSTFIRE:'Ice-blue flames that burn cold',LAVA:'Molten rock that drips and glows',SYNTHWAVE:'An 80s neon ribbon, pink to cyan',ZEUS:'Golden lightning of the gods',HEARTBREAKER:'A trail of red hearts - leaves them broken',CANDY:'Sweet pink and blue sprinkles'};
 const custRect=i=>[240,150+i*70,480,60],custRows=()=>['audio','vis'];
 function openCust(back){MM.back=back;MM.cs=0;S='cust'}
 function custBack(){S=MM.back||'menu';for(const k in P)P[k]=0}
@@ -4735,7 +4857,7 @@ function custStep(up,dn){
 }
 function savePrefs(){try{localStorage.setItem('hardwood27.custom.v1',JSON.stringify({gfx:GFX,trail:TRL_S,court:COURT,cam:CAMM,tm:TI}))}catch(e){}}
 function loadPrefs(){try{const v=JSON.parse(localStorage.getItem('hardwood27.custom.v1')||'null');if(!v)return;
- if(TS[v.trail])TRL_S=v.trail;if(COURTS.includes(v.court)&&v.court!=COURT)setCourt(v.court);if(['LOW','COOL','SUPER'].includes(v.gfx))setGfx(v.gfx);if(v.cam===0||v.cam===1)CAMM=v.cam;if(Array.isArray(v.tm)&&v.tm.length==2&&v.tm.every(n=>Number.isInteger(n)&&n>=0&&n<6)&&v.tm[0]!=v.tm[1])setTeams(v.tm[0],v.tm[1])}catch(e){}}
+ if(TS[v.trail])TRL_S=v.trail;if(COURTS.includes(v.court)&&v.court!=COURT)setCourt(v.court);if(['LOW','COOL','SUPER','ULTRA'].includes(v.gfx))setGfx(v.gfx);if(v.cam===0||v.cam===1)CAMM=v.cam;if(Array.isArray(v.tm)&&v.tm.length==2&&v.tm.every(n=>Number.isInteger(n)&&n>=0&&n<6)&&v.tm[0]!=v.tm[1])setTeams(v.tm[0],v.tm[1])}catch(e){}}
 function drawCust(){
  g.fillStyle='rgba(8,10,16,.5)';g.fillRect(0,0,960,540);
  const rows=custRows(),n=rows.length;mRR(200,66,560,174+n*70,16,'rgba(10,12,18,.84)','rgba(255,210,63,.35)');
@@ -5357,10 +5479,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.05'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.06'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.06','ULTRA graphics + 5 new trails',['NEW GRAPHICS PRESET: ULTRA (VISUALS, one step above SUPER) - a cinematic HDR pipeline with bloom on every light, trail and impact; image-based lighting and physically based materials on everything; a lacquered clear-coat floor with sharp full-resolution mirror reflections; a 4K court texture and a 4K wood-grain detail map; 8K shadows; ambient occlusion; a soft depth of field on the far background; colour grading, a lens vignette, chromatic aberration and film grain; volumetric light beams and drifting dust on night and indoor courts. It needs a powerful graphics card - the first time you pick it, the game warns you.','5 NEW BALL TRAILS: FROSTFIRE (ice-blue flames), LAVA (molten rock that drips), SYNTHWAVE (an 80s neon ribbon), ZEUS (golden lightning) and HEARTBREAKER (a trail of red hearts). 33 trails in all.','Make explosions on ball trails are ~60% smaller (the SUN GOD keeps its full size).']],
  ['v2.05','Dribble moves eased back',['The v2.03 dribble-move nerf was too harsh: moves now cover only about 12% less ground than they did before it (they had been cut by ~40%).','Moves still cost a little momentum (going in and just after), but much less: running or sprinting into a move now keeps ~85-90% of the ground you would have covered running straight (was ~65%).']],
  ['v2.04','Rarer, smarter ankle breakers',['Ankle breakers are rare now (they used to land on a quarter to half of all moves). Against a defender guarding you normally: about 2% of moves with no signature, 5% with ANKLE BREAKER bronze, 10% silver, 18% gold (the signature counts on crossovers, step-backs and between-the-legs).','They depend on the moment: a defender flying at you or running hard one way, when your move sends you the other way, is far more likely to go down (up to ~2.5x). A set, still defender almost never does. Catching him reaching for the ball or off his feet makes it 1.6x likelier; the closer he is, the likelier.','A better ball handle helps a little (x0.75 at 25 up to x1.25 at 100). Crossovers are the best ankle breaker, then step-backs, between-the-legs, hesitations, behind-the-back and spins.']],
  ['v2.03','Realistic dribble moves',['Dribble moves no longer work as a speed boost: each move covers about 40% less ground (from a standstill a crossover now moves you 2-3 ft, like a real one).','Moves now cost momentum, as they always should have: a bug since v1.82 had switched that off. Going into a move you slow down, and you are a beat slower for a moment after it, so running or sprinting straight is always faster than chaining moves - they are for style and for beating your man.','The hesitation-into-combo window and the move whoosh sounds work again (same bug).','Blow-bys (beating a defender in front of you at speed) are 15% less explosive.']],
@@ -6007,7 +6130,7 @@ const HL_MODES=[
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
  {t:'GAME PLANS',tag:'AI TEAMS',d:'Every team has its own way of playing on offence and defence (shown on its roster page) and adjusts during the game, for example when it\'s chasing the score or a player is hot. The strip under the scoreboard shows what each team is running, and call-outs like SCREEN, POST UP, TRAP or LEAK OUT show the plan in action.'},
- {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• AUDIO (pause, or CUSTOMISATION on the main menu): master, crowd, court sounds, sound effects, ball trail and menu music volumes, and mute in background.\n• VISUALS (same places): graphics preset LOW (fast) / COOL (shadows, glossy court) / SUPER (reflections, extra lights), resolution 480p to 4K, target FPS 30 to 144 or MAX, trail lighting, camera shake, brightness and an FPS counter. Use LOW, a lower resolution or a lower FPS if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 28 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
+ {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• AUDIO (pause, or CUSTOMISATION on the main menu): master, crowd, court sounds, sound effects, ball trail and menu music volumes, and mute in background.\n• VISUALS (same places): graphics preset LOW (fast) / COOL (shadows, glossy court) / SUPER (reflections, extra lights) / ULTRA (cinematic: bloom, image-based lighting, 4K textures, 8K shadows - for powerful graphics cards), resolution 480p to 4K, target FPS 30 to 144 or MAX, trail lighting, camera shake, brightness and an FPS counter. Use LOW, a lower resolution or a lower FPS if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 28 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
  {t:'AFTER THE GAME',tag:'RESULTS',d:'The result screen shows the player of the game, what went well and what to work on, and the EXP you earned. From there: MAIN MENU, RUN IT BACK (rematch) or the BOX SCORE (M and B are shortcuts).'},
  {t:'TEAMS',tag:'6 TEAMS',d:'Pinkie Pies, Green Gekos, Yellow Vikings, Red Royals, Blue Crusaders and Rainbow Slayers. Each has its own style, strengths and weaknesses: see ROSTERS.'}];
 const HELP_T=[
@@ -6187,7 +6310,7 @@ function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
  if(!pkOn(pk)){pk.k.forEach(k=>{const i=off.indexOf(k);if(i>=0)off.splice(i,1)});beep(620,.06,'triangle');return}
  const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
  pk.k.forEach(k=>{if(!off.includes(k))off.push(k)});beep(300,.05)}
-const TRL_K=Object.keys(TS),TR_CARD=i=>[24+(i%8)*114,308+(i/8|0)*42,106,38];
+const TRL_K=Object.keys(TS),TR_CARD=i=>[24+(i%8)*114,306+(i/8|0)*35,106,32];
 function trlEquip(i){MM.cr.trl=TRL_S=TRL_K[i];beep(660,.08,'triangle')}
 function openStore(){MM.st={pg:'hub',hub:1,ts:Math.max(0,TRL_K.indexOf(MM.cr.trl||TRL_S)),cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 const ST_HUB=i=>[110+i*390,130,350,250],ST_BK=[24,482,150,40],AN_ROW=i=>[24,92+i*48,300,42],AN_TAB=i=>[480-(AN_CAT.length*90-14)/2+i*90,466,76,64],AN_EQ=[760,400,176,40];
@@ -6231,7 +6354,7 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
  if(st.pg=='cos'){title('COSMETICS  ·  BALL TRAIL');const eq=d.trl||TRL_S,hx=c=>'#'+c.toString(16).padStart(6,'0'),k=TRL_K[st.ts];
   TRL_K.forEach((kk,i)=>{const[x,y,w,h]=TR_CARD(i),t=TS[kk],on=st.ts==i,me=kk==eq;mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',me?'#4cff7a':on?'#fff':'#3a4450');
    const gr=g.createLinearGradient(x+8,0,x+w-8,0);(t.rb?[0xff3b3b,0xffe14a,0x3fd45a,0x3f8cff,0xc06aff]:[t.g,t.m,t.k]).forEach((c,j,a)=>gr.addColorStop(j/(a.length-1),hx(c)));
-   g.fillStyle=gr;g.fillRect(x+8,y+6,w-16,5);g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#fff';g.fillText((me?'✓ ':'')+kk,x+w/2,y+28)});
+   g.fillStyle=gr;g.fillRect(x+8,y+5,w-16,4);g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#fff';g.fillText((me?'✓ ':'')+kk,x+w/2,y+24)});
   // the picked trail, and the live demo: your player's jump shot with a perfect release
   g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(k,30,130);g.font='13px system-ui';g.fillStyle='#8fa3b8';g.fillText(TRL_DESC[k],30,154);
   g.font='bold 13px system-ui';g.fillStyle=k==eq?'#4cff7a':GOLD;g.fillText(k==eq?'✓ EQUIPPED':'ENTER / CLICK TO EQUIP',30,186);
