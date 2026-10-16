@@ -118,11 +118,11 @@ const JS=[
  JS_M=Object.fromEntries(JS.map(j=>[j.id,Object.assign({},JS_DEF,j)])),JS_PL={'D.Ryerson':'dry','E.Lewis':'lew','M.Johnson':'mjo','C.King':'cki','M.Allen':'mal','L.Scott':'lsc'};
 const jsRt=(p,j)=>{const r=p.build?p.build.st:p.rt;return(r&&r[j.at])||50};
 function jsOf(p){if(p.jsO&&JS_M[p.jsO])return JS_M[p.jsO];if(p._js&&p._jsB===p.build)return p._js;let id='b1';
- if(p.build){const b=p.build;id=JS_M[b.js]&&jsRt(p,JS_M[b.js])>=JS_M[b.js].req?b.js:'b1'} // your created player: what you equipped (if your ratings still allow it)
+ if(p.build){const b=p.build;id=JS_M[b.js]&&jsRt(p,JS_M[b.js])>=JS_M[b.js].req&&(!SLOTS.includes(b)||own('js:'+b.js))?b.js:'b1'} // your created player: what you equipped (if your ratings still allow it)
  else{const nm=(tmOf(p).pl||[])[p.i];if(JS_PL[nm])id=JS_PL[nm];else{const ok=JS.filter(j=>!j.sig&&jsRt(p,JS_M[j.id])>=JS_M[j.id].req);let h=0;for(const c of String(nm||p.i))h=(h*31+c.charCodeAt(0))>>>0;id=ok[Math.max(0,ok.length-1-h%Math.min(4,ok.length))].id}} // AI: one of the best few he qualifies for
  p._jsB=p.build;return p._js=JS_M[id]}
 function jsApply(p){p._js=null;p.st=.55*jsOf(p).ms} // (the shot meter's speed follows his jumper)
-const SF=['akk','akt','akT','aks','x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs','spn'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='FIRE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
+const SF=['akk','akt','akT','aks','x','y','z','vx','vy','fx','fy','spin','stun','jump','sj','lnd','lz','side','ls','hg','sjm','sjp','vz','air','cr','jph','pu','spd','pst','sd','stb','spr','rch','fdk','fdp','hgk','scw','sfw','sfs','spn'];let RC=0,COURT='STREET',GFX='LOW',TRL_S='NONE',PM=0,RT=0,DF={g:null,h:null},CH=[],RS=null,RP={fr:[],rel:0,mk:0,has:0,show:0,want:0,clip:null,who:null,loop:0,rt:0,i:0},S='menu',sc=[0,0],qn=1,qc=QL,shot=24,off=0,qt=0,msg={s:'',t:0,c:'#fff'},shake=0,rim=0,T=0,TM,B,ctl=0,ms={on:false,t:0,show:0,res:0,last:0,who:null};
 let AC;function beep(f,d=.1,t='sine',v=.05){try{AC=AC||new AudioContext();const o=AC.createOscillator(),a=AC.createGain();o.type=t;o.frequency.value=f;a.gain.value=v;o.connect(a);a.connect(rawOut('sfx'));o.start();a.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
 const say=(s,c='#fff')=>{msg={s,t:1.5,c}};
 const widFor=(t,i)=>{const w=TEAMS[TI[t]].wd;return w&&w[i]||1}; // (no team uses wd any more - body shape comes from body types, see BODY) // per-player body-width override: A.Sanad is built much wider (1.4) than anyone else (created players top out at ~1.19)
@@ -818,7 +818,7 @@ const drbT=u=>sm3(sm3(u));
 const spinYaw=p=>p.spin>0?sm3(1-p.spin/(p.sd||.5))*2*Math.PI*(p.spd||1)*(p.spn||1):0; // a spin eases in and out (v2.00: it was a constant-speed turn) // the tempo that hangs at both ends and snaps through the middle
 // which package p uses: a CREATED player uses the one his owner equipped (only stepped down if his handle no longer reaches it); every other (AI / roster)
 // player automatically uses the highest package his handle unlocks
-function drbPick(p){const bh=(p.rt&&p.rt.bh)||50;let v=p.build?p.build.drb|0:DRB.length-1;while(v>0&&DRB[v].req>bh)v--;return v}
+function drbPick(p){const bh=(p.rt&&p.rt.bh)||50,mine=(p&&p.build&&typeof SLOTS!='undefined'&&SLOTS.includes(p.build));let v=p.build?p.build.drb|0:DRB.length-1;while(v>0&&(DRB[v].req>bh||mine&&!own('drb:'+v)))v--;return v}
 // the ball during a move: [sideways, forward, height, progress 0-1] (local to the handler; hz0 = his hip height)
 function drbBall(h,bm,hz0){const S=drbA(bm.v,bm.k),u=Math.min(1,bm.t/bm.d),k=bm.k,uu=S.tmp?drbT(u):u,fl=uu<.5?1-(2*uu)**2:1-(2-2*uu)**2;
  let lat=h.side*9,fw=7,bz=k=='X'?4+(hz0-4)*(.55+.45*Math.cos(uu*6.283)):4+(hz0-4)*fl;
@@ -2658,7 +2658,7 @@ const TS={
 const tb=k=>TS[k].fx||k; // base style of a trail
 // whose trail a perfect release shows: a created player's own (CAREER > CUSTOMISATION), everyone else his team's laser (TEAMS order)
 const TEAM_TRL=['PINK LAZER','GREEN LAZER','YELLOW LAZER','RED LAZER','BLUE LAZER','RAINBOW LAZER'];let TRL_C='FIRE',lastH=null;
-const shTrl=p=>!p?TRL_S:p.build?(TS[p.build.trl]?p.build.trl:TRL_S):TEAM_TRL[TI[p.team]]||TRL_S;
+const shTrl=p=>!p?null:p.build?(TS[p.build.trl]&&own('trl:'+p.build.trl)?p.build.trl:null):TEAM_TRL[TI[p.team]]||null; // (v2.12: a created player only gets a trail he has BOUGHT - none by default)
 function rbw(st){const h=st.gl?(Math.floor(T*14)%3)*.33+.5:st.hr?st.hr[0]+(st.hr[1]-st.hr[0])*(.5+.5*Math.sin(T*1.6)):T*.45%1,c=x=>colA.setHSL((h+x)%1,1,.55).getHex();st.g=st.L=c(0);st.m=c(.12);st.sp=st.c=[c(0),c(.33),c(.66)]} // RAINBOW: hue rolls with time
 const shpG=(...f)=>new THREE.ShapeGeometry(f.map(fn=>{const s=new THREE.Shape();fn(s);return s}));
 const PG=[new THREE.SphereGeometry(1,8,6),new THREE.OctahedronGeometry(1,0),new THREE.BoxGeometry(.5,.5,2.4),
@@ -2857,7 +2857,7 @@ function impUpd(dt){
 // STORE > COSMETICS preview: the trail's meshes move into the preview scene while it is open, and back for the game
 let TCAM=null;const TRL_OBJ=()=>[...RB,...SPR.map(o=>o.s),...TRL.map(o=>o.m),...bG,flS,rgS,bolt,tl,imF,imG,imC,...imR,...imB];
 function trlHost(sc){if(tl.parent!==sc)TRL_OBJ().forEach(o=>sc.add(o))}
-function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}const on=pv?pv.on:B.mode=='shot'&&B.perf;if(on&&!trOn)TRL_C=pv?pv.k:shTrl(B.sh||lastH); // (online guests only know who last held it)
+function trailUpd(dt,pv){if(!pv){trlHost(sc3);if(B.h)lastH=B.h}let on=pv?pv.on:B.mode=='shot'&&B.perf;if(on&&!trOn){const k_=pv?pv.k:shTrl(B.sh||lastH);if(TS[k_])TRL_C=k_;else on=false} // (NO TRAIL: nothing at all) // (online guests only know who last held it)
  const st=TS[TRL_C],bp=pv?pv.pos:ballM.position,cool=GFX!='LOW',sb=tb(TRL_C);if(st.rb)rbw(st);
  if(on&&!trOn){trOn=1;TP.length=0;burstFx(bp,st)}if(!on)trOn=0;
  {const Hn=bp.x<47?5.2:88.8;if(IM.pOn&&!on&&Math.abs(bp.x-Hn)<.25&&Math.abs(bp.z-32)<.25&&bp.y>8&&bp.y<12){IM.p.set(Hn,10,32);impactFx(TRL_C)}IM.pOn=on?1:0}
@@ -5533,10 +5533,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.11'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.12'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.12','The Store costs Court Credits',['Everything in the STORE now costs COURT CREDITS (CC), earned in Career games (about 1,000 CC a game). Press Enter / click once to see the price, again to buy. Purchases are for your whole account (and go in your cloud backup); rating requirements still apply on top.','BALL TRAILS: none are free any more - everyone starts with NO TRAIL. Team lasers 2,500 · Fire 3,000 · Ice 3,500 ... Dragon 80,000 · Zeus 90,000 · SUN GOD 150,000.','DRIBBLE PACKAGES: Basic 1 free · Basic 2 2,000 · Pro 1 8,000 · Pro 2 15,000 · Elite 1 30,000 · Elite 2 50,000 · Flashy 1 85,000 · FLASHY 2 130,000.','DUNK PACKAGES: Basic Two-Handers free · Basic Tomahawks 3,000 · Alley-Oops 12,000 · Athletic Two-Handers 25,000 · Long Tomahawks 45,000 · Spins & Windmills 80,000 · SUPERMAN 130,000.','JUMP SHOTS: Basic 1-2 free, then 500 up to 38,000 (Pro 10); the signature jumpers L.Scott 45,000 · M.Allen 55,000 · C.King 65,000 · M.Johnson 75,000 · E.Lewis 80,000 · D.RYERSON 90,000. LAYUPS 4,000-18,000, PASSES 3,000-20,000, FADEAWAYS 6,000-9,000.','In games your player only uses what you have bought (anything else falls back to the free basics). The Store preview still shows everything, so you can try before you buy.']],
  ['v2.11','Admin camera: strafe',['ADMIN CAMERA: A / D now slide the camera left / right relative to where it is facing, and W / S fly properly in every direction (a bug had locked the camera to one axis of the court, so only forward / back along the length of the court worked).']],
  ['v2.10','Admin camera: super sensitivity',['ADMIN CAMERA: press 6 to switch SUPER SENSITIVITY on or off - the mouse turns the camera 7x as far (shown top right while it is on).']],
  ['v2.09','Admin camera everywhere',['The ADMIN CAMERA (pause, then press 1 three times) now works in 1v1 and in every practice drill too - the last ~12 seconds of play are always recorded now. (1v1 and the half-court drill still have no T replays after a bucket.)']],
@@ -5865,6 +5866,25 @@ setTimeout(acPush,4000);setInterval(()=>{if(S=='menu'||S=='over')acPush()},20000
 // ===== COURT CREDITS (CC): a standalone currency with its own wallet (not per slot, and NOT boosted by rebirths like EXP is), shown top right of the CAREER screen.
 // Earned by your created player in Career games: win 500 / loss 300, +20 per shot taken (2PT or 3PT), +30 per block, +30 per steal, +50 per assist, then +10% if he is PLAYER OF THE GAME. Each rebirth: +3000.
 const CC_KEY='hardwood27.credits.v1';let CC=0,ccBlk=0;try{CC=Math.max(0,parseInt(localStorage.getItem(CC_KEY))||0)}catch(e){}
+// ===== THE STORE ECONOMY (v2.12): every trail, animation package, jump shot and dribble package costs COURT CREDITS (CC). A Career game pays ~700-1,300 CC
+// (500 a win / 300 a loss + 20 a shot, 50 an assist, 30 a steal or block, +10% PLAYER OF THE GAME), so ~1,000 a game: the first upgrades take 1-5 games,
+// mid-tier ones 10-40, and the flexes 85-150 games. Purchases are for the whole account (like the wallet) and are kept in its cloud backup; rating
+// requirements still apply on top (you can only buy what your player has unlocked). Free: the basic two-handers, basic layups, basic passes, BASIC 1-2
+// jump shots, the BASIC 1 dribble package. Trails: NONE are free - everyone starts with NO TRAIL.
+const PRICE={'pk:BASIC TWO-HANDERS':0,'pk:BASIC TOMAHAWKS':3000,'pk:ALLEY-OOPS':12000,'pk:ATHLETIC TWO-HANDERS':25000,'pk:LONG TOMAHAWKS':45000,'pk:SPINS & WINDMILLS':80000,'pk:SUPERMAN':130000,
+ 'pk:BASIC LAYUPS':0,'pk:TOUCH FINISHES':4000,'pk:EURO STEP':10000,'pk:REVERSE LAYUPS':18000,'pk:FADEAWAY':6000,'pk:POST FADEAWAY':9000,
+ 'pk:BASIC PASSES':0,'pk:ONE-HAND PASSES':3000,'pk:FLASHY PASSES':20000};
+[0,2000,8000,15000,30000,50000,85000,130000].forEach((v,i)=>PRICE['drb:'+i]=v); // BASIC 1 ... FLASHY 2
+Object.entries({b1:0,b2:0,b3:500,b4:1000,b5:1500,b6:2500,b7:3500,b8:5000,p1:7000,p2:9000,p3:11000,p4:13000,p5:16000,p6:19000,p7:23000,p8:27000,p9:32000,p10:38000,
+ lsc:45000,mal:55000,cki:65000,mjo:75000,lew:80000,dry:90000}).forEach(([k,v])=>PRICE['js:'+k]=v);
+Object.entries({'GREEN LAZER':2500,'RED LAZER':2500,'PINK LAZER':2500,'YELLOW LAZER':2500,'BLUE LAZER':2500,FIRE:3000,ICE:3500,STORM:4500,CANDY:5000,FAIRY:6000,BLACK:7000,STARS:7500,
+ IRISH:9000,TOXIC:10000,'RAINBOW LAZER':12000,SAKURA:12000,HEARTBREAKER:14000,MONEY:15000,GHOST:18000,BULLET:20000,GOLD:25000,FROSTFIRE:28000,PLASMA:30000,LAVA:32000,
+ GALAXY:35000,SYNTHWAVE:38000,DEMONIC:40000,AURORA:45000,GLITCH:50000,'ULTRA AURA':60000,DRAGON:80000,ZEUS:90000,'SUN GOD':150000}).forEach(([k,v])=>PRICE['trl:'+k]=v);
+const OWN_KEY='hardwood27.owned.v1',OWN=new Set();try{(JSON.parse(localStorage.getItem(OWN_KEY)||'[]')||[]).forEach(k=>{if(typeof k=='string')OWN.add(k)})}catch(e){}
+const ownSave=()=>{try{localStorage.setItem(OWN_KEY,JSON.stringify([...OWN]))}catch(e){}};
+const own=k=>!(PRICE[k]>0)||OWN.has(k),fmtCC=n=>n.toLocaleString('en-US');
+function ccSpend(n){CC=Math.max(0,CC-Math.round(n));try{localStorage.setItem(CC_KEY,String(CC))}catch(e){}}
+
 function ccAdd(n){pfLife();PF.d.cc+=Math.max(0,Math.round(n));profSave();CC=Math.min(999999999,CC+Math.max(0,Math.round(n)));try{localStorage.setItem(CC_KEY,String(CC))}catch(e){}}
 function ccMatch(fp){const me=NET.on?null:myP();if(!me)return null;const s=pstat(me),n=Math.round(((sc[0]>sc[1]?500:300)+20*(s.fga+s.tpa)+30*ccBlk+30*s.stl+50*s.ast)*(fp===me?1.1:1));ccAdd(n);return{n,potg:fp===me}}
 const ccBlock=d=>{if(d&&d===myP())ccBlk++};
@@ -6189,7 +6209,7 @@ const HL_MODES=[
  {t:'GAME LENGTH',tag:'RULES',d:'• 5v5 and 3v3: four 1-minute quarters, with 45-second overtime if tied, and a 24-second shot clock.\n• 1v1: first to 11 (online: the host picks 7, 11, 15 or 21), 15-second shot clock.'},
  {t:'ROSTERS',tag:'MAIN MENU',d:'Every team\'s starting five with their OVR and stars. Open a team to see each player in 3D with their best and worst ratings, Signatures, size and the team\'s GAME PLAN. Use ←/→ to flip between teams.'},
  {t:'GAME PLANS',tag:'AI TEAMS',d:'Every team has its own way of playing on offence and defence (shown on its roster page) and adjusts during the game, for example when it\'s chasing the score or a player is hot. The strip under the scoreboard shows what each team is running, and call-outs like SCREEN, POST UP, TRAP or LEAK OUT show the plan in action.'},
- {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• AUDIO (pause, or CUSTOMISATION on the main menu): master, crowd, court sounds, sound effects, ball trail and menu music volumes, and mute in background.\n• VISUALS (same places): graphics preset LOW (fast) / COOL (shadows, glossy court) / SUPER (reflections, extra lights) / ULTRA (cinematic: bloom, image-based lighting, 4K textures, 8K shadows - for powerful graphics cards), resolution 480p to 4K, target FPS 30 to 144 or MAX, trail lighting, camera shake, brightness and an FPS counter. Use LOW, a lower resolution or a lower FPS if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 28 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Stars, Fairy, Bullet, Irish, Ultra Aura and more, each with its own sound and rim impact. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
+ {t:'CUSTOMISATION',tag:'MAIN MENU / PAUSE / STORE',d:'• AUDIO (pause, or CUSTOMISATION on the main menu): master, crowd, court sounds, sound effects, ball trail and menu music volumes, and mute in background.\n• VISUALS (same places): graphics preset LOW (fast) / COOL (shadows, glossy court) / SUPER (reflections, extra lights) / ULTRA (cinematic: bloom, image-based lighting, 4K textures, 8K shadows - for powerful graphics cards), resolution 480p to 4K, target FPS 30 to 144 or MAX, trail lighting, camera shake, brightness and an FPS counter. Use LOW, a lower resolution or a lower FPS if the game runs slowly.\n• BALL TRAIL (CAREER: pick a player, then STORE > COSMETICS): 33 trails, from Fire, Ice, Black and Storm to the lasers, Money, Demonic, Ultra Aura, Dragon, Zeus and the Sun God, each with its own sound and rim impact. Every trail costs COURT CREDITS (2,500 up to 150,000 for the Sun God); you start with NO TRAIL.\n• THE STORE COSTS CC: every animation package, jump shot and dribble package is bought with COURT CREDITS (CC), earned in Career games (about 1,000 a game). The basics are free; the best (Flashy 2, the Superman dunks, the D.Ryerson jumper, the Sun God trail) take a long grind. Purchases are for your whole account, and rating requirements still apply. Each created player keeps his own trail; every other player shoots his TEAM\'S LASER (Pinkie Pies pink, Green Gekos green, Yellow Vikings yellow, Red Royals red, Blue Crusaders blue, Rainbow Slayers rainbow).\nChanges show straight away and are remembered.'},
  {t:'AFTER THE GAME',tag:'RESULTS',d:'The result screen shows the player of the game, what went well and what to work on, and the EXP you earned. From there: MAIN MENU, RUN IT BACK (rematch) or the BOX SCORE (M and B are shortcuts).'},
  {t:'TEAMS',tag:'6 TEAMS',d:'Pinkie Pies, Green Gekos, Yellow Vikings, Red Royals, Blue Crusaders and Rainbow Slayers. Each has its own style, strengths and weaknesses: see ROSTERS.'}];
 const HELP_T=[
@@ -6227,7 +6247,7 @@ const PASS_D={nolook:'Eyes and shoulders one way, the ball flung the other.',beh
  wrap:'A lunge and a low one-hander swung round the defender, off the floor.',legs:'Pushed down through his own legs to a man behind him.',hook:'One arm swept out wide and over the top: long outlets and out of the post.',flip:'An underhand flick from the hip on the drive.',chest:'Two hands from the chest, step in, thumbs-down snap.',bounce:'Two hands pushed down: it skips off the floor under the defender.',over:'Two hands from above the head: skip passes, post entries, over a defender.',
  one:'A quick one-handed push on the move.',btb:'The ball hand wraps behind the back to a teammate on the other side.',base:'Long outlet thrown like a baseball, arm cocked by the ear.'};
 function animClean(a){const ok=new Set(STORE_T.flatMap(t=>t.items().map(i=>i.k)));const off=a&&Array.isArray(a.off)?[...new Set(a.off.filter(k=>typeof k=='string'&&ok.has(k)))]:[];return{off}}
-const animOn=(p,k)=>!(p&&p.build&&p.build.anim&&p.build.anim.off&&p.build.anim.off.includes(k));
+const animOn=(p,k)=>!(p&&p.build&&p.build.anim&&p.build.anim.off&&p.build.anim.off.includes(k))&&(!(p&&p.build&&typeof SLOTS!='undefined'&&SLOTS.includes(p.build))||itOwn(k)); // (v2.12: and BOUGHT)
 // THE STORE IS ABSOLUTE: a random one of the candidates c he has switched ON (preferring the ones ok() allows - his rating), only falling back to def when he has none ON at all
 function animAny(p,g,c,ok,def){const on=c.filter(x=>animOn(p,g+':'+x)),a=on.filter(ok||(()=>true)),L=a.length?a:on;return L.length?L[Math.random()*L.length|0]:def}
 // in games: which dunk style (DUNKS: rating + switched on; 40% of the old pure tomahawks were the leaning one, kept as the weights)
@@ -6238,7 +6258,11 @@ function dunkPick(p,dn){const L=[];let tot=0;for(const v of DUNKV){if(v.sty==4||
 function storeBack(){if(MM.fromAct){actReturn();return}S='create';MM.row=5;MM.apS=2;for(const k in P)P[k]=0}
 const stHave=(it,at)=>((MM.cr.st&&MM.cr.st[at])||25)>=it.req;
 const statLbl=a=>((STATS.find(z=>z[0]==a)||[a,a])[1]).replace('LAYUP / CLOSE SHOT','LAYUP');
-function storeMsg(s){MM.st.msg=s;MM.st.mt=2;beep(160,.08,'square')}
+function storeMsg(s,ok){MM.st.msg=s;MM.st.mt=2.2;MM.st.mok=!!ok;if(!ok)beep(160,.08,'square')}
+// BUY: the first Enter / click shows the price, a second within 4 s buys it (so nobody spends 130,000 CC by accident)
+function stBuy(id,name){const st=MM.st,pr=PRICE[id]||0;if(own(id))return true;if(CC<pr){storeMsg('NEED '+fmtCC(pr-CC)+' MORE CC  ·  '+name+' COSTS '+fmtCC(pr));return false}
+ if(st.cf!==id||performance.now()-(st.cft||0)>4000){st.cf=id;st.cft=performance.now();storeMsg('PRESS AGAIN TO BUY '+name+' FOR '+fmtCC(pr)+' CC',1);beep(520,.05,'triangle');return false}
+ st.cf=null;ccSpend(pr);OWN.add(id);ownSave();storeMsg('BOUGHT '+name+'  ·  -'+fmtCC(pr)+' CC',1);beep(660,.08,'triangle');setTimeout(()=>beep(990,.14,'triangle'),90);return true}
 // ===== STORE PREVIEW: the selected (or hovered) animation, played on loop by YOUR player on a little half court to the right of the list. It runs the
 // game's own animation code - dunkStep (with k.pv: no score, no sound, no defenders), layStep, passPose, the jump shot - on a stand-alone copy of the
 // player that is never part of a game (not in TM, never the ball handler). Side-on camera; the rim is where the game's is (x 88.8 ft, 10 ft up).
@@ -6329,7 +6353,7 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
  if(!SPV.trl&&(SPV.done>1.1||SPV.t>9))spvStart(SPV.key)} // loop (the trail preview loops itself: trlPrevUpd)
 // one frame of the preview into the panel: step, pose (the game's pose()), place, render (scissored into SPV_R, the 2D UI is cleared there)
 // trail preview: a perfect-release jump shot; the trail runs while the ball is in flight, the rim impact plays, then 1s pause and again
-function trlPrevUpd(dt){trlHost(SPV.sc);const bf=SPV.bf,on=!!(bf&&!bf.drop&&SPV.ph=='shot');
+function trlPrevUpd(dt){trlHost(SPV.sc);const bf=SPV.bf,on=!!(bf&&!bf.drop&&SPV.ph=='shot');if(!TS[SPV.tk]){if(SPV.wo&&!on&&SPV.tw==null)SPV.tw=0;SPV.wo=on} // (NO TRAIL: the demo still loops)
  if(trOn&&!on)SPV.tw=0; // flight over: the rim impact goes off now
  if(SPV.tw!=null){SPV.tw+=dt;if(SPV.tw>=IM.dur+1){SPV.tw=null;spvStart(SPV.key)}}
  TCAM=SPV.cam;trailUpd(dt,{on,pos:SPV.ball.position,k:SPV.tk});TCAM=null}
@@ -6357,38 +6381,41 @@ const AN_CAT=[
  {n:'DRIBBLING',ic:'drb',sub:[{n:'DRIBBLE PACKAGES',at:'bh',pk:DRB.map((s,i)=>({n:s.n,k:['drb:'+i]}))}]}];
 // DUNK PACKAGES (v1.84): a package UNLOCKS as a whole at one DUNKING level (its easiest dunk's old requirement); inside an unlocked package you switch each dunk on / off.
 const DK_PK=AN_CAT[0].sub[0].pk;DK_PK.forEach(pk=>{const r=Math.min(...pk.k.map(k=>(DUNKV.find(v=>'dnk:'+v.sty==k)||{req:0}).req));pk.req=r;pk.k.forEach(k=>{const v=DUNKV.find(v=>'dnk:'+v.sty==k);if(v)v.req=r})});
-const anDk=st=>st.cat==0&&st.sub==0; // (the dunk list: packages open into their dunks)
+const anDk=st=>st.cat==0&&st.sub==0;
+const pkId=pk=>/^(js|drb):/.test(pk.k[0])?pk.k[0]:'pk:'+pk.n,KEYPK={};AN_CAT.forEach(c=>c.sub.forEach(sb=>sb.pk.forEach(pk=>{if(!/^(js|drb):/.test(pk.k[0]))pk.k.forEach(k=>KEYPK[k]='pk:'+pk.n)})));
+const itOwn=k=>/^(js|drb):/.test(k)?own(k):!KEYPK[k]||own(KEYPK[k]),pkOwn=pk=>own(pkId(pk)); // (the posterizer belongs to no package: free) // (the dunk list: packages open into their dunks)
 const dkRate=r=>Math.round(.4*r[0]+.3*r[1]+.3*r[2]);
 let AN_IT=null;const anItem=k=>(AN_IT||(AN_IT=Object.fromEntries(STORE_T.flatMap(t=>t.items().map(i=>[i.k,Object.assign({at:t.at},i)])))))[k];
 const anGrp=k=>k=='dnk:4'||k.startsWith('sht:')||k.startsWith('drb:')?null:/^dnk:(6|7|8|10)$/.test(k)?'oop':k.split(':')[0],AN_GN={dnk:'DUNK',oop:'ALLEY-OOP',lay:'LAYUP',pas:'PASS'}; // each group keeps one unlocked animation ON (the posterizer and fadeaways are optional)
 const pkOn=pk=>pk.k[0].startsWith('drb:')?(MM.cr.drb|0)==+pk.k[0].slice(4):pk.k[0].startsWith('js:')?(MM.cr.js||'b1')==pk.k[0].slice(3):pk.k.every(k=>!MM.cr.anim.off.includes(k)),pkHave=pk=>pk.k.some(k=>stHave(anItem(k),anItem(k).at)),pkReq=pk=>Math.min(...pk.k.map(k=>anItem(k).req));
 function pkEquip(pk){const off=MM.cr.anim.off;if(!pk)return;
  if(!pkHave(pk)){const it=anItem(pk.k[0]);storeMsg('LOCKED: NEEDS '+statLbl(it.at)+' '+pkReq(pk));return}
+ {const id=MM.st.lv==2?pkId(DK_PK[MM.st.pk]):pkId(pk);if(!own(id)){if(!stBuy(id,MM.st.lv==2?DK_PK[MM.st.pk].n:pk.n))return}} // not bought yet: buy it first
  if(pk.k[0].startsWith('js:')){MM.cr.js=pk.k[0].slice(3);beep(620,.06,'triangle');return} // a jump shot: one at a time
  if(pk.k[0].startsWith('drb:')){MM.cr.drb=+pk.k[0].slice(4);beep(620,.06,'triangle');return} // a dribble package: one at a time
  if(!pkOn(pk)){pk.k.forEach(k=>{const i=off.indexOf(k);if(i>=0)off.splice(i,1)});beep(620,.06,'triangle');return}
- const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
+ const after=off.concat(pk.k);for(const gp of new Set(pk.k.map(anGrp).filter(Boolean)))if(!Object.values(AN_IT).some(i=>anGrp(i.k)==gp&&!after.includes(i.k)&&stHave(i,i.at)&&itOwn(i.k))){storeMsg('EQUIP ANOTHER '+AN_GN[gp]+' PACKAGE FIRST');return}
  pk.k.forEach(k=>{if(!off.includes(k))off.push(k)});beep(300,.05)}
-const TRL_K=Object.keys(TS),TR_CARD=i=>[24+(i%8)*114,306+(i/8|0)*35,106,32];
-function trlEquip(i){MM.cr.trl=TRL_S=TRL_K[i];beep(660,.08,'triangle')}
-function openStore(){MM.st={pg:'hub',hub:1,ts:Math.max(0,TRL_K.indexOf(MM.cr.trl||TRL_S)),cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
+const TRL_K=Object.keys(TS),TRL_G=['NONE',...TRL_K],TR_CARD=i=>[24+(i%8)*114,306+(i/8|0)*35,106,32];
+function trlEquip(i){const k=TRL_G[i];if(k!='NONE'&&!own('trl:'+k)&&!stBuy('trl:'+k,k))return;MM.cr.trl=TRL_S=k;beep(660,.08,'triangle')}
+function openStore(){MM.st={pg:'hub',hub:1,ts:Math.max(0,TRL_G.indexOf(MM.cr.trl||'NONE')),cat:0,lv:0,sub:0,sel:0,msg:'',mt:0};if(!MM.cr.anim)MM.cr.anim={off:[]};S='store';spvBuild();beep(520,.06,'triangle')}
 const ST_HUB=i=>[110+i*390,130,350,250],ST_BK=[24,482,150,40],AN_ROW=i=>[24,92+i*48,300,42],AN_TAB=i=>[480-(AN_CAT.length*90-14)/2+i*90,466,76,64],AN_EQ=[760,400,176,40];
 const AN_VIS=7,anTop=(st,L)=>L.length<=AN_VIS?0:Math.max(0,Math.min(L.length-AN_VIS,st.sel-3)); // (long lists - the jump shots - scroll with the selection)
 const anDkIt=st=>DK_PK[st.pk].k.map(k=>({n:anItem(k).n,k:[k]})), // inside a dunk package: one row per dunk (a one-dunk 'package' = its on / off switch)
  anList=st=>{const c=AN_CAT[st.cat];return st.lv==2?anDkIt(st):st.lv?c.sub[st.sub].pk:c.sub},anPk=st=>st.lv==2?anDkIt(st)[st.sel]:st.lv?AN_CAT[st.cat].sub[st.sub].pk[st.sel]:null;
 function anEnter(st){if(!st.lv){st.sub=st.sel;st.lv=1;st.sel=0;beep(520,.05,'triangle')}
- else if(st.lv==1&&anDk(st)){const pk=anPk(st);if(!pkHave(pk)){storeMsg('LOCKED: NEEDS DUNKING '+pk.req);return}st.pk=st.sel;st.lv=2;st.sel=0;beep(520,.05,'triangle')} // open the package
+ else if(st.lv==1&&anDk(st)){const pk=anPk(st);if(!pkHave(pk)){storeMsg('LOCKED: NEEDS DUNKING '+pk.req);return}if(!pkOwn(pk)&&!stBuy(pkId(pk),pk.n))return;st.pk=st.sel;st.lv=2;st.sel=0;beep(520,.05,'triangle')} // open the package
  else pkEquip(anPk(st))}
 function anBack(st){if(st.lv==2){st.lv=1;st.sel=st.pk;beep(300,.05,'triangle')}else if(st.lv){st.lv=0;st.sel=st.sub;beep(300,.05,'triangle')}else{st.pg='hub';beep(300,.05,'triangle')}}
 function storeStep(dt){const st=MM.st;st.mt=Math.max(0,st.mt-dt);const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0),esc=P.Escape||P.Backspace,ok=P.Enter||P.Space;
  if(st.pg=='hub'){if(lr)st.hub=1-st.hub;if(ok){st.pg=st.hub?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle')}if(esc)storeBack();return}
- if(st.pg=='cos'){const n=TRL_K.length,ud=(P.ArrowDown||P.KeyS?1:0)-(P.ArrowUp||P.KeyW?1:0);if(lr||ud){st.ts=Math.max(0,Math.min(n-1,st.ts+lr+ud*8));beep(440,.03,'triangle')}if(ok)trlEquip(st.ts);if(esc){st.pg='hub';beep(300,.05,'triangle')}return}
+ if(st.pg=='cos'){const n=TRL_G.length,ud=(P.ArrowDown||P.KeyS?1:0)-(P.ArrowUp||P.KeyW?1:0);if(lr||ud){st.ts=Math.max(0,Math.min(n-1,st.ts+lr+ud*8));beep(440,.03,'triangle')}if(ok)trlEquip(st.ts);if(esc){st.pg='hub';beep(300,.05,'triangle')}return}
  if(lr){st.cat=(st.cat+lr+AN_CAT.length)%AN_CAT.length;st.lv=0;st.sel=0;st.sub=0}
  const n=anList(st).length;if(P.ArrowDown||P.KeyS)st.sel=Math.min(n-1,st.sel+1);if(P.ArrowUp||P.KeyW)st.sel=Math.max(0,st.sel-1);
  if(ok)anEnter(st);if(esc)anBack(st)}
 function storePtr(x,y,type){const st=MM.st;if(type!=0)return;
  if(st.pg=='hub'){for(let i=0;i<2;i++)if(mIn(x,y,ST_HUB(i))){st.hub=i;st.pg=i?'anim':'cos';st.lv=0;st.sel=0;beep(520,.06,'triangle');return}if(mIn(x,y,ST_BK))storeBack();return}
- if(st.pg=='cos'){for(let i=0;i<TRL_K.length;i++)if(mIn(x,y,TR_CARD(i))){st.ts=i;trlEquip(i);return}if(mIn(x,y,ST_BK)){st.pg='hub';beep(300,.05,'triangle')}return}
+ if(st.pg=='cos'){for(let i=0;i<TRL_G.length;i++)if(mIn(x,y,TR_CARD(i))){st.ts=i;trlEquip(i);return}if(mIn(x,y,ST_BK)){st.pg='hub';beep(300,.05,'triangle')}return}
  if(mIn(x,y,ST_BK)){anBack(st);return}
  for(let i=0;i<AN_CAT.length;i++)if(mIn(x,y,AN_TAB(i))){st.cat=i;st.lv=0;st.sel=0;st.sub=0;beep(440,.05,'triangle');return}
  const L=anList(st),tp_=anTop(st,L);for(let i=tp_;i<Math.min(L.length,tp_+AN_VIS);i++)if(mIn(x,y,AN_ROW(i-tp_))){if(st.lv)st.sel=i;else{st.sel=i;anEnter(st)}return}
@@ -6410,13 +6437,14 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
    anIcon(ic,x+w/2,y+100,110,C);g.textAlign='center';g.font='bold 28px system-ui';g.fillStyle='#fff';g.fillText(t,x+w/2,y+h-46);g.font='12px system-ui';g.fillStyle='#8fa3b8';g.fillText(s,x+w/2,y+h-22)});
   back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('←/→ choose  ·  Enter open  ·  Esc back',936,510);return}
  SPV.trl=st.pg=='cos';
- if(st.pg=='cos'){title('COSMETICS  ·  BALL TRAIL');const eq=d.trl||TRL_S,hx=c=>'#'+c.toString(16).padStart(6,'0'),k=TRL_K[st.ts];
-  TRL_K.forEach((kk,i)=>{const[x,y,w,h]=TR_CARD(i),t=TS[kk],on=st.ts==i,me=kk==eq;mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',me?'#4cff7a':on?'#fff':'#3a4450');
-   const gr=g.createLinearGradient(x+8,0,x+w-8,0);(t.rb?[0xff3b3b,0xffe14a,0x3fd45a,0x3f8cff,0xc06aff]:[t.g,t.m,t.k]).forEach((c,j,a)=>gr.addColorStop(j/(a.length-1),hx(c)));
-   g.fillStyle=gr;g.fillRect(x+8,y+5,w-16,4);g.textAlign='center';g.font='bold 11px system-ui';g.fillStyle='#fff';g.fillText((me?'✓ ':'')+kk,x+w/2,y+24)});
+ if(st.pg=='cos'){title('COSMETICS  ·  BALL TRAIL');const eq=TS[d.trl]?d.trl:'NONE',hx=c=>'#'+c.toString(16).padStart(6,'0'),k=TRL_G[st.ts];
+  TRL_G.forEach((kk,i)=>{const[x,y,w,h]=TR_CARD(i),t=TS[kk],on=st.ts==i,me=kk==eq,ow=kk=='NONE'||own('trl:'+kk);mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',me?'#4cff7a':on?'#fff':'#3a4450');
+   if(t){const gr=g.createLinearGradient(x+8,0,x+w-8,0);(t.rb?[0xff3b3b,0xffe14a,0x3fd45a,0x3f8cff,0xc06aff]:[t.g,t.m,t.k]).forEach((c,j,a)=>gr.addColorStop(j/(a.length-1),hx(c)));g.fillStyle=gr}else g.fillStyle='#3a4450';
+   g.fillRect(x+8,y+4,w-16,3);g.textAlign='center';let f=10.5;g.font='bold '+f+'px system-ui';const nm=(me?'✓ ':'')+(kk=='NONE'?'NO TRAIL':kk);while(g.measureText(nm).width>w-8&&f>8){f-=.5;g.font='bold '+f+'px system-ui'}g.fillStyle=ow?'#fff':'#aab4c0';g.fillText(nm,x+w/2,y+18);
+   g.font='bold 9px system-ui';g.fillStyle=ow?'#4cff7a':GOLD;g.fillText(ow?(me?'EQUIPPED':kk=='NONE'?'':'OWNED'):fmtCC(PRICE['trl:'+kk])+' CC',x+w/2,y+29)});
   // the picked trail, and the live demo: your player's jump shot with a perfect release
-  g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(k,30,130);g.font='13px system-ui';g.fillStyle='#8fa3b8';g.fillText(TRL_DESC[k],30,154);
-  g.font='bold 13px system-ui';g.fillStyle=k==eq?'#4cff7a':GOLD;g.fillText(k==eq?'✓ EQUIPPED':'ENTER / CLICK TO EQUIP',30,186);
+  g.textAlign='left';g.font='italic 900 30px "Impact","Arial Black",sans-serif';g.fillStyle='#fff';g.fillText(k=='NONE'?'NO TRAIL':k,30,130);g.font='13px system-ui';g.fillStyle='#8fa3b8';g.fillText(k=='NONE'?'A clean release - no trail at all':TRL_DESC[k],30,154);
+  {const ow=k=='NONE'||own('trl:'+k),pr=PRICE['trl:'+k]||0;g.font='bold 13px system-ui';g.fillStyle=k==eq?'#4cff7a':ow?GOLD:CC>=pr?'#ffb020':'#ff7b7b';g.fillText(k==eq?'✓ EQUIPPED':ow?'ENTER / CLICK TO EQUIP':CC>=pr?'BUY FOR '+fmtCC(pr)+' CC  ·  ENTER / CLICK':'COSTS '+fmtCC(pr)+' CC  ·  YOU NEED '+fmtCC(pr-CC)+' MORE',30,186)}
   const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'#3a4450');g.clearRect(px,py,pw,ph);
   if(SPV.tk!==k){SPV.tk=k;SPV.tw=null;trOn=0;TP.length=0;SPV.key='';IM.t=-1;SUNR=0;SPR.forEach(o=>{o.l=0;o.s.visible=false});TRL.forEach(o=>o.l=0)} // a new trail: clear the last one's effects, start its demo from the top
   spvFrame('js:'+(JS_M[d.js]?d.js:'b1'));
@@ -6428,6 +6456,7 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
  L.forEach((it,i)=>{if(i<tp_||i>=tp_+AN_VIS)return;const[x,y,w,h]=AN_ROW(i-tp_),on=st.sel==i,lk=st.lv&&!pkHave(it),eq=st.lv&&!lk&&pkOn(it);mRR(x,y,w,h,2,on?'#2c3743':'#1f252c',on?'#fff':C);
   g.textAlign='center';let f=19;g.font=f+'px system-ui';while(g.measureText(it.n).width>w-70&&f>12){f--;g.font=f+'px system-ui'}g.fillStyle=lk?'#5d6b7a':C;g.fillText(st.lv?it.n:it.n.charAt(0)+it.n.slice(1).toLowerCase(),x+w/2,y+28);
   if(st.lv==1&&anDk(st)&&!lk){const n=it.k.filter(k=>!MM.cr.anim.off.includes(k)).length;g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle=n?'#4cff7a':'#8a90a0';g.fillText(n+'/'+it.k.length+'  ›',x+w-12,y+27)} // dunks switched on
+  else if(st.lv==1&&!pkOwn(it)){g.textAlign='right';g.font='bold 11px system-ui';g.fillStyle=lk?'#6a7080':CC>=(PRICE[pkId(it)]||0)?GOLD:'#ff9a7a';g.fillText((lk?'🔒 ':'')+fmtCC(PRICE[pkId(it)]||0)+' CC',x+w-10,y+27)}
   else if(eq){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle='#4cff7a';g.fillText('✓',x+w-12,y+27)}else if(lk){g.textAlign='right';g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('🔒',x+w-10,y+27)}else if(!st.lv){g.textAlign='right';g.font='bold 14px system-ui';g.fillStyle=C;g.fillText('›',x+w-12,y+27)}});
  // preview + package details
  const[px,py,pw,ph]=SPV_R;mRR(px-2,py-2,pw+4,ph+4,2,null,'rgba(63,184,255,.5)');
@@ -6441,10 +6470,10 @@ function drawStore(){const st=MM.st,d=MM.cr,C=ACT_C;
      mRR(xx,yy-12,w,18,9,on?'rgba(63,184,255,.2)':'rgba(255,255,255,.06)',null);g.fillStyle=have?'#fff':'#6a7080';g.fillText(t,xx+8,yy+1);xx+=w+6});if(!have){g.fillStyle='#8a90a0';g.font='11px system-ui';g.fillText('🔒 BALL HANDLE '+it.req,px,yy+24)}}
    else ks.forEach(k=>{const it=anItem(k),have=stHave(it,it.at),t=(k==cur?'▶ ':'')+it.n+(have?'':'  🔒'+it.req);g.font=(k==cur?'bold ':'')+'12px system-ui';const w=g.measureText(t).width+18;if(xx+w>px+400){xx=px;yy+=22}
     mRR(xx,yy-12,w,18,9,k==cur?'rgba(63,184,255,.2)':'rgba(255,255,255,.06)',null);g.fillStyle=have?'#fff':'#6a7080';g.fillText(t,xx+9,yy+1);xx+=w+6})}
-  {const[x,y,w,h]=AN_EQ,eq=pkOn(pk),lk=!pkHave(pk);mRR(x,y,w,h,2,lk?'#2a2f37':eq?'#1e3a28':'#ffb020',lk?'#555':eq?'#4cff7a':'#fff');g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle=lk?'#8a90a0':eq?'#4cff7a':'#11131a';
-   const op=st.lv==1&&anDk(st);g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):op?'OPEN  ›':st.lv==2?(eq?'✓ ON':'OFF'):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(!lk&&(st.lv==2||eq&&!op&&!ks[0].startsWith('js:')&&!ks[0].startsWith('drb:'))){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText(st.lv==2?'Enter / click to switch '+(eq?'off':'on'):'Enter / click to unequip',x+w/2,y+h+12)}}}
+  {const[x,y,w,h]=AN_EQ,lk=!pkHave(pk),pid=st.lv==2?pkId(DK_PK[st.pk]):pkId(pk),ow=own(pid),eq=ow&&pkOn(pk);if(!lk&&!ow){const pr=PRICE[pid]||0,cf=st.cf===pid&&performance.now()-(st.cft||0)<4000,can=CC>=pr;mRR(x,y,w,h,2,can?(cf?'#4cff7a':'#ffb020'):'#3a2a2a',can?'#fff':'#ff7b7b');g.textAlign='center';g.font='bold 15px system-ui';g.fillStyle=can?'#11131a':'#ff9a9a';g.fillText((cf?'CONFIRM  ':can?'BUY  ':'')+fmtCC(pr)+' CC',x+w/2,y+26);g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText(can?(cf?'press again to buy':'Enter / click to buy'):'you need '+fmtCC(pr-CC)+' more CC',x+w/2,y+h+12)}else{mRR(x,y,w,h,2,lk?'#2a2f37':eq?'#1e3a28':'#ffb020',lk?'#555':eq?'#4cff7a':'#fff');g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle=lk?'#8a90a0':eq?'#4cff7a':'#11131a';
+   const op=st.lv==1&&anDk(st);g.fillText(lk?'🔒 '+statLbl(anItem(ks[0]).at)+' '+pkReq(pk):op?'OPEN  ›':st.lv==2?(eq?'✓ ON':'OFF'):eq?'✓ EQUIPPED':'EQUIP',x+w/2,y+26);if(!lk&&(st.lv==2||eq&&!op&&!ks[0].startsWith('js:')&&!ks[0].startsWith('drb:'))){g.font='9px system-ui';g.fillStyle='#8a90a0';g.fillText(st.lv==2?'Enter / click to switch '+(eq?'off':'on'):'Enter / click to unequip',x+w/2,y+h+12)}}}}
  else{g.textAlign='center';g.font='bold 16px system-ui';g.fillStyle='#8fa3b8';g.fillText('Choose '+L.map(s=>s.n.toLowerCase()).join(' or ')+' on the left',px+pw/2,py+ph/2)}
- if(st.mt>0){g.textAlign='center';g.font='bold 14px system-ui';const tw_=g.measureText(st.msg).width+28;mRR(px+pw/2-tw_/2,py+10,tw_,26,13,'rgba(20,10,10,.85)','rgba(255,120,120,.6)');g.fillStyle='#ff9a9a';g.fillText(st.msg,px+pw/2,py+28)}
+ if(st.mt>0){g.textAlign='center';g.font='bold 14px system-ui';const tw_=g.measureText(st.msg).width+28;mRR(px+pw/2-tw_/2,py+10,tw_,26,13,st.mok?'rgba(10,20,12,.88)':'rgba(20,10,10,.85)',st.mok?'rgba(76,255,122,.6)':'rgba(255,120,120,.6)');g.fillStyle=st.mok?'#7fffa0':'#ff9a9a';g.fillText(st.msg,px+pw/2,py+28)}
  // category tabs along the bottom
  AN_CAT.forEach((c,i)=>{const[x,y,w,h]=AN_TAB(i),on=st.cat==i;mRR(x,y,w,h,2,on?C:'#1f252c',on?'#fff':C);anIcon(c.ic,x+w/2,y+h/2,46,on?'#fff':C)});
  back();g.textAlign='right';g.font='11px system-ui';g.fillStyle='rgba(255,255,255,.6)';g.fillText('←/→ category  ·  ↑/↓ choose  ·  Enter open / equip  ·  Esc back',936,532)}
