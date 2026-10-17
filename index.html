@@ -2142,7 +2142,7 @@ function step(dt){
   boardCol(q0[0],q0[1],q0[2]);
   if(B.z<=4){B.z=4;B.vz=Math.abs(B.vz)*.66;B.vx*=.88;B.vy*=.88;if(B.vz<25)B.vz=0}
   B.x=Math.max(10,Math.min(930,B.x));B.y=Math.max(10,Math.min(CW-10,B.y));
-  if(HC){if(B.age>=1)checkBall(1-B.so)} // 1v1 (and half-court 3v3): nobody rebounds - after 1s the other player gets it at the top of the key
+  if(HC){if(B.age>=1){const d=TM[1-B.so]&&TM[1-B.so][0];if(d&&!(PR&&PR<4)){pstat(d).reb++;awardP(d,XP_REB,'REBOUND')}checkBall(1-B.so)}} // 1v1 (and half-court 3v3): nobody chases it - after 1s the defender gets it at the top of the key, and that counts as his (defensive) rebound (it never used to: 1v1 players always had 0 rebounds)
   else if(B.age>.3){let b=null,bs=1e9;for(const p of TM[0].concat(TM[1])){if(p.stun>0||p.dunk)continue;const dd=Math.hypot(p.x-B.x,p.y-B.y),re=rbEdge(p);if(dd<rbR(p)*re.r&&B.z<95*p.ht+p.z){const k=dd-p.ht*10-8*rbN(p)+Math.random()*14-re.k;if(k<bs){bs=k;b=p}}}if(b)grab(b)}
  }else if(B.mode=='post'){
   B.t-=dt;
@@ -5716,10 +5716,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.19'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.20'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.20','Stat tracking fixes',['Fixed: 1v1 (including ONLINE 1V1) never counted rebounds - the defender who gets the ball after a miss now gets the rebound','Fixed: after updating, your leaderboard profile could stay out of date until you finished another game - it now refreshes straight away','Leaderboard profiles from older versions now show POINTS (worked out from their FG and 3PT makes)']],
  ['v2.19','Leaderboard profiles',['Click any player on the LEADERBOARD to open their profile: picture, name, total EXP, ONLINE WINS and CC, lifetime stats and their record in every mode','Players on older versions show the stats their game shares (the rest fill in once they update)']],
  ['v2.18','Minor fixes',['Small fixes and improvements']],
  ['v2.17','Minor fixes',['Small fixes and improvements']],
@@ -6069,12 +6070,12 @@ function acSnap(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=
 // one short-lived socket per relay: send one message, hand every reply to onMsg until it returns true (or the time runs out)
 function acRelay(url,send,onMsg,ms=7000){return new Promise(res=>{let ws,t;const end=()=>{clearTimeout(t);try{ws.close()}catch(e){}res()};try{ws=new WebSocket(url)}catch(e){return res()}
  t=setTimeout(end,ms);ws.onopen=()=>ws.send(JSON.stringify(send));ws.onerror=end;ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(onMsg(m))end()}})}
-async function acPush(){if(!ACCT.code||ACCT.busy||ACCT.in!=null)return;const snap=acSnap();if(snap==ACCT.last)return;ACCT.busy=1;let ok=0;
+async function acPush(){if(!ACCT.code||ACCT.busy||ACCT.in!=null)return;const snap=acSnap(),key=snap+JSON.stringify(lbCard());if(key==ACCT.last)return;/* (the card is part of the key: after an update adds fields to it, it goes out at once, not after the next game) */ACCT.busy=1;let ok=0;
  try{const{sk,pk}=await acKeys(ACCT.code),ev={pubkey:pk,created_at:Math.floor(Date.now()/1000),kind:30078,tags:[['d',AC_D]],content:snap},id=await acId(ev);
   ev.id=acHex(id);ev.sig=acHex(await H27P2P.schnorr.signAsync(id,sk));
   const lb={pubkey:pk,created_at:ev.created_at,kind:30078,tags:[['d',AC_LB]],content:JSON.stringify(lbCard())},lid=await acId(lb);lb.id=acHex(lid);lb.sig=acHex(await H27P2P.schnorr.signAsync(lid,sk));
   await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',ev],m=>{if(m[0]=='OK'&&m[1]==ev.id){if(m[2])ok++;return true}}).then(()=>acRelay(u,['EVENT',lb],m=>m[0]=='OK'))))}catch(e){}
- if(ok)ACCT.last=snap;ACCT.msg=ok?'SAVED TO CLOUD':'CLOUD SAVE FAILED - RETRYING SOON';ACCT.busy=0}
+ if(ok)ACCT.last=key;ACCT.msg=ok?'SAVED TO CLOUD':'CLOUD SAVE FAILED - RETRYING SOON';ACCT.busy=0}
 async function acPull(code){const{pk}=await acKeys(code),pkB=acBytes(pk),evs=[];
  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27',{kinds:[30078],authors:[pk],'#d':[AC_D],limit:1}],m=>{if(m[0]=='EVENT'&&m[2]&&m[2].pubkey==pk)evs.push(m[2]);return m[0]=='EOSE'})));
  let best=null;for(const ev of evs.sort((a,b)=>b.created_at-a.created_at)){try{const id=await acId(ev);if(acHex(id)==ev.id&&await H27P2P.schnorr.verifyAsync(acBytes(ev.sig),id,pkB)){best=ev;break}}catch(e){}} // a relay can't forge or alter someone's save
@@ -6140,7 +6141,8 @@ const LB_STATS=[['WINS',c=>c.w],['W/L RATIO',c=>c.l?c.w/c.l:c.w,v=>v.toFixed(2)]
 function lbCard(){const s=PF.d.st,md={};pfLife();PF_MODES.forEach(k=>{const m=PF.d.md[k];md[k]=[m.gp,m.w,m.l]});return{n:PF.d.name,lg:PF.d.logo,gp:s.gp,w:s.w,l:s.l,fg:s.fgm,tm:s.tpm,ta:s.tpa,fa:s.fga,ow:PF.d.md.ONLINE.w,xp:PF.d.xp,cc:PF.d.cc,pts:s.pts,rb:s.reb,as:s.ast,sl:s.stl,md}} // (pts..md: for the profile others see when they click you on the leaderboard)
 function lbClean(o){if(!o||typeof o!='object')return null;const n=k=>Math.min(1e9,Math.max(0,Math.round(+o[k])||0)),c={n:String(o.n||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',lg:o.lg>=0&&o.lg<TEAMS.length?o.lg|0:0};
  ['gp','w','l','fg','fa','tm','ta','ow','xp','cc'].forEach(k=>c[k]=n(k));
- if(o.pts!=null){c.ext=1;['pts','rb','as','sl'].forEach(k=>c[k]=n(k))} // (cards from before v2.19 don't carry these)
+ if(o.pts!=null){c.ext=1;['pts','rb','as','sl'].forEach(k=>c[k]=n(k))} // (cards from before v2.19 don't carry these...)
+ else c.pts=2*c.fg+3*c.tm; // (...but points are exactly 2 per FG + 3 per 3PT: there are no free throws)
  if(o.md&&typeof o.md=='object'){c.md={};PF_MODES.forEach(k=>{const a=Array.isArray(o.md[k])?o.md[k]:[];c.md[k]=a.slice(0,3).map(v=>Math.min(1e9,Math.max(0,Math.round(+v)||0)))})}return c}
 async function lbFetch(){const got={};try{if(ACCT.code)LB.me=(await acKeys(ACCT.code)).pk;
  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27lb',{kinds:[30078],'#d':[AC_LB],limit:2000}],m=>{const ev=m[2];if(m[0]=='EVENT'&&ev&&typeof ev.pubkey=='string'&&(!got[ev.pubkey]||ev.created_at>got[ev.pubkey].created_at))got[ev.pubkey]=ev;return m[0]=='EOSE'})))}catch(e){}
@@ -6174,7 +6176,7 @@ function lbDraw(){const[bx,by,bw,bh]=LB_BOX,i=LB.sel,L=lbRank(i),[nm,,,note]=LB_
  g.fillStyle=GOLD;g.fillText(!ACCT.code?'Create an account in PROFILE (P) to appear here.':k<0?'Play a game to get ranked.':'You are #'+(k+1)+' of '+L.length,x,by+bh-14);
  g.textAlign='right';g.fillStyle='#8a90a0';g.fillText('click a player for their profile  ·  ↑/↓ stat  ·  Esc / L close',x+w,by+bh-14);g.restore();if(LB.view)lbProfDraw(LB.view)}
 // someone's profile, from their leaderboard card (your own row shows your own, live): picture, name, EXP / CC, then the same stats as the PROFILE page
-function lbProfDraw(c){const[bx,by,bw,bh]=PF_BOX,me=c.mine,d=me?PF.d:{st:{gp:c.gp,w:c.w,l:c.l,pts:c.ext?c.pts:null,reb:c.ext?c.rb:null,ast:c.ext?c.as:null,stl:c.ext?c.sl:null,fgm:c.fg,fga:c.fa,tpm:c.tm,tpa:c.ta},
+function lbProfDraw(c){const[bx,by,bw,bh]=PF_BOX,me=c.mine,d=me?PF.d:{st:{gp:c.gp,w:c.w,l:c.l,pts:c.pts,reb:c.ext?c.rb:null,ast:c.ext?c.as:null,stl:c.ext?c.sl:null,fgm:c.fg,fga:c.fa,tpm:c.tm,tpa:c.ta},
   md:c.md?Object.fromEntries(PF_MODES.map(k=>[k,{gp:c.md[k][0]|0,w:c.md[k][1]|0,l:c.md[k][2]|0}])):null};g.save();
  g.fillStyle='rgba(4,5,9,.6)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.98)',GOLD);
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText(me?'YOUR PROFILE':'PLAYER PROFILE',bx+20,by+40);
