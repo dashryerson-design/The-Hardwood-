@@ -1170,11 +1170,11 @@ function startDunk(p){
 // his right hand at the catch point of his jump - then it is a normal dunk (physical blocks, the vertical contest at the slam, the make chance). Before the
 // catch the lob can be tipped by a defender who gets a hand up to it. The AI throws them too, now and then, when such a teammate is near the rim and open.
 // SIGNATURE reach (units, 10 = 1 ft) per tier: city = LOB CITY (always), mom = MOMENTUM TAKEOFF (sprinting) - both Gold: 24 + 2 + 1.3 = ~27.3 ft, a step past the arc
-const OOP={city:[7,13,20],mom:[5,9,13],call:240,react:.22,range:150,dnk:50,arc:[30,.09],tip:.55,names:{6:'ALLEY-OOP FLUSH',7:'ALLEY-OOP TOMAHAWK',8:'ALLEY-OOP TUCK SLAM',10:'SUPERMAN ALLEY-OOP'}};
+const OOP={city:[7,13,20],mom:[5,9,13],call:240,react:.22,range:150,dnk:50,arc:[30,.09],tip:.55,names:{6:'ALLEY-OOP FLUSH',7:'ALLEY-OOP TOMAHAWK',8:'ALLEY-OOP TUCK SLAM',10:'SUPERMAN ALLEY-OOP',18:'2-HAND ALLEY-OOP FLUSH',19:'2-HAND ALLEY-OOP HAMMER',20:'2-HAND ALLEY-OOP TUCK'}};
 function oopTarget(p){let best=null,bs=-1e9;const H=hx(p.team);
  for(const q of TM[p.team]){if(q===p||q.stun>0||q.air||q.jph||q.dunk||q.lay||q.fire)continue;if(((q.rt&&q.rt.dnk)||50)<OOP.dnk)continue;const d=Math.hypot(H-q.x,HY-q.y);if(d>OOP.range)continue;
   const df=near(q,TM[1-p.team],200),sep=df?Math.hypot(df.x-q.x,df.y-q.y):200,s=sep-d*.4;if(s>bs){bs=s;best=q}}return best}
-const OOP_STY=[6,7,8,10];
+const OOP_STY=[6,7,8,10,18,19,20];
 function oopStyle(r){const dn=(r.rt&&r.rt.dnk)||80,L=OOP_STY.filter(s=>animOn(r,'dnk:'+s)&&dn>=((DUNKV.find(v=>v.sty==s)||{}).req||0));return L.length?L[Math.random()*L.length|0]:animAny(r,'dnk',OOP_STY,null,6)}
 function startOop(r,sty){const H=hx(r.team),pt_={x:H-dr(r.team)*30,y:HY},d0=nearD(pt_,TM[1-r.team],75,0),dn=(r.rt&&r.rt.dnk)||80,sn=Math.max(0,Math.min(1,(((r.rt&&r.rt.str)||50)-25)/75)),cc=cont(r),
   mk=dunkMake(dn,!d0&&cc<WOPEN,Math.max(cc,d0?.5:0),false,sn),ft=DKS[sty].ft||(sty==6?2:1);
@@ -1205,12 +1205,12 @@ function oopCallStep(dt){if(!OOPC)return;OOPC.t-=dt;if(OOPC.t>0)return;const p=O
 function oopRem(r,k){const H=hx(r.team),Tx=H-dr(r.team)*20;
  if(k.ph==0){const d=Math.hypot(Tx-r.x,HY-r.y),v=Math.max(90,Math.hypot(r.vx,r.vy));return Math.max(0,d-55)/v+.13+.12+k.cf*.42}
  if(k.ph==1)return(1-k.pt)*k.tl+k.tp+k.cf*k.tA;if(k.ph==2)return(1-k.pt)*k.tp+k.cf*k.tA;return Math.max(0,k.cf*k.tA-k.ta)}
-const _OPH=new THREE.Vector3();
+const _OPH=new THREE.Vector3(),_OPH2=new THREE.Vector3();
 function oopStep(dt){const r=B.to,k=r&&r.dunk;
  if(!k||!k.oop||r.stun>0||k.lost){B.oop=0;B.mode='loose';B.h=null;B.age=0;B.so=B.from?B.from.team:off;B.vx=(Math.random()-.5)*60;B.vy=(Math.random()-.5)*60;B.vz=-20;if(r&&r.dunk&&r.dunk.oop&&!r.dunk.caught)r.dunk.mk=false;return}
  const rem=oopRem(r,k);B.ou=Math.min(1,B.ou+(1-B.ou)*Math.min(1,dt/Math.max(dt,rem)));
  const H=hx(r.team),D=dr(r.team);let tx=H-D*22,ty=HY+(r.y-HY)*.15,tz=RZ+16; // predicted catch point (just in front of the rim, above it)
- if(k.ph>=3){const m=r.m;m.updateMatrixWorld(true);(k.mir?m.aR:m.aL).h.getWorldPosition(_OPH);const w=sm3(Math.min(1,k.ta/Math.max(.01,k.cf*k.tA)));
+ if(k.ph>=3){const m=r.m;m.updateMatrixWorld(true);(k.mir?m.aR:m.aL).h.getWorldPosition(_OPH);if(DKS[k.sty].two){(k.mir?m.aL:m.aR).h.getWorldPosition(_OPH2);_OPH.add(_OPH2).multiplyScalar(.5);_OPH.y+=.3}const w=sm3(Math.min(1,k.ta/Math.max(.01,k.cf*k.tA)));
   tx+=(_OPH.x*10-tx)*w;ty+=((_OPH.z+ZO)*10-ty)*w;tz+=(_OPH.y*10+2-tz)*w}
  const u=B.ou;B.x=B.sx+(tx-B.sx)*u;B.y=B.sy+(ty-B.sy)*u;B.z=B.z0+(tz-B.z0)*u+B.arc*4*u*(1-u);
  // a defender who gets a hand up to the lob can tip it (once each)
@@ -3132,12 +3132,27 @@ const DKS=[ // per style: flight arm / torso tracks (tau >= 2) + where the ball 
   Tk:[[2,.2],[2.06,.6],[2.12,1],[2.24,1.3],[2.35,1.35],[2.47,1.3],[2.59,1.2],[2.71,1.1],[2.82,1],[2.94,.7],[3.06,.6],[3.25,.9],[3.5,1.1],[3.75,.7],[4,.4]],
   Fh:[[2,-1.5],[2.06,-1.5],[2.12,-1.45],[2.24,-1.1],[2.35,-1],[2.47,-1.1],[2.59,-1.2],[2.71,-1.25],[2.82,-1.1],[2.94,-.6],[3.06,-.45],[3.25,-.55],[3.5,-.6],[3.75,-.45],[4,-.3]],
   Fk:[[2,1.6],[2.06,1.5],[2.12,1.4],[2.24,1.3],[2.35,1.1],[2.47,.8],[2.59,.5],[2.71,.35],[2.82,.35],[2.94,.5],[3.06,.45],[3.25,.35],[3.5,.3],[3.75,.3],[4,.3]],
-  hd:[[0,-.1],[1,-.2],[2,-.35],[2.5,-.4],[2.8,-.3],[2.95,.12],[3.4,.15],[4,.1]]}];
+  hd:[[0,-.1],[1,-.2],[2,-.35],[2.5,-.4],[2.8,-.3],[2.95,.12],[3.4,.15],[4,.1]]},
+ // ===== 2 HAND ALLEY-OOPS (v2.22, styles 18-20): both hands go up for the lob (it is caught between them at tau 2+cf), then a two-handed slam
+ {nm:'2-HAND OOP FLUSH',P:-2.7,Pe:-.25,two:1,oop:1,cf:.6,ft:2, // two-foot: rises straight up with both arms reaching high, takes it at the top and flushes it straight down with both hands
+  Ax:[[2,-2.7],[2.35,-3],[2.6,-3.12],[2.72,-3.25],[2.84,-2.5],[2.96,-2.1],[3.15,-1.6],[3.45,-1],[3.75,-.6],[4,-.45]],Ae:[[2,-.25],[2.6,-.12],[2.72,-.6],[2.84,-.15],[2.96,-.08],[3.3,-.3],[4,-.45]],
+  Aw:[[2,0],[2.6,.15],[2.72,-.35],[2.88,.8],[3.2,.35],[4,0]],Az:[[2,-.12],[2.6,-.08],[2.72,-.12],[2.95,-.15],[3.3,.3],[3.7,.55],[4,.5]],
+  lean:[[2,0],[2.6,-.08],[2.72,-.15],[2.88,.28],[3.1,.28],[3.6,.15],[4,.12]]},
+ {nm:'2-HAND OOP HAMMER',P:-2.6,Pe:-.3,two:1,oop:1,cf:.55,ft:1, // one-foot: catches it overhead in both hands, takes it way back behind the head with the back arched, then hammers it down
+  Ax:[[2,-2.6],[2.3,-3],[2.55,-3.15],[2.68,-3.45],[2.8,-3.5],[2.92,-2.55],[3.02,-2.2],[3.3,-1.4],[3.7,-.7],[4,-.45]],Ae:[[2,-.3],[2.55,-.15],[2.68,-1.25],[2.8,-1.45],[2.92,-.2],[3.05,-.1],[3.35,-.3],[4,-.45]],
+  Aw:[[2,0],[2.55,.2],[2.68,-.45],[2.8,-.5],[2.94,.85],[3.25,.4],[4,0]],Az:[[2,-.15],[2.55,-.1],[2.8,-.2],[3,-.2],[3.35,.35],[3.7,.6],[4,.5]],
+  lean:[[2,0],[2.55,-.1],[2.7,-.32],[2.82,-.35],[2.94,.3],[3.15,.3],[3.6,.15],[4,.12]]},
+ {nm:'2-HAND OOP TUCK',P:-2.6,Pe:-.3,two:1,oop:1,cf:.5,ft:2,tuck:1, // two-foot: takes it high in both hands, rips it back behind the head with both knees tucked up, then throws it down as the legs kick out
+  Ax:[[2,-2.6],[2.3,-3],[2.5,-3.1],[2.62,-3.45],[2.78,-3.55],[2.88,-2.45],[2.98,-2.05],[3.15,-1.6],[3.45,-1],[3.75,-.6],[4,-.45]],Ae:[[2,-.3],[2.5,-.12],[2.62,-1.3],[2.78,-1.55],[2.88,-.25],[2.98,-.1],[3.3,-.3],[4,-.45]],
+  Aw:[[2,0],[2.5,.25],[2.62,-.45],[2.78,-.5],[2.9,.95],[3.25,.45],[4,0]],Az:[[2,-.15],[2.5,-.1],[2.78,-.15],[3,-.18],[3.4,.35],[3.7,.55],[4,.5]],
+  lean:[[2,0],[2.5,-.08],[2.66,-.2],[2.8,-.25],[2.92,.35],[3.1,.4],[3.6,.18],[4,.12]],
+  Th:[[2,.1],[2.35,.3],[2.5,-.7],[2.66,-1.1],[2.82,-1.1],[2.95,-.3],[3.2,-.35],[3.6,-.3],[4,-.25]],Tk:[[2,.1],[2.35,1],[2.5,1.6],[2.66,2],[2.82,2],[2.95,.8],[3.2,.9],[3.6,.5],[4,.35]],
+  Fh:[[2,.1],[2.35,.3],[2.5,-.7],[2.66,-1.1],[2.82,-1.1],[2.95,-.3],[3.2,-.35],[3.6,-.3],[4,-.25]],Fk:[[2,.1],[2.35,1],[2.5,1.6],[2.66,2],[2.82,2],[2.95,.8],[3.2,.9],[3.6,.5],[4,.35]]}];
 
 const DKH=[[0,-.1],[1,-.2],[2,-.3],[2.7,-.3],[2.95,.1],[3.4,.25],[4,.12]], // head: eyes up on the rim on the way up, down on the ball at the slam, then on the landing
  DKF=[[2,.75],[2.7,.7],[3.2,.5],[3.8,.35],[4,.3]]; // trailing / airborne feet: toes pointed off the floor, flattening out to land toes first
 // hands still together on the ball? (0 = both hands on it, 1 = only the dunking hand) - shared by the pose and the ball placement in render()
-function dkSep(k){if(k.oop)return 1;const s=DKS[k.sty];if(!s||s.two||k.ph<3)return 0;if(k.ph>3)return 1;const t=2+k.pt;return sm3(Math.max(0,Math.min(1,(t-s.sp[0])/(s.sp[1]-s.sp[0]))))}
+function dkSep(k){if(k.oop)return DKS[k.sty]&&DKS[k.sty].two?0:1;const s=DKS[k.sty];if(!s||s.two||k.ph<3)return 0;if(k.ph>3)return 1;const t=2+k.pt;return sm3(Math.max(0,Math.min(1,(t-s.sp[0])/(s.sp[1]-s.sp[0]))))}
 // dunk clock tau (see DUNK BODY MECHANICS); -1 on the run-up
 function dkTau(p,k){if(k.ph==1)return k.pt;if(k.ph==2)return 1+k.pt;if(k.ph==3)return 2+k.pt;if(k.ph>3)return 3+(k.za>0?Math.max(0,Math.min(1,1-p.z/k.za)):Math.max(0,Math.min(1,k.pf/Math.max(.2,k.tA||.5))));return -1}
 // whole-body turn of the dunker (added to his facing in render(); only the leaning tomahawk turns side-on)
@@ -3185,6 +3200,7 @@ function dunkPose(p,k,q,LG,aa){
    Fh:kf(tau,poster?[[2,.15],[2.3,-1.4],[2.85,-1.6],[3.05,-1.25],[3.6,-.4],[4,-.25]]:[[2,.15],[2.4,.38],[2.72,.36],[3,-.35],[3.5,-.3],[4,-.25]]),
    Fk:kf(tau,poster?[[2,.1],[2.3,1.6],[2.85,1.55],[3.05,1.3],[3.6,.5],[4,.35]]:[[2,.1],[2.4,1.3],[2.72,1.35],[3,1.1],[3.5,.5],[4,.35]])});
  }
+ if(st.tuck&&!one&&tau>=2){c.Th=kf(tau,st.Th);c.Tk=kf(tau,st.Tk);c.Fh=kf(tau,st.Fh);c.Fk=kf(tau,st.Fk)} // (a two-foot tuck: 2-HAND OOP TUCK)
  if(st.legs&&tau>=2){c.Th=K(tau,st.Th);c.Tk=K(tau,st.Tk);c.Fh=K(tau,st.Fh);c.Fk=K(tau,st.Fk)} // the v1.13 dunks: their own legs through the flight
  if(tau>=2)c.lean=K(tau,st.lean);
  // hip height: the stance leg(s) keep the foot on the floor through the load and push; the last ~0.3 ft comes from the ankle rolling up onto the toes
@@ -5716,10 +5732,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.21'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.22'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.22','2 Hand Alley-Oops',['NEW Store package: 2 HAND ALLEY-OOPS (28,000 CC) - alley-oop dunks finished with both hands','2-HAND OOP FLUSH (two feet): both hands up for the lob, flushed straight down','2-HAND OOP HAMMER (one foot): caught in both hands, taken way back behind the head and hammered down','2-HAND OOP TUCK (two feet): ripped back behind the head with both knees tucked, then thrown down','The lob is caught between both hands; switch them on in the Store like any other dunk']],
  ['v2.21','Beta versions',['Patch notes now show every version as a BETA version (e.g. BETA V2.21) - the game is in beta']],
  ['v2.20','Stat tracking fixes',['Fixed: 1v1 (including ONLINE 1V1) never counted rebounds - the defender who gets the ball after a miss now gets the rebound','Fixed: after updating, your leaderboard profile could stay out of date until you finished another game - it now refreshes straight away','Leaderboard profiles from older versions now show POINTS (worked out from their FG and 3PT makes)']],
  ['v2.19','Leaderboard profiles',['Click any player on the LEADERBOARD to open their profile: picture, name, total EXP, ONLINE WINS and CC, lifetime stats and their record in every mode','Players on older versions show the stats their game shares (the rest fill in once they update)']],
@@ -6113,7 +6130,7 @@ const CC_KEY='hardwood27.credits.v1';let CC=0,ccBlk=0;try{CC=Math.max(0,parseInt
 // mid-tier ones 10-40, and the flexes 85-150 games. Purchases are for the whole account (like the wallet) and are kept in its cloud backup; rating
 // requirements still apply on top (you can only buy what your player has unlocked). Free: the basic two-handers, basic layups, basic passes, BASIC 1-2
 // jump shots, the BASIC 1 dribble package. Trails: NONE are free - everyone starts with NO TRAIL.
-const PRICE={'pk:BASIC TWO-HANDERS':0,'pk:BASIC TOMAHAWKS':3000,'pk:ALLEY-OOPS':12000,'pk:ATHLETIC TWO-HANDERS':25000,'pk:LONG TOMAHAWKS':45000,'pk:SPINS & WINDMILLS':80000,'pk:SUPERMAN':130000,
+const PRICE={'pk:BASIC TWO-HANDERS':0,'pk:BASIC TOMAHAWKS':3000,'pk:ALLEY-OOPS':12000,'pk:2 HAND ALLEY-OOPS':28000,'pk:ATHLETIC TWO-HANDERS':25000,'pk:LONG TOMAHAWKS':45000,'pk:SPINS & WINDMILLS':80000,'pk:SUPERMAN':130000,
  'pk:BASIC LAYUPS':0,'pk:TOUCH FINISHES':4000,'pk:EURO STEP':10000,'pk:REVERSE LAYUPS':18000,'pk:FADEAWAY':6000,'pk:POST FADEAWAY':9000,
  'pk:BASIC PASSES':0,'pk:ONE-HAND PASSES':3000,'pk:FLASHY PASSES':20000};
 [0,2000,8000,15000,30000,50000,85000,130000].forEach((v,i)=>PRICE['drb:'+i]=v); // BASIC 1 ... FLASHY 2
@@ -6497,6 +6514,8 @@ const DUNKV=[{sty:0,n:'TOMAHAWK',req:0,d:'One hand, the ball cocked behind the h
  {sty:3,n:'360',req:85,d:'A full spin in the air before the slam.'},{sty:4,n:'POSTERIZER',req:0,d:'Goes right over a defender at the rim (when one is there).'},
  {sty:6,n:'ALLEY-OOP FLUSH',req:50,d:'Two-foot: catches the lob at the top and flushes it straight down.'},{sty:7,n:'ALLEY-OOP TOMAHAWK',req:50,d:'One-foot: catches it high, winds it back behind the head and chops it down.'},
  {sty:8,n:'ALLEY-OOP TUCK SLAM',req:50,d:'Catches it high, rips it back with both knees tucked, then throws it down.'},
+ {sty:18,n:'2-HAND OOP FLUSH',req:55,d:'Two-foot: both hands up for the lob, flushed straight down with both.'},{sty:19,n:'2-HAND OOP HAMMER',req:60,d:'One-foot: caught in both hands, taken way back behind the head, hammered down.'},
+ {sty:20,n:'2-HAND OOP TUCK',req:65,d:'Two-foot: both hands, ripped back with the knees tucked, thrown down.'},
  {sty:13,n:'EXTENSION SLAM',req:60,d:'Ball pushed straight up at full stretch, flushed, then falls away kicking.'},{sty:9,n:'COCK-BACK SLAM',req:70,d:'Cocked way back behind the head, left arm wide, thrown down, then a leg kick.'},
  {sty:12,n:'BACKSCRATCH HANG',req:80,d:'Two hands scratch the back, thrown down, then hangs on the rim, knees tucked.'},{sty:11,n:'WINDMILL',req:85,d:'The ball swung down past the hip and round in a full circle over the top.'},
  {sty:10,n:'SUPERMAN',req:88,d:'Alley-oop: off two feet from way out, arms in a T, catches it laid out flat, flushes it, lands running.'},
@@ -6601,7 +6620,7 @@ function spvStep(dt){const p=SPV.p,q=SPV.q,H=SPV_H,c=SPV.c;SPV.t+=dt;
  else{let pl=null;
   if(c=='dnk'&&p.dunk&&(p.dunk.ph>=1||p.dunk.g>0)&&!(p.dunk.oop&&!p.dunk.caught)){const k=p.dunk,a=spvHand(p,!k.mir,_SVA);const sw=dkSep(k);if(sw<1){const b=spvHand(p,!!k.mir,_SVB);b.add(a).multiplyScalar(.5);b.y+=.3;a.lerp(b,1-sw)}
    const w=sm3(Math.max(0,Math.min(1,(Math.min(1,k.t)-.86)/.14)));a.x+=(88.8-a.x)*w;a.y+=(10.1-a.y)*w;a.z+=(32-a.z)*w;const gb=k.g!=null?sm3(k.g):1;pl=a.clone();if(gb<1){const dr_=spvHand(p,1,_SVB).clone();dr_.y=Math.max(.4,dr_.y-1.6*Math.abs(Math.sin(SPV.t*9)));pl=dr_.lerp(a,gb)}}
-  else if(c=='dnk'&&p.dunk&&p.dunk.oop&&!p.dunk.caught){const k=p.dunk,h=spvHand(p,1,_SVA),rem=k.ph>=3?Math.max(.02,k.cf*k.tA-k.ta):9;if(!SPV.lob)SPV.lob=new THREE.Vector3(76,15,26);if(k.ph>=3)SPV.lob.lerp(h,Math.min(1,dt/rem));pl=SPV.lob.clone()}
+  else if(c=='dnk'&&p.dunk&&p.dunk.oop&&!p.dunk.caught){const k=p.dunk,h=spvHand(p,1,_SVA);if(DKS[k.sty].two){h.add(spvHand(p,0,_SVB)).multiplyScalar(.5);h.y+=.3}const rem=k.ph>=3?Math.max(.02,k.cf*k.tA-k.ta):9;if(!SPV.lob)SPV.lob=new THREE.Vector3(76,15,26);if(k.ph>=3)SPV.lob.lerp(h,Math.min(1,dt/rem));pl=SPV.lob.clone()}
   else if(c=='lay'&&p.lay){const L=p.lay,v=LAYV[L.v]||LAYV[0],tau=layTau(p,L),one=tau>=(v.sp?v.sp[0]:3.3),a=spvHand(p,!L.M,_SVA);if(!one){const b=spvHand(p,!!L.M,_SVB);a.add(b).multiplyScalar(.5);a.y+=.25}pl=a.clone()}
   else if(c=='pas'&&p.ps&&passHand(p,_SVA))pl=_SVA.clone();
   else if(c=='sht'&&(SPV.ph=='shot'||SPV.ph=='set')&&(SPV.ph=='shot'||!SPV.v||SPV.v=='fade')){const a=spvHand(p,1,_SVA),b=spvHand(p,0,_SVB);a.add(b).multiplyScalar(.5);a.y+=.35;pl=a.clone()}
@@ -6632,7 +6651,7 @@ function spvFrame(k){if(!SPV.p)spvBuild();if(k!==SPV.key)spvStart(k);const now=p
 // Dunk packages carry a DUNK RATING = 40% technique + 30% jump distance + 30% height reached (r = those three, 0-99).
 const AN_CAT=[
  {n:'FINISHING',ic:'fin',sub:[
-  {n:'DUNKS',at:'dnk',pk:[{n:'BASIC TWO-HANDERS',k:[2,13],r:[20,25,40]},{n:'BASIC TOMAHAWKS',k:[0,1,9],r:[35,30,50]},{n:'ALLEY-OOPS',k:[6,7,8],r:[60,40,75]},
+  {n:'DUNKS',at:'dnk',pk:[{n:'BASIC TWO-HANDERS',k:[2,13],r:[20,25,40]},{n:'BASIC TOMAHAWKS',k:[0,1,9],r:[35,30,50]},{n:'ALLEY-OOPS',k:[6,7,8],r:[60,40,75]},{n:'2 HAND ALLEY-OOPS',k:[18,19,20],r:[70,50,80]},
    {n:'ATHLETIC TWO-HANDERS',k:[15,12,14],r:[70,50,85]},{n:'LONG TOMAHAWKS',k:[5,17,16],r:[65,90,75]},{n:'SPINS & WINDMILLS',k:[3,11],r:[95,45,88]},{n:'SUPERMAN',k:[10],r:[90,99,90]}].map(p=>Object.assign(p,{k:p.k.map(s=>'dnk:'+s)}))},
   {n:'LAYUPS',at:'lay',pk:[{n:'BASIC LAYUPS',k:[0,5]},{n:'TOUCH FINISHES',k:[1,4,2]},{n:'EURO STEP',k:[6]},{n:'REVERSE LAYUPS',k:[3,7]}].map(p=>Object.assign(p,{k:p.k.map(i=>'lay:'+i)}))}]},
  {n:'SHOOTING',ic:'sht',sub:[{n:'JUMP SHOTS',at:'tp',pk:JS.map(j=>({n:j.n,k:['js:'+j.id]}))},{n:'FADEAWAYS',at:'mid',pk:[{n:'FADEAWAY',k:['sht:fade']},{n:'POST FADEAWAY',k:['sht:pfade']}]}]},
