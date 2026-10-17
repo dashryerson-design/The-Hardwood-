@@ -5716,10 +5716,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.17'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.18'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.18','Minor fixes',['Small fixes and improvements']],
  ['v2.17','Minor fixes',['Small fixes and improvements']],
  ['v2.16','Minor fixes',['Small fixes and improvements']],
  ['v2.15','Minor fixes',['Small fixes and improvements']],
@@ -5980,8 +5981,12 @@ const pfaGet=p=>p.split('.').reduce((o,k)=>o&&o[k],PF.d)|0;
 function pfaAdd(p,d){const ks=p.split('.'),o=ks.slice(0,-1).reduce((o,k)=>o[k],PF.d),k=ks[ks.length-1],v=Math.max(0,Math.min(999999999,(o[k]|0)+d));d=v-(o[k]|0);o[k]=v;return d}
 function pfaApply(sg){const r=PFA_R[PFA.sel],n=Math.max(0,parseInt(PFA.amt,10)||0);PFA.fr=1;if(!r||!n){PFA.msg='TYPE AN AMOUNT FIRST';PFA.ok=0;PFA.mt=performance.now();beep(160,.08,'square');return}
  pfLife();const d=pfaAdd(r[0],sg*n),m=/^md\.(.+)\.([wl])$/.exec(r[0]),w=/^st\.([wl])$/.exec(r[0]);
- if(d){if(m){pfaAdd('md.'+m[1]+'.gp',d);pfaAdd('st.'+m[2],d);pfaAdd('st.gp',d)}else if(w)pfaAdd('st.gp',d)}profSave();
- PFA.msg=d?(d>0?'+':'−')+fmtCC(Math.abs(d))+' '+r[1]+'  ·  now '+fmtCC(pfaGet(r[0])):r[1]+' IS ALREADY 0';PFA.ok=!!d;PFA.mt=performance.now();beep(d?(d>0?880:440):160,.07,d?'triangle':'square')}
+ let ex='';const k=r[0],mk={'st.fgm':['st.fga',2,'FG ATT'],'st.tpm':['st.tpa',3,'3PT ATT']}[k],at={'st.fga':['st.fgm',2],'st.tpa':['st.tpm',3]}[k];
+ if(d){if(m){pfaAdd('md.'+m[1]+'.gp',d);pfaAdd('st.'+m[2],d);pfaAdd('st.gp',d)}else if(w)pfaAdd('st.gp',d)
+  else if(mk){const a=pfaAdd(mk[0],d),p=pfaAdd('st.pts',mk[1]*d);ex='  ('+(a<0?'':'+')+a+' '+mk[2]+', '+(p<0?'':'+')+p+' PTS)'} // a make is also an attempt and 2 / 3 points (FG = 2-pointers; threes are counted apart)
+  else if(at){const x=pfaGet(at[0])-pfaGet(k);if(x>0){pfaAdd(at[0],-x);const p=pfaAdd('st.pts',-at[1]*x);ex='  (-'+x+' made, '+p+' PTS)'}}} // fewer attempts than makes: the makes (and their points) go too
+ profSave();
+ PFA.msg=d?(d>0?'+':'−')+fmtCC(Math.abs(d))+' '+r[1]+ex+'  ·  now '+fmtCC(pfaGet(r[0])):r[1]+' IS ALREADY 0';PFA.ok=!!d;PFA.mt=performance.now();beep(d?(d>0?880:440):160,.07,d?'triangle':'square')}
 function pfaKeys(){const n=PFA_R.length;
  if(P.Escape){PFA.on=false;beep(300,.06,'triangle');return}
  if(P.ArrowUp||P.KeyW)PFA.sel=(PFA.sel+n-1)%n;if(P.ArrowDown||P.KeyS)PFA.sel=(PFA.sel+1)%n;
@@ -6008,7 +6013,7 @@ function pfaDraw(){const[bx,by,bw,bh]=PFA_BOX,r=PFA_R[PFA.sel];g.save();g.fillSt
  PFA_AM.forEach((a,i)=>{const[x,y,w,h]=PFA_P(i),on=+PFA.amt===a;mRR(x,y,w,h,6,on?'rgba(76,255,122,.18)':'rgba(255,255,255,.06)',on?'#7fffa0':'rgba(255,255,255,.14)');g.font='bold 12px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(a>=1000?a/1000+'K':String(a),x+w/2,y+21)});
  mRR(...PFA_ADD,10,'rgba(76,255,122,.18)','#4cff7a');mRR(...PFA_SUB,10,'rgba(255,107,107,.16)','#ff6b6b');g.font='bold 17px Georgia';g.fillStyle='#7fffa0';g.fillText('+ ADD',PFA_ADD[0]+57,PFA_ADD[1]+29);g.fillStyle='#ff9b9b';g.fillText('− REMOVE',PFA_SUB[0]+57,PFA_SUB[1]+29);
  if(PFA.msg&&performance.now()-PFA.mt<4000){g.font='bold 12px system-ui';g.fillStyle=PFA.ok?'#7fffa0':'#ff7b7b';g.fillText(PFA.msg,cx,372)}
- g.font='10px system-ui';g.fillStyle='#8a90a0';['type an amount  ·  ←/→ presets','Enter / + add  ·  − remove','a mode\'s W / L also counts as a game played','Esc close'].forEach((t,i)=>g.fillText(t,cx,400+i*15));g.restore()}
+ g.font='10px system-ui';g.fillStyle='#8a90a0';['type an amount  ·  ←/→ presets','Enter / + add  ·  − remove','linked stats follow (W/L > games, makes > attempts + PTS)','Esc close'].forEach((t,i)=>g.fillText(t,cx,400+i*15));g.restore()}
 function profOpen(){PF.on=true;PF.ed=false;beep(520,.06,'triangle')}
 function profClose(){PF.on=false;PFA.on=false;ACCT.in=null;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
 function profLogo(i){PF.d.logo=(i+TEAMS.length)%TEAMS.length;profSave();beep(440,.05,'triangle')}
