@@ -5716,10 +5716,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.18'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.19'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.19','Leaderboard profiles',['Click any player on the LEADERBOARD to open their profile: picture, name, total EXP, ONLINE WINS and CC, lifetime stats and their record in every mode','Players on older versions show the stats their game shares (the rest fill in once they update)']],
  ['v2.18','Minor fixes',['Small fixes and improvements']],
  ['v2.17','Minor fixes',['Small fixes and improvements']],
  ['v2.16','Minor fixes',['Small fixes and improvements']],
@@ -6033,7 +6034,7 @@ const pfPct=(m,a)=>a?(100*m/a).toFixed(1)+'%':'-',pfAvg=(v,n)=>n?(v/n).toFixed(1
 function profBtnDraw(){if(MN.gate||MN.t<T_READY-.6||PN.on)return;const[x,y,w,h]=PF_BTN,s=PF.d.st;mRR(x,y,w,h,12,PF.on?'rgba(40,32,8,.9)':'rgba(8,10,16,.78)',GOLD);
  g.save();g.drawImage(teamLogo(PF.d.logo),x+6,y+5,48,48);g.textAlign='left';let fz=22;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif';while(g.measureText(PF.d.name).width>w-80&&fz>12){fz--;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif'}
  g.fillStyle='#fff';g.fillText(PF.d.name,x+62,y+27);g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText((ACCT.code?'':'NOT SIGNED IN  ·  ')+'PROFILE (P)  ·  '+s.gp+(s.gp==1?' game':' games')+'  ·  '+s.w+'-'+s.l,x+62,y+45);g.restore()}
-function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d,s=d.st;g.save();
+function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d;g.save();
  g.fillStyle='rgba(4,5,9,.72)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.97)',GOLD);
  g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText('PROFILE',bx+20,by+40);acDraw();
  {const[x,y,w,h]=PF_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
@@ -6044,17 +6045,19 @@ function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d,s=d.st;g.save();
   g.textAlign='center';g.fillStyle='#fff';g.fillText(nm,x+w/2,y+25);g.font='10px system-ui';g.fillStyle=PF.ed?GOLD:'#8a90a0';g.fillText(PF.ed?'type a name  ·  Enter to save':'USERNAME  ·  click or Enter to edit',x+w/2,y-6)}
  g.font='10px system-ui';g.fillStyle='#8a90a0';g.textAlign='left';g.fillText('PICTURE  ·  ←/→ or click',104,360);
  for(let i=0;i<TEAMS.length;i++){const[x,y,w,h]=PF_LOGO(i),on=i==d.logo;if(on)mRR(x-3,y-3,w+6,h+6,10,'rgba(255,210,63,.16)',GOLD);g.drawImage(teamLogo(i),x,y,w,h)}
- // right: lifetime totals, then the record in each mode
+ pfStatsDraw(d,by);
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('stats count every finished game  ·  Esc / P close  ·  or click outside',360,by+bh-14);g.restore();if(PFA.on)pfaDraw()}
+// the right half of a profile: lifetime totals, then the record in each mode (d: {st, md}; a stat that's null shows as '-': a leaderboard card from an older version)
+function pfStatsDraw(d,by){const s=d.st,u=v=>v==null?'-':v,av=(a,b)=>a==null?'-':pfAvg(a,b);
  g.textAlign='left';g.fillStyle='#fff';g.font='bold 18px Georgia';g.fillText('LIFETIME STATS',360,by+78);
- const T=[['GAMES',s.gp],['RECORD',s.w+'-'+s.l],['WIN %',pfPct(s.w,s.gp)],['POINTS',s.pts],['REBOUNDS',s.reb],['ASSISTS',s.ast],['STEALS',s.stl],['PPG',pfAvg(s.pts,s.gp)],
-  ['RPG',pfAvg(s.reb,s.gp)],['APG',pfAvg(s.ast,s.gp)],['FG',s.fgm+'/'+s.fga+'  '+pfPct(s.fgm,s.fga)],['3PT',s.tpm+'/'+s.tpa+'  '+pfPct(s.tpm,s.tpa)]];
+ const T=[['GAMES',s.gp],['RECORD',s.w+'-'+s.l],['WIN %',pfPct(s.w,s.gp)],['POINTS',u(s.pts)],['REBOUNDS',u(s.reb)],['ASSISTS',u(s.ast)],['STEALS',u(s.stl)],['PPG',av(s.pts,s.gp)],
+  ['RPG',av(s.reb,s.gp)],['APG',av(s.ast,s.gp)],['FG',s.fgm+'/'+s.fga+'  '+pfPct(s.fgm,s.fga)],['3PT',s.tpm+'/'+s.tpa+'  '+pfPct(s.tpm,s.tpa)]];
  T.forEach(([k,v],i)=>{const x=360+i%4*122,y=by+92+(i/4|0)*60;mRR(x,y,114,52,8,'rgba(255,255,255,.05)',null);g.textAlign='left';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(k,x+10,y+17);
   let fz=20;const t=String(v);g.font='bold '+fz+'px system-ui';while(g.measureText(t).width>98&&fz>10){fz--;g.font='bold '+fz+'px system-ui'}g.fillStyle='#fff';g.fillText(t,x+10,y+41)});
  g.font='bold 18px Georgia';g.fillStyle='#fff';g.fillText('BY MODE',360,by+284);
  g.font='10px system-ui';g.fillStyle='#8a90a0';[['MODE',360],['GAMES',500],['WON',600],['LOST',700],['WIN %',790]].forEach(([t,x])=>g.fillText(t,x,by+302));
- PF_MODES.forEach((k,i)=>{const m=d.md[k],y=by+322+i*20;g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText(k,360,y);g.fillStyle='#dfe3ea';g.font='13px system-ui';
-  [[m.gp,500],[m.w,600],[m.l,700],[pfPct(m.w,m.gp),790]].forEach(([t,x])=>g.fillText(String(t),x,y))});
- g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('stats count every finished game  ·  Esc / P close  ·  or click outside',360,by+bh-14);g.restore();if(PFA.on)pfaDraw()}
+ PF_MODES.forEach((k,i)=>{const m=d.md&&d.md[k],y=by+322+i*20;g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText(k,360,y);g.fillStyle='#dfe3ea';g.font='13px system-ui';
+  [[m?m.gp:'-',500],[m?m.w:'-',600],[m?m.l:'-',700],[m?pfPct(m.w,m.gp):'-',790]].forEach(([t,x])=>g.fillText(String(t),x,y))})}
 // ===== ACCOUNTS (in the PROFILE): a 6-character code backs up the whole save (players, profile, stats, settings) to public Nostr relays, so it can be restored on any device or after the browser's data is cleared.
 // The code is the only secret: it derives the Nostr key that signs the backup, so only someone with the code can read it back by key or overwrite it. Re-sent from the menu whenever the save changes.
 // shortcut: public relays may drop old events after weeks or months, so a code that hasn't synced in a long time can stop working; move the backup to a real database (e.g. Firebase) if players report lost codes.
@@ -6134,9 +6137,11 @@ function ccDraw(){const t=CC.toLocaleString('en-US');g.save();g.font='bold 15px 
 const AC_LB='hardwood27-lb',LB={on:false,sel:0,cards:[],me:null,msg:'LOADING...'},LB_MINI=[34,204,240,156],LB_BOX=[80,52,800,440],LB_X=[770,66,92,30],LB_TAB=i=>[100,104+i*44,200,38];
 const LB_STATS=[['WINS',c=>c.w],['W/L RATIO',c=>c.l?c.w/c.l:c.w,v=>v.toFixed(2)],['FGM',c=>c.fg,(v,c)=>v.toLocaleString('en-US')+'  ·  '+pfPct(c.fg,c.fa)],['3PM',c=>c.tm,(v,c)=>v.toLocaleString('en-US')+'  ·  '+pfPct(c.tm,c.ta)],
  ['ONLINE WINS',c=>c.ow],['TOTAL EXP',c=>c.xp],['TOTAL CC',c=>c.cc]];
-function lbCard(){const s=PF.d.st;pfLife();return{n:PF.d.name,lg:PF.d.logo,gp:s.gp,w:s.w,l:s.l,fg:s.fgm,tm:s.tpm,ta:s.tpa,fa:s.fga,ow:PF.d.md.ONLINE.w,xp:PF.d.xp,cc:PF.d.cc}}
+function lbCard(){const s=PF.d.st,md={};pfLife();PF_MODES.forEach(k=>{const m=PF.d.md[k];md[k]=[m.gp,m.w,m.l]});return{n:PF.d.name,lg:PF.d.logo,gp:s.gp,w:s.w,l:s.l,fg:s.fgm,tm:s.tpm,ta:s.tpa,fa:s.fga,ow:PF.d.md.ONLINE.w,xp:PF.d.xp,cc:PF.d.cc,pts:s.pts,rb:s.reb,as:s.ast,sl:s.stl,md}} // (pts..md: for the profile others see when they click you on the leaderboard)
 function lbClean(o){if(!o||typeof o!='object')return null;const n=k=>Math.min(1e9,Math.max(0,Math.round(+o[k])||0)),c={n:String(o.n||'PLAYER').toUpperCase().replace(/[^A-Z0-9 '.\-]/g,'').slice(0,12)||'PLAYER',lg:o.lg>=0&&o.lg<TEAMS.length?o.lg|0:0};
- ['gp','w','l','fg','fa','tm','ta','ow','xp','cc'].forEach(k=>c[k]=n(k));return c}
+ ['gp','w','l','fg','fa','tm','ta','ow','xp','cc'].forEach(k=>c[k]=n(k));
+ if(o.pts!=null){c.ext=1;['pts','rb','as','sl'].forEach(k=>c[k]=n(k))} // (cards from before v2.19 don't carry these)
+ if(o.md&&typeof o.md=='object'){c.md={};PF_MODES.forEach(k=>{const a=Array.isArray(o.md[k])?o.md[k]:[];c.md[k]=a.slice(0,3).map(v=>Math.min(1e9,Math.max(0,Math.round(+v)||0)))})}return c}
 async function lbFetch(){const got={};try{if(ACCT.code)LB.me=(await acKeys(ACCT.code)).pk;
  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27lb',{kinds:[30078],'#d':[AC_LB],limit:2000}],m=>{const ev=m[2];if(m[0]=='EVENT'&&ev&&typeof ev.pubkey=='string'&&(!got[ev.pubkey]||ev.created_at>got[ev.pubkey].created_at))got[ev.pubkey]=ev;return m[0]=='EOSE'})))}catch(e){}
  const cards=[];for(const pk in got){let c=null;try{c=lbClean(JSON.parse(got[pk].content))}catch(e){}if(c){c.pk=pk;cards.push(c)}}
@@ -6146,9 +6151,10 @@ function lbRank(i){const[,f]=LB_STATS[i],me=ACCT.code?Object.assign(lbCard(),{pk
  return LB.cards.filter(c=>c.pk!==LB.me).concat(me?[me]:[]).filter(c=>c.gp>0&&f(c)>=0).sort((a,b)=>f(b)-f(a)||b.gp-a.gp)}
 const lbVal=(i,c)=>{const[,f,fm]=LB_STATS[i],v=f(c);return fm?fm(v,c):v.toLocaleString('en-US')};
 function lbOpen(){LB.on=true;beep(520,.06,'triangle');lbFetch()}
-function lbClose(){LB.on=false;beep(300,.06,'triangle')}
-function lbKeys(up,dn){const n=LB_STATS.length;if(up)LB.sel=(LB.sel+n-1)%n;if(dn)LB.sel=(LB.sel+1)%n;if(P.Escape||P.Backspace||P.KeyL||P.Enter)lbClose()}
-function lbPtr(x,y,type){if(type!=0)return;if(mIn(x,y,LB_X)||!mIn(x,y,LB_BOX)){lbClose();return}for(let i=0;i<LB_STATS.length;i++)if(mIn(x,y,LB_TAB(i))){LB.sel=i;beep(440,.05,'triangle');return}}
+function lbClose(){LB.on=false;LB.view=null;beep(300,.06,'triangle')}
+function lbKeys(up,dn){if(LB.view){if(P.Escape||P.Backspace||P.Enter||P.KeyL)LB.view=null;return}const n=LB_STATS.length;if(up)LB.sel=(LB.sel+n-1)%n;if(dn)LB.sel=(LB.sel+1)%n;if(P.Escape||P.Backspace||P.KeyL||P.Enter)lbClose()}
+function lbPtr(x,y,type){LB.mx=x;LB.my=y;if(type!=0)return;if(LB.view){LB.view=null;beep(300,.06,'triangle');return} // (their profile is read-only: any click goes back to the list)
+ if(mIn(x,y,LB_X)||!mIn(x,y,LB_BOX)){lbClose();return}for(const[r,c]of LB.hit||[])if(mIn(x,y,r)){LB.view=c;beep(520,.06,'triangle');return}for(let i=0;i<LB_STATS.length;i++)if(mIn(x,y,LB_TAB(i))){LB.sel=i;beep(440,.05,'triangle');return}}
 function lbRow(c,r,x,y,w,i,fz){g.textAlign='left';if(c.mine)mRR(x-4,y-fz-3,w+8,fz+8,5,'rgba(255,210,63,.16)',null);g.font='bold '+fz+'px system-ui';g.fillStyle=r<3?GOLD:'#8a90a0';g.fillText(r+1,x,y);
  g.drawImage(teamLogo(c.lg),x+24,y-fz,fz+3,fz+3);g.fillStyle=c.mine?'#fff':'#dfe3ea';g.fillText(c.n,x+30+fz,y);g.textAlign='right';g.fillStyle='#fff';g.fillText(lbVal(i,c),x+w,y)}
 function lbMiniDraw(){if(MN.gate||MN.t<T_READY-.6||PN.on||PF.on||LB.on)return;const[x,y,w,h]=LB_MINI,L=lbRank(0).slice(0,5);g.save();mRR(x,y,w,h,12,'rgba(8,10,16,.6)','rgba(255,255,255,.14)');
@@ -6162,11 +6168,24 @@ function lbDraw(){const[bx,by,bw,bh]=LB_BOX,i=LB.sel,L=lbRank(i),[nm,,,note]=LB_
  {const[x,y,w,h]=LB_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE  ✕',x+w/2,y+20)}
  LB_STATS.forEach(([t],j)=>{const[x,y,w,h]=LB_TAB(j),on=j==i;mRR(x,y,w,h,9,on?'rgba(255,210,63,.16)':'rgba(255,255,255,.05)',on?GOLD:null);g.textAlign='left';g.font='bold 14px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(t,x+14,y+24)});
  const x=330,w=520;g.font='10px system-ui';g.fillStyle='#8a90a0';g.textAlign='left';g.fillText('#   PLAYER',x,by+76);g.textAlign='right';g.fillText(nm,x+w,by+76);
- L.slice(0,14).forEach((c,r)=>lbRow(c,r,x,by+100+r*24,w,i,14));
+ LB.hit=[];L.slice(0,14).forEach((c,r)=>{const y=by+100+r*24,rc=[x-6,y-18,w+12,24];if(LB.mx!=null&&mIn(LB.mx,LB.my,rc)&&!LB.view)mRR(...rc,5,'rgba(255,255,255,.07)',null);LB.hit.push([rc,c]);lbRow(c,r,x,y,w,i,14)});
  g.textAlign='left';g.font='12px system-ui';const k=L.findIndex(c=>c.mine);
  if(!L.length){g.fillStyle='#8a90a0';g.fillText(LB.msg||'Nobody qualifies yet.',x,by+100)}
  g.fillStyle=GOLD;g.fillText(!ACCT.code?'Create an account in PROFILE (P) to appear here.':k<0?'Play a game to get ranked.':'You are #'+(k+1)+' of '+L.length,x,by+bh-14);
- g.textAlign='right';g.fillStyle='#8a90a0';g.fillText('↑/↓ stat  ·  Esc / L close',x+w,by+bh-14);g.restore()}
+ g.textAlign='right';g.fillStyle='#8a90a0';g.fillText('click a player for their profile  ·  ↑/↓ stat  ·  Esc / L close',x+w,by+bh-14);g.restore();if(LB.view)lbProfDraw(LB.view)}
+// someone's profile, from their leaderboard card (your own row shows your own, live): picture, name, EXP / CC, then the same stats as the PROFILE page
+function lbProfDraw(c){const[bx,by,bw,bh]=PF_BOX,me=c.mine,d=me?PF.d:{st:{gp:c.gp,w:c.w,l:c.l,pts:c.ext?c.pts:null,reb:c.ext?c.rb:null,ast:c.ext?c.as:null,stl:c.ext?c.sl:null,fgm:c.fg,fga:c.fa,tpm:c.tm,tpa:c.ta},
+  md:c.md?Object.fromEntries(PF_MODES.map(k=>[k,{gp:c.md[k][0]|0,w:c.md[k][1]|0,l:c.md[k][2]|0}])):null};g.save();
+ g.fillStyle='rgba(4,5,9,.6)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,14,'rgba(16,18,26,.98)',GOLD);
+ g.textAlign='left';g.fillStyle=GOLD;g.font='bold 26px Georgia';g.fillText(me?'YOUR PROFILE':'PLAYER PROFILE',bx+20,by+40);
+ {const[x,y,w,h]=PF_X;mRR(x,y,w,h,8,'rgba(255,255,255,.07)','rgba(255,255,255,.25)');g.textAlign='center';g.font='bold 12px system-ui';g.fillStyle='#cfd3dc';g.fillText('BACK  ✕',x+w/2,y+20)}
+ g.drawImage(teamLogo(me?PF.d.logo:c.lg),140,96,150,150);
+ let fz=26;const nm=me?PF.d.name:c.n;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif';while(g.measureText(nm).width>230&&fz>14){fz--;g.font='italic 900 '+fz+'px "Impact","Arial Black",sans-serif'}
+ g.textAlign='center';g.fillStyle='#fff';g.fillText(nm,215,290);g.font='bold 11px system-ui';g.fillStyle=GOLD;g.fillText((TEAMS[me?PF.d.logo:c.lg]||TEAMS[0]).n,215,310);
+ [['TOTAL EXP',me?PF.d.xp:c.xp],['ONLINE WINS',me?PF.d.md.ONLINE.w:c.ow],['TOTAL CC',me?PF.d.cc:c.cc]].forEach(([k,v],i)=>{const y=330+i*44;mRR(110,y,210,38,8,'rgba(255,255,255,.05)',null);g.textAlign='left';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText(k,122,y+24);
+  g.textAlign='right';g.font='bold 17px system-ui';g.fillStyle='#fff';g.fillText((v|0).toLocaleString('en-US'),308,y+25)});
+ pfStatsDraw(d,by);g.textAlign='left';g.font='11px system-ui';g.fillStyle='#8a90a0';
+ g.fillText(!me&&!c.ext?'This player\'s game is out of date, so only some stats are shown  ·  click or Esc to go back':'Esc or click to go back to the leaderboard',360,by+bh-14);g.restore()}
 setTimeout(lbFetch,3000);setInterval(()=>{if(S=='menu')lbFetch()},120000);
 // UPDATE CHECK: the website copy of the game (GitHub Pages) carries version.json. Every copy (the website, a home-screen app on iPad, the downloaded file)
 // asks it which version is current - on load and every 2 min on the main menu / server list - and if there is a newer one the main menu shows a banner:
