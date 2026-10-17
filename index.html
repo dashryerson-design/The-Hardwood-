@@ -5716,10 +5716,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.15'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.16'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.16','Admin account stats editor',['The admin profile trick (1 four times within 2s on your profile) now opens an ACCOUNT STATS editor instead of a flat +5,000 EXP','Pick any stat the account tracks: lifetime EXP, ONLINE WINS, lifetime CC earned, games / wins / losses, points, rebounds, assists, steals, FG and 3PT, and every mode\'s games / wins / losses','Type an amount (or pick a preset) and ADD or REMOVE it - stats never go below 0','A win or loss added to a mode also counts as a game played there and in your lifetime record','Only your account / leaderboard numbers change: no player gets EXP, CC or stats']],
  ['v2.15','Admin leaderboard EXP',['Admin testing trick: on your profile page, press 1 four times within 2 seconds for +5,000 account EXP','It only moves your account\'s leaderboard EXP - none of your players gain any EXP or levels']],
  ['v2.14','Point guard stall fix',['Fixed: a point guard who got the ball off a defensive rebound or an inbound could just stand at half court','Ball handlers who are their team\'s best (or only) handler now bring it up themselves instead of waiting for an outlet to themselves','Nobody waits more than 2.5s in the backcourt for an outlet pass that isn\'t coming']],
  ['v2.13','Continuous online 3v3',['NEW: ONLINE · CONTINUOUS - online 3v3 matches that never stop, between two random current-roster teams','Server list: LOBBY 1, 2 and 3 are always there; the first player in starts the lobby (the AI plays every empty spot)','Pick a side when you join: you take an AI player\'s spot on that team (max 6 players, 3 a side)','Join mid-match and you spectate until the next quarter starts','Quarter breaks are 3 seconds and automatic; 15 seconds after the final the next match starts with new random teams','HOST MATCH makes your own lobby with a 4-digit code (on the list as LOBBY - CODE; the code is in the pause menu, K / Esc)','Every Continuous match counts towards ONLINE WINS - even playing the AI alone','If the host leaves, the lobby carries on: another player takes it over and a new match starts']],
@@ -5966,16 +5967,58 @@ profLoad();
 function profRecord(){if(NET.cm&&!NET.played)return; // (CONTINUOUS: only a match you were on the floor for counts)
  const me=NET.on&&!NET.cm?null:myP(),k=NET.on?'ONLINE':me?'CAREER':MODE+'v'+MODE,w=sc[0]>sc[1]?'w':'l',m=PF.d.md[k];
  [PF.d.st,m].forEach(o=>{if(o){o.gp++;o[w]++}});(me?[me]:TM[0]).forEach(p=>{const s=pstat(p);PF_K.forEach(k=>PF.d.st[k]+=s[k]|0)});profSave()}
+// ===== ADMIN · ACCOUNT STATS (profile page, 1 x4 within 2s): add to / take from ANY stat the account tracks - lifetime EXP and CC earned (leaderboard
+// only: no player gets EXP or CC), the lifetime totals, and every mode's games / wins / losses (ONLINE WINS included). For testing the leaderboards.
+// A win or loss added to a mode is added to that mode's games and to the lifetime record too (and lifetime W / L to lifetime games), so records stay whole.
+const PFA={on:false,sel:0,top:0,amt:'1000',fr:1,msg:'',ok:1,mt:0},PFA_N=12,PFA_AM=[1,10,100,1000,5000,10000,50000,100000],
+ PFA_R=[['xp','LIFETIME EXP'],['md.ONLINE.w','ONLINE WINS'],['cc','LIFETIME CC EARNED'],['st.gp','GAMES'],['st.w','WINS'],['st.l','LOSSES'],['st.pts','POINTS'],['st.reb','REBOUNDS'],
+  ['st.ast','ASSISTS'],['st.stl','STEALS'],['st.fgm','FG MADE'],['st.fga','FG ATTEMPTED'],['st.tpm','3PT MADE'],['st.tpa','3PT ATTEMPTED'],
+  ...PF_MODES.flatMap(m=>[['md.'+m+'.gp',m+' GAMES'],['md.'+m+'.w',m+' WINS'],['md.'+m+'.l',m+' LOSSES']]).filter(r=>r[0]!='md.ONLINE.w')],
+ PFA_BOX=[150,60,660,420],PFA_X=[730,72,66,28],PFA_ROW=k=>[170,124+k*26,360,24],PFA_P=i=>[552+(i%4)*60,214+(i/4|0)*38,54,32],PFA_ADD=[552,300,114,46],PFA_SUB=[672,300,114,46];
+function pfaOpen(){pfLife();Object.assign(PFA,{on:true,msg:'',fr:1});beep(880,.08,'triangle')}
+const pfaGet=p=>p.split('.').reduce((o,k)=>o&&o[k],PF.d)|0;
+function pfaAdd(p,d){const ks=p.split('.'),o=ks.slice(0,-1).reduce((o,k)=>o[k],PF.d),k=ks[ks.length-1],v=Math.max(0,Math.min(999999999,(o[k]|0)+d));d=v-(o[k]|0);o[k]=v;return d}
+function pfaApply(sg){const r=PFA_R[PFA.sel],n=Math.max(0,parseInt(PFA.amt,10)||0);PFA.fr=1;if(!r||!n){PFA.msg='TYPE AN AMOUNT FIRST';PFA.ok=0;PFA.mt=performance.now();beep(160,.08,'square');return}
+ pfLife();const d=pfaAdd(r[0],sg*n),m=/^md\.(.+)\.([wl])$/.exec(r[0]),w=/^st\.([wl])$/.exec(r[0]);
+ if(d){if(m){pfaAdd('md.'+m[1]+'.gp',d);pfaAdd('st.'+m[2],d);pfaAdd('st.gp',d)}else if(w)pfaAdd('st.gp',d)}profSave();
+ PFA.msg=d?(d>0?'+':'−')+fmtCC(Math.abs(d))+' '+r[1]+'  ·  now '+fmtCC(pfaGet(r[0])):r[1]+' IS ALREADY 0';PFA.ok=!!d;PFA.mt=performance.now();beep(d?(d>0?880:440):160,.07,d?'triangle':'square')}
+function pfaKeys(){const n=PFA_R.length;
+ if(P.Escape){PFA.on=false;beep(300,.06,'triangle');return}
+ if(P.ArrowUp||P.KeyW)PFA.sel=(PFA.sel+n-1)%n;if(P.ArrowDown||P.KeyS)PFA.sel=(PFA.sel+1)%n;
+ const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0);if(lr){let i=PFA_AM.indexOf(+PFA.amt);i=i<0?3:Math.max(0,Math.min(PFA_AM.length-1,i+lr));PFA.amt=String(PFA_AM[i]);PFA.fr=1}
+ for(let d=0;d<10;d++)if(P['Digit'+d]||P['Numpad'+d]){PFA.amt=PFA.fr?String(d):(PFA.amt+d).slice(0,9);PFA.fr=0}
+ if(P.Backspace){PFA.amt=PFA.amt.slice(0,-1);PFA.fr=0}
+ if(P.Enter||P.NumpadEnter||P.Equal||P.NumpadAdd)pfaApply(1);else if(P.Minus||P.NumpadSubtract)pfaApply(-1)}
+function pfaPtr(x,y){if(mIn(x,y,PFA_X)||!mIn(x,y,PFA_BOX)){PFA.on=false;return}
+ for(let k=0;k<PFA_N;k++)if(PFA.top+k<PFA_R.length&&mIn(x,y,PFA_ROW(k))){PFA.sel=PFA.top+k;return}
+ for(let i=0;i<PFA_AM.length;i++)if(mIn(x,y,PFA_P(i))){PFA.amt=String(PFA_AM[i]);PFA.fr=1;return}
+ if(mIn(x,y,PFA_ADD))pfaApply(1);else if(mIn(x,y,PFA_SUB))pfaApply(-1)}
+addEventListener('wheel',e=>{if(!PFA.on)return;PFA.top=Math.max(0,Math.min(PFA_R.length-PFA_N,PFA.top+(e.deltaY>0?2:-2)))},{passive:true});
+function pfaDraw(){const[bx,by,bw,bh]=PFA_BOX,r=PFA_R[PFA.sel];g.save();g.fillStyle='rgba(0,0,0,.6)';g.fillRect(0,0,960,540);mRR(bx,by,bw,bh,16,'rgba(16,18,24,.98)','#7fffa0');
+ g.textAlign='left';g.fillStyle='#7fffa0';g.font='bold 24px Georgia';g.fillText('ADMIN  ·  ACCOUNT STATS',bx+20,by+36);
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('Changes your account / leaderboard numbers only  ·  no player gets EXP, CC or stats',bx+20,by+54);
+ mRR(...PFA_X,8,'rgba(255,255,255,.07)');g.textAlign='center';g.font='bold 13px system-ui';g.fillStyle='#cfd3dc';g.fillText('CLOSE',PFA_X[0]+PFA_X[2]/2,PFA_X[1]+19);
+ if(PFA.sel<PFA.top)PFA.top=PFA.sel;if(PFA.sel>=PFA.top+PFA_N)PFA.top=PFA.sel-PFA_N+1;
+ for(let k=0;k<PFA_N;k++){const i=PFA.top+k,q=PFA_R[i];if(!q)break;const[x,y,w,h]=PFA_ROW(k),on=i==PFA.sel;
+  mRR(x,y,w,h,6,on?'rgba(76,255,122,.14)':'rgba(255,255,255,.035)',on?'#7fffa0':null);g.textAlign='left';g.font=(on?'bold ':'')+'12px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(q[1],x+10,y+16);
+  g.textAlign='right';g.font='bold 12px system-ui';g.fillStyle=on?'#7fffa0':'#fff';g.fillText(fmtCC(pfaGet(q[0])),x+w-10,y+16)}
+ g.textAlign='center';g.font='10px system-ui';g.fillStyle='#8a90a0';g.fillText((PFA.top+1)+'-'+Math.min(PFA_R.length,PFA.top+PFA_N)+' of '+PFA_R.length+' stats  ·  ↑/↓ or scroll',350,by+bh-12);
+ const cx=670;g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('SELECTED',cx,124);g.font='bold 16px system-ui';g.fillStyle='#fff';g.fillText(r[1],cx,144);g.font='12px system-ui';g.fillStyle='#cfd3dc';g.fillText('now '+fmtCC(pfaGet(r[0])),cx,162);
+ mRR(552,174,234,32,8,'rgba(255,255,255,.06)',PFA.fr?'rgba(255,255,255,.2)':'#7fffa0');g.font='bold 20px Georgia';g.fillStyle='#fff';g.fillText((parseInt(PFA.amt,10)||0).toLocaleString('en-US')+(!PFA.fr&&(performance.now()/500|0)%2?'|':''),cx,197);
+ PFA_AM.forEach((a,i)=>{const[x,y,w,h]=PFA_P(i),on=+PFA.amt===a;mRR(x,y,w,h,6,on?'rgba(76,255,122,.18)':'rgba(255,255,255,.06)',on?'#7fffa0':'rgba(255,255,255,.14)');g.font='bold 12px system-ui';g.fillStyle=on?'#fff':'#cfd3dc';g.fillText(a>=1000?a/1000+'K':String(a),x+w/2,y+21)});
+ mRR(...PFA_ADD,10,'rgba(76,255,122,.18)','#4cff7a');mRR(...PFA_SUB,10,'rgba(255,107,107,.16)','#ff6b6b');g.font='bold 17px Georgia';g.fillStyle='#7fffa0';g.fillText('+ ADD',PFA_ADD[0]+57,PFA_ADD[1]+29);g.fillStyle='#ff9b9b';g.fillText('− REMOVE',PFA_SUB[0]+57,PFA_SUB[1]+29);
+ if(PFA.msg&&performance.now()-PFA.mt<4000){g.font='bold 12px system-ui';g.fillStyle=PFA.ok?'#7fffa0':'#ff7b7b';g.fillText(PFA.msg,cx,372)}
+ g.font='10px system-ui';g.fillStyle='#8a90a0';['type an amount  ·  ←/→ presets','Enter / + add  ·  − remove','a mode\'s W / L also counts as a game played','Esc close'].forEach((t,i)=>g.fillText(t,cx,400+i*15));g.restore()}
 function profOpen(){PF.on=true;PF.ed=false;beep(520,.06,'triangle')}
-function profClose(){PF.on=false;ACCT.in=null;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
+function profClose(){PF.on=false;PFA.on=false;ACCT.in=null;PF.ed=false;if(!PF.d.name.trim())PF.d.name='PLAYER';profSave();beep(300,.06,'triangle')}
 function profLogo(i){PF.d.logo=(i+TEAMS.length)%TEAMS.length;profSave();beep(440,.05,'triangle')}
 function profEdit(on){PF.ed=on;if(!on){PF.d.name=PF.d.name.trim()||'PLAYER';profSave()}beep(on?520:440,.05,'triangle')}
-function profKeys(up,dn,ok){if(ACCT.in!=null){acKeysStep();return}if(PF.ed){if(P.Enter||P.Escape)profEdit(false);return}
- if(P.Digit1||P.Numpad1){const n=performance.now();PF.ak=(PF.ak||[]).filter(t=>n-t<2000);PF.ak.push(n); // ADMIN: 1 x4 within 2s = +5,000 on the ACCOUNT's lifetime EXP (the leaderboard number) only - no player gets any EXP
-  if(PF.ak.length>=4){PF.ak=[];pfLife();PF.d.xp+=5000;profSave();PF.akT=n;beep(880,.08,'triangle')}}
+function profKeys(up,dn,ok){if(PFA.on){pfaKeys();return}if(ACCT.in!=null){acKeysStep();return}if(PF.ed){if(P.Enter||P.Escape)profEdit(false);return}
+ if(P.Digit1||P.Numpad1){const n=performance.now();PF.ak=(PF.ak||[]).filter(t=>n-t<2000);PF.ak.push(n); // ADMIN: 1 x4 within 2s opens the ACCOUNT STATS editor (see PFA)
+  if(PF.ak.length>=4){PF.ak=[];pfaOpen();return}}
  const lr=(P.ArrowRight||P.KeyD?1:0)-(P.ArrowLeft||P.KeyA?1:0)+(dn?3:0)-(up?3:0);if(lr)profLogo(PF.d.logo+lr);
  if(ok)profEdit(true);else if(P.KeyC){ACCT.in='';ACCT.msg=''}else if(P.Escape||P.Backspace||P.KeyP)profClose()}
-function profPtr(x,y,type){if(type!=0)return;if(mIn(x,y,PF_X)||!mIn(x,y,PF_BOX)){profClose();return}if(acPtr(x,y))return;
+function profPtr(x,y,type){if(type!=0)return;if(PFA.on){pfaPtr(x,y);return}if(mIn(x,y,PF_X)||!mIn(x,y,PF_BOX)){profClose();return}if(acPtr(x,y))return;
  if(mIn(x,y,PF_NAME)){profEdit(!PF.ed);return}if(PF.ed)profEdit(false);for(let i=0;i<TEAMS.length;i++)if(mIn(x,y,PF_LOGO(i))){profLogo(i);return}}
 addEventListener('keydown',e=>{ // username entry (same rules as a created player's name)
  if(!PF.on||!PF.ed||e.ctrlKey||e.metaKey||e.altKey)return;const d=PF.d;
@@ -6006,8 +6049,7 @@ function profDraw(){const[bx,by,bw,bh]=PF_BOX,d=PF.d,s=d.st;g.save();
  g.font='10px system-ui';g.fillStyle='#8a90a0';[['MODE',360],['GAMES',500],['WON',600],['LOST',700],['WIN %',790]].forEach(([t,x])=>g.fillText(t,x,by+302));
  PF_MODES.forEach((k,i)=>{const m=d.md[k],y=by+322+i*20;g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText(k,360,y);g.fillStyle='#dfe3ea';g.font='13px system-ui';
   [[m.gp,500],[m.w,600],[m.l,700],[pfPct(m.w,m.gp),790]].forEach(([t,x])=>g.fillText(String(t),x,y))});
- g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('stats count every finished game  ·  Esc / P close  ·  or click outside',360,by+bh-14);
- if(PF.akT&&performance.now()-PF.akT<3000){g.textAlign='right';g.font='bold 13px system-ui';g.fillStyle='#7fffa0';g.fillText('ADMIN  ·  +5,000 ACCOUNT EXP  ·  total '+fmtCC(PF.d.xp|0),bx+bw-40,by+72)}g.restore()}
+ g.font='11px system-ui';g.fillStyle='#8a90a0';g.fillText('stats count every finished game  ·  Esc / P close  ·  or click outside',360,by+bh-14);g.restore();if(PFA.on)pfaDraw()}
 // ===== ACCOUNTS (in the PROFILE): a 6-character code backs up the whole save (players, profile, stats, settings) to public Nostr relays, so it can be restored on any device or after the browser's data is cleared.
 // The code is the only secret: it derives the Nostr key that signs the backup, so only someone with the code can read it back by key or overwrite it. Re-sent from the menu whenever the save changes.
 // shortcut: public relays may drop old events after weeks or months, so a code that hasn't synced in a long time can stop working; move the backup to a real database (e.g. Firebase) if players report lost codes.
