@@ -4178,7 +4178,7 @@ function envUpd(dt){ET+=dt;const E=ENV[COURT];
 function drift(Q,dt,vx,vy){const p=Q.pos;for(let i=0;i<Q.spd.length;i++){const s=Q.spd[i];p[i*3]+=(vx*s+Math.sin(ET*.7+i)*.6)*dt;p[i*3+1]+=vy*s*dt;if(p[i*3]>160)p[i*3]=-70;if(p[i*3+1]<0)p[i*3+1]=70;else if(p[i*3+1]>70)p[i*3+1]=0}Q.pg.attributes.position.needsUpdate=true}
 
 // ---------- MAIN MENU · PLAYER SLOTS · BUILD CREATOR ----------
-const SLOT_KEY='hardwood27.slots.v1',POOL=240,SMIN=25,SMAX=100,H_MIN=69,H_MAX=86,W_MIN=130,W_MAX=320;
+const SLOT_KEY='hardwood27.slots.v1',POOL=120,POOL_OLD=240,SMIN=25,SMAX=100,H_MIN=69,H_MAX=86,W_MIN=130,W_MAX=320;
 // HEIGHT per position (inches): PG 5'9"-6'4" · SG 6'0"-6'7" · SF 6'3"-6'10" · PF 6'6"-7'0" · C 6'9"-7'2"
 const HRANGE=[[69,76],[72,79],[75,82],[78,84],[81,86]];
 // WEIGHT must suit the height (a typical build is 190 lb at 6'2" plus 7 lb per inch; allowed from 55 lb under to 95 lb over)
@@ -4255,21 +4255,23 @@ const ovr=d=>{const key=d.h+','+d.wt+','+d.ws+','+btEff(d)+','+STATS.map(([k])=>
 // ===== PLAYER PROGRESSION: LEVEL + EXP (separate from OVR) =====
 // Every created player has a total EXP (b.xp, saved with the slot). LEVEL is worked out from it, max level 25.
 // EXP to the next level: a steady climb, +50 per level: 1->2 100 · 2->3 150 · ... · 6->7 350 · ... · 24->25 1250 (16,200 EXP from level 1 to 25). No sudden walls.
-// ATTRIBUTE POINTS per level-up (added to the 190 you start with, spent by editing the player): level L -> L+1 gives L+14, a smooth ramp from +15 (1->2) to +38 (24->25).
+// ATTRIBUTE POINTS per level-up (added to the 120 you start with, spent by editing the player): level L -> L+1 gives L+19, a smooth ramp from +20 (1->2) to +43 (24->25).
+// (v2.29: the start went from 240 to 120 and every level-up gives 5 more, so a max-level player still has 876 in all. Players saved before v2.29 (pv 1) keep
+//  the old 240 + L+14 ramp - it is never below the new one and meets it at level 25 - so nobody loses points they already have.)
 // Level 25 = 190 + 636 = 826 points in total: enough to raise EVERY attribute to its cap on any legal build (the most any build can need is 822),
 // and no single level-up is a huge jump any more (the old 10-level curve handed out +87 / +174 / +348 at the end, which made late career far too easy).
 // FOR FUTURE EXPANSION: award EXP from anywhere in the game with  addExp(amount, 'reason')  - it adds to the player currently in the match, saves, shows the "+N EXP" popup and announces level-ups. Nothing calls it yet.
 const LV_MAX=25,expNeed=L=>100+50*(L-1), // EXP needed to go from level L to level L+1
- LV_PTS=L=>L+14; // attribute points gained going from level L to L+1
-function lvBonus(xp){const lv=lvInfo(xp).lv;let p=0;for(let l=1;l<lv;l++)p+=LV_PTS(l);return p}
-function poolOf(d){return POOL+lvBonus(d&&d.xp)} // total attribute points this player has earned (start + level-ups)
+ LV_PTS=(L,b)=>L+(b&&b.pv==1?14:19); // attribute points gained going from level L to L+1 (b: whose - an old save keeps the old ramp)
+function lvBonus(xp,b){const lv=lvInfo(xp).lv;let p=0;for(let l=1;l<lv;l++)p+=LV_PTS(l,b);return p}
+function poolOf(d){return(d&&d.pv==1?POOL_OLD:POOL)+lvBonus(d&&d.xp,d)} // total attribute points this player has earned (start + level-ups)
 function lvInfo(xp){xp=Math.max(0,xp|0);let L=1,left=xp;while(L<LV_MAX&&left>=expNeed(L)){left-=expNeed(L);L++}return{lv:L,into:L>=LV_MAX?0:left,need:L>=LV_MAX?0:expNeed(L),total:xp}}
 let xpPop={n:0,t:0,why:''},lvUp=0,matchXp=0,gameXp=null;
 function addExp(n,why,bonus){const b=ACTIVE>=0?SLOTS[ACTIVE]:null;n=Math.round(n*rbExp(b)); // (rebirths: +25% each)
 if(!b||!(n>0))return null;
  const before=lvInfo(b.xp).lv;b.xp=Math.min(9999999,(b.xp|0)+n);pfLife();PF.d.xp+=n;profSave();if(!bonus)matchXp+=n;const a=lvInfo(b.xp);saveSlots();
  xpPop={n:(xpPop.t>0?xpPop.n:0)+n,t:2.2,why:why||''};
- if(a.lv>before){lvUp=2.6;let pts=0;for(let l=before;l<a.lv;l++)pts+=LV_PTS(l);a.pts=pts;say('LEVEL UP!  LEVEL '+a.lv+'  \u00b7  +'+pts+' ATTRIBUTE POINTS','#ffd23f');beep(660,.15,'triangle',.05);beep(880,.25,'triangle',.05)}
+ if(a.lv>before){lvUp=2.6;let pts=0;for(let l=before;l<a.lv;l++)pts+=LV_PTS(l,b);a.pts=pts;say('LEVEL UP!  LEVEL '+a.lv+'  \u00b7  +'+pts+' ATTRIBUTE POINTS','#ffd23f');beep(660,.15,'triangle',.05);beep(880,.25,'triangle',.05)}
  return a}
 // ----- EXP SOURCES (in-game actions by YOUR created player; applied instantly): steal 23 · layup / close shot make 20 · mid-range make 24 · 3PT make 27 · dunk 24 · rebound 33 · assist 33.
 // Finishing the match (natural end: all quarters, or first to 11 in 1v1) adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1) on everything earned THIS match; leaving early keeps the EXP already earned but gets no bonus.
@@ -4347,7 +4349,7 @@ function drawEnd(){const t=ES.t,c01_=v=>Math.max(0,Math.min(1,v)),ea=v=>1-Math.p
   g.textAlign='left';g.font='bold 20px Georgia';g.fillStyle=on?'#14161d':'#e6e9f0';g.fillText(l,x+ox+22,y+32);g.textAlign='right';g.font='bold 16px system-ui';g.fillText('▶',x+ox+w-18,y+31);g.restore()});
  if(gameXp){const a=ea((t-1)/.5);g.save();g.globalAlpha=a;g.textAlign='left';g.font='bold 11px system-ui';g.fillStyle='#8a90a0';g.fillText('EXP EARNED',38,384);
   g.font='bold 20px Georgia';g.fillStyle='#7fffa0';g.fillText('+'+(gameXp.earned+gameXp.bonus)+' EXP',38,408);g.font='11px system-ui';g.fillStyle='#cfd3dc';g.fillText(gameXp.earned+' in the game  +  '+gameXp.bonus+' full-game bonus (+'+Math.round(xpFinish()*100)+'%)',38,426);
-  if(gameXp.lv1>gameXp.lv0){let pts=0;for(let l=gameXp.lv0;l<gameXp.lv1;l++)pts+=LV_PTS(l);g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText('LEVEL UP!  LEVEL '+gameXp.lv1+'  ·  +'+pts+' ATTRIBUTE POINTS',38,448)}g.restore()}
+  if(gameXp.lv1>gameXp.lv0){let pts=0;for(let l=gameXp.lv0;l<gameXp.lv1;l++)pts+=LV_PTS(l,ACTIVE>=0?SLOTS[ACTIVE]:null);g.font='bold 13px system-ui';g.fillStyle=GOLD;g.fillText('LEVEL UP!  LEVEL '+gameXp.lv1+'  ·  +'+pts+' ATTRIBUTE POINTS',38,448)}g.restore()}
  if(ES.cc){const c=ES.cc;g.save();g.globalAlpha=ea((t-1.1)/.5);g.textAlign='left';g.font='bold 20px Georgia';g.fillStyle=GOLD;g.fillText('+'+c.n.toLocaleString('en-US')+' CC',38,gameXp?480:408);const w=g.measureText('+'+c.n.toLocaleString('en-US')+' CC').width;
   g.font='11px system-ui';g.fillStyle='#cfd3dc';g.fillText('COURT CREDITS'+(c.potg?'  ·  incl. +10% PLAYER OF THE GAME':''),46+w,gameXp?480:408);g.restore()}
  g.textAlign='left';g.font='11px system-ui';g.fillStyle='rgba(200,205,215,'+(.8*ea((t-1.2)/.5))+')';g.fillText('↑/↓ choose  ·  Enter confirm  ·  or click',38,510);
@@ -4413,9 +4415,9 @@ function sanitize(b){
  const pos=mClamp(b.pos|0,0,4),h=mClamp(Math.round(+b.h)||DEF_H[pos],HRANGE[pos][0],HRANGE[pos][1]),wr=wRange(h),wt=mClamp(Math.round((+b.wt||DEF_W[pos])/5)*5,wr[0],wr[1]),ws=wsClamp(Math.round(+b.ws)||h+4,h),caps=statCaps(h,wt,ws,btEff({h,wt,bt:b.bt|0,btSet:!!b.btSet}));
  const st={};STATS.forEach(([k])=>{const raw=b.st&&b.st[k];st[k]=mClamp(Math.round(+raw)||(raw==null&&(k=='vrt'||k=='sta')?50:SMIN),SMIN,caps[k])}); /* (VERTICAL / STAMINA, v2.27: builds saved before them start at 50 - the pool grew by 50 to pay for it) */fitLimits(st); // (v1.25: builds from before the rebalance give back what breaks the rivals / elite budget, as points to spend)
  let used=STATS.reduce((a,[k])=>a+st[k]-SMIN,0);
- const pool=poolOf(b);while(used>pool){let m=STATS[0][0];STATS.forEach(([k])=>{if(st[k]>st[m])m=k});st[m]--;used--}
+ const pv=b.pv==2?2:1,pool=poolOf({pv,xp:b.xp});while(used>pool){let m=STATS[0][0];STATS.forEach(([k])=>{if(st[k]>st[m])m=k});st[m]--;used--}
  const sigLv=lvInfo(Math.max(0,Math.round(+b.xp)||0)).lv;
- return{trl:TS[b.trl]?b.trl:null,js:JS_M[b.js]?b.js:'b1',drb:Math.max(0,Math.min(DRB.length-1,b.drb|0)),anim:animClean(b.anim),sig:sigClean(b.sig,st,sigLv,rbOf(b)),rb:Math.min(999,rbOf(b)),name:String(b.name||'PLAYER').slice(0,12).toUpperCase(),sk:/^#[0-9a-f]{6}$/i.test(b.sk)?b.sk.toLowerCase():'#c68642',hs:mClamp(b.hs|0,0,HSTY.length-1),fc:b.fc!=null&&(b.fc>=0&&b.fc<8||b.fc==9)?b.fc|0:null,xp:mClamp(Math.round(+b.xp)||0,0,9999999),tm:b.tm!=null&&b.tm>=0&&b.tm<TEAMS.length?b.tm|0:null,hc:/^#[0-9a-f]{6}$/i.test(b.hc)?b.hc.toLowerCase():'#17110c',pos,h,wt,ws,bt:mClamp(b.bt|0,0,4),btSet:!!b.btSet,st,arch:ARCH_N.has(b.arch)?b.arch:archOf({st,pos,h}),archSk:ARCH_N.has(b.archSk)?b.archSk:null}
+ return{trl:TS[b.trl]?b.trl:null,js:JS_M[b.js]?b.js:'b1',drb:Math.max(0,Math.min(DRB.length-1,b.drb|0)),anim:animClean(b.anim),sig:sigClean(b.sig,st,sigLv,rbOf(b)),rb:Math.min(999,rbOf(b)),name:String(b.name||'PLAYER').slice(0,12).toUpperCase(),sk:/^#[0-9a-f]{6}$/i.test(b.sk)?b.sk.toLowerCase():'#c68642',hs:mClamp(b.hs|0,0,HSTY.length-1),fc:b.fc!=null&&(b.fc>=0&&b.fc<8||b.fc==9)?b.fc|0:null,xp:mClamp(Math.round(+b.xp)||0,0,9999999),tm:b.tm!=null&&b.tm>=0&&b.tm<TEAMS.length?b.tm|0:null,hc:/^#[0-9a-f]{6}$/i.test(b.hc)?b.hc.toLowerCase():'#17110c',pos,h,wt,ws,bt:mClamp(b.bt|0,0,4),btSet:!!b.btSet,pv,st,arch:ARCH_N.has(b.arch)?b.arch:archOf({st,pos,h}),archSk:ARCH_N.has(b.archSk)?b.archSk:null}
 }
 function saveSlots(){try{localStorage.setItem(SLOT_KEY,JSON.stringify({slots:SLOTS,active:ACTIVE}))}catch(e){}}
 function loadSlots(){try{const v=JSON.parse(localStorage.getItem(SLOT_KEY)||'null');
@@ -4468,7 +4470,7 @@ const DEF_H=[74,76,79,82,85],DEF_W=[185,200,215,235,255]; // default height (in)
 function openCreate(slot,pos){MM.fromAct=0;
  MM.slot=slot;MM.row=0;MM.hold=0;MM.drag=-1;
  const old=SLOTS[slot],b=MM.rbNew?null:old,ps=pos==null?0:pos; // REBIRTH: a brand-new build in an occupied slot (the old one stays until the new one is saved)
- MM.cr=b?JSON.parse(JSON.stringify(b)):{rb:MM.rbNew||0,name:MM.rbNew&&old?old.name:'PLAYER '+(slot+1),sk:'#c68642',hs:0,hc:'#17110c',pos:ps,h:DEF_H[ps],wt:DEF_W[ps],ws:DEF_H[ps]+4,bt:2,btSet:false,st:Object.fromEntries(STATS.map(([k])=>[k,SMIN]))};
+ MM.cr=b?JSON.parse(JSON.stringify(b)):{rb:MM.rbNew||0,name:MM.rbNew&&old?old.name:'PLAYER '+(slot+1),sk:'#c68642',hs:0,hc:'#17110c',pos:ps,h:DEF_H[ps],wt:DEF_W[ps],ws:DEF_H[ps]+4,bt:2,btSet:false,pv:2,st:Object.fromEntries(STATS.map(([k])=>[k,SMIN]))};
  MM.posLock=true;MM.bi=1;MM.bioNew=!b;MM.bd=1; // the position never changes after the position page (editing a saved player keeps his)
  MM.floor=null;
  if(b){ // AFTER CREATION: name, position, height, weight, wingspan and build are locked - only the look (face, hair, hair colour, skin) changes, and attributes only go UP from what is saved
@@ -5770,10 +5772,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.28'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.29'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.29','New attribute curve',['New players start with 120 attribute points (was 240)','Every level-up now gives 5 more points than before (+20 at the first, +43 at the last), so a max-level player still ends up with the same total','Players you already have keep their points and the old level-up ramp - nothing is taken away']],
  ['v2.28','Tired shooting',['STAMINA now affects shooting: under 40% stamina your perfect (green) window shrinks, down to about half its size when you are empty','IRON MAN also softens the smaller window']],
  ['v2.27','Vertical & Stamina',['NEW PHYSICAL attributes: VERTICAL and STAMINA (every created player starts them at 50 - your attribute pool grew by 50 to cover it)','VERTICAL: how high you get up - higher block jumps and more rebound reach','STAMINA: sprinting drains it (dribble moves a little); it comes back when you stop sprinting and between quarters. Low stamina slows you down, empty = no sprint','A stamina bar shows under your player card while you play','6 new Signatures: SKYWALKER, HIGH POINT, SPRING-LOADED (vertical) · ENDLESS MOTOR, SECOND WIND, IRON MAN (stamina)']],
  ['v2.26','Contact dunk hits',['Real body-contact sound when a dunker knocks a defender over, at a different pitch every time']],
@@ -6488,7 +6491,7 @@ const HL_CREATE=[
  {t:'STORE',tag:'ANIMATIONS',d:'From the attributes page, move to APPEARANCE and press \u2192 twice (or click STORE). It lists every animation your player can use, in four tabs: LAYUPS, DUNKS, PASSES and SHOTS (fadeaways). The tabs run along the top and that tab\'s animations down the left: hover over or click one and your own player performs it on loop in the PREVIEW to the right, so you can see exactly what it looks like (locked ones too).\n• The ones your ratings have unlocked can be switched ON or OFF; a switched-off animation is never used in your games, offline or online.\n• Locked ones show the rating they need (e.g. the 360 dunk needs DUNKING 85) and unlock as you upgrade.\n• Each tab keeps at least one ON (except fadeaways, which you can switch off completely).\n• Your choices are saved when you SAVE PLAYER.'},
  {t:'SIGNATURES',tag:'BADGES',d:'From the attributes page, move to APPEARANCE and press → to switch to SIGNATURES. Your ratings unlock Bronze, Silver and Gold tiers, and you spend each category\'s Signature Points to equip them. See the SIGNATURES page for every one.'},
  {t:'STEP 4: PICK YOUR TEAM',tag:'SIGNING',d:'Press SAVE PLAYER, then choose which of the 6 teams to sign with. Each team card shows its lineup with you in it. Confirm with YES and you replace that team\'s starter at your position. Your team can\'t be changed afterwards.\nYou then get your debut: a welcome card for your new team.'},
- {t:'LEVELS AND EXP',tag:'PROGRESSION',d:'You earn EXP for what your created player does in a career game: steals, layups, mid-range shots, threes, dunks, rebounds and assists. Finishing the whole game adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1); leaving early keeps your EXP but loses the bonus.\n• No EXP is earned in Play Now or online.\n• There are 25 levels. Each level-up gives attribute points (15 at the first and more every level after).\n• Each level also gives more Signature Points in every category.'},
+ {t:'LEVELS AND EXP',tag:'PROGRESSION',d:'You earn EXP for what your created player does in a career game: steals, layups, mid-range shots, threes, dunks, rebounds and assists. Finishing the whole game adds a bonus (+25% in 5v5 / 3v3, +15% in 1v1); leaving early keeps your EXP but loses the bonus.\n• No EXP is earned in Play Now or online.\n• There are 25 levels. You start with 120 attribute points, and each level-up gives more (20 at the first and more every level after).\n• Each level also gives more Signature Points in every category.'},
  {t:'REBIRTH',tag:'MAX LEVEL',d:'Once your player reaches level 25, pick him on the CAREER screen and choose REBIRTH. You make a brand-new build in that slot (new position, body, attributes and team) starting from level 1. Your old player is only replaced when you save the new one.\nEvery rebirth stacks forever:\n\u2022 +25% EXP on everything you earn (rebirth 2 = +50%, rebirth 3 = +75% ...).\n\u2022 +2 maximum SP in every Signature category (rebirth 2 = +4 ...).\nYour rebirth count shows as a gold star next to your level.'},
  {t:'UPGRADING YOUR PLAYER',tag:'EDIT PLAYER',d:'Pick your player on the CAREER screen and choose EDIT PLAYER (it shows how many points you have to spend). Attributes can only go up, never down, and never past their caps (including the caps lowered by rivals and the elite budget). Appearance and Signatures can be changed freely; name, position, body and team are locked.\nIf your upgrades change what kind of player you are, the game asks whether you want to adopt the new archetype or keep your old one.'},
  {t:'PLAYING YOUR CAREER',tag:'PLAY',d:'Pick your player and choose PLAY, then CAREER for games against the AI teams: 5V5, 3V3 (your team\'s best three, and you always play) or 1V1 against the player at your position on the team you pick. Or choose ONLINE to play a friend (see ONLINE PLAY).\nIn career you always control your own player. On offence, Space when someone else has the ball makes that teammate shoot, and E calls for the pass.'}];
