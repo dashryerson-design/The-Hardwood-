@@ -5772,10 +5772,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.29'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.30'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.30','Accounts sync properly',['Your ACCOUNT is now the one source of your stats: every sync downloads the account first and adds the games played on this device to it, instead of one device overwriting the others','Play on your Mac and your iPad: wins, stats, EXP and CC from both add up, purchases from both are kept, and each player keeps his most progressed version','Nothing is uploaded until the account has been downloaded, so a device that can\'t reach the cloud never replaces your save','First sync after updating: for each stat, the higher number of your devices is kept']],
  ['v2.29','New attribute curve',['New players start with 120 attribute points (was 240)','Every level-up now gives 5 more points than before (+20 at the first, +43 at the last), so a max-level player still ends up with the same total','Players you already have keep their points and the old level-up ramp - nothing is taken away']],
  ['v2.28','Tired shooting',['STAMINA now affects shooting: under 40% stamina your perfect (green) window shrinks, down to about half its size when you are empty','IRON MAN also softens the smaller window']],
  ['v2.27','Vertical & Stamina',['NEW PHYSICAL attributes: VERTICAL and STAMINA (every created player starts them at 50 - your attribute pool grew by 50 to cover it)','VERTICAL: how high you get up - higher block jumps and more rebound reach','STAMINA: sprinting drains it (dribble moves a little); it comes back when you stop sprinting and between quarters. Low stamina slows you down, empty = no sprint','A stamina bar shows under your player card while you play','6 new Signatures: SKYWALKER, HIGH POINT, SPRING-LOADED (vertical) · ENDLESS MOTOR, SECOND WIND, IRON MAN (stamina)']],
@@ -6131,28 +6132,67 @@ const AC_KEY='hardwood27.account.v1',AC_ABC='ABCDEFGHJKMNPQRSTUVWXYZ23456789',AC
 const ACCT={code:null,last:'',msg:'',in:null,busy:0},AC_B1=[244,62,170,34],AC_B2=[422,62,170,34],AC_IN=[244,62,348,34],AC_B3=[592,62,166,34];try{const c=localStorage.getItem(AC_KEY);if(/^[A-Z0-9]{6}$/.test(c))ACCT.code=c}catch(e){}
 const acBytes=h=>new Uint8Array((String(h).match(/../g)||[]).map(x=>parseInt(x,16))),acHex=b=>[...b].map(x=>x.toString(16).padStart(2,'0')).join(''),acSha=async s=>new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),
  acId=ev=>acSha(JSON.stringify([0,ev.pubkey,ev.created_at,ev.kind,ev.tags,ev.content])),acKeys=async code=>{const sk=await acSha('hardwood27 account '+code);return{sk,pk:acHex(H27P2P.schnorr.getPublicKey(sk))}};
-function acSnap(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('hardwood27.')&&k!=AC_KEY)o[k]=localStorage.getItem(k)}}catch(e){}return JSON.stringify(o)}
+const AC_BASE='hardwood27.acbase.v1'; // the save as it was at the last sync with the cloud (this device only, never uploaded): lets a sync tell what changed HERE since then
+function acSnap(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('hardwood27.')&&k!=AC_KEY&&k!=AC_BASE)o[k]=localStorage.getItem(k)}}catch(e){}return JSON.stringify(o)}
+// ===== SYNC (v2.30): the ACCOUNT is the one source of truth. Every sync first DOWNLOADS the account's save, merges what was played on this device since the
+// last sync into it, writes the result here AND uploads it - a device never uploads its local save blind (that is how one device's 10 wins could replace
+// another's 200). Merge, key by key (L = this device, C = the cloud, B = the last synced copy here):
+//  only one side changed -> that side · both changed -> PROFILE counters (wins, games, points, rebounds, EXP, CC earned...) and the CC wallet: C + (L - B), so games
+//  from both devices add up · purchases: both sets · players: per slot, the one with more EXP · settings / looks: this device.
+//  No B yet (the first sync after this update): counters take the HIGHER of the two (never double-counted), the rest as above.
+const acJ=v=>{try{return v==null?null:JSON.parse(v)}catch(e){return null}};
+function acNum(l,c,b,hasB){l=+l||0;c=+c||0;return Math.max(0,hasB?c+(l-(+b||0)):Math.max(l,c))}
+function acProf(l,c,b,hasB){if(!l)return c;if(!c)return l;const o=JSON.parse(JSON.stringify(c));
+ const walk=(L,C,B,O)=>{for(const k of new Set([...Object.keys(L||{}),...Object.keys(C||{})])){const lv=L&&L[k],cv=C&&C[k],bv=B&&B[k];
+  if((typeof lv=='number'||typeof cv=='number')&&!(lv&&typeof lv=='object')&&!(cv&&typeof cv=='object'))O[k]=acNum(lv,cv,bv,hasB);
+  else if((lv&&typeof lv=='object')||(cv&&typeof cv=='object')){O[k]=O[k]&&typeof O[k]=='object'?O[k]:{};walk(lv||{},cv||{},bv||{},O[k])}}};
+ walk({st:l.st,md:l.md,xp:l.xp,cc:l.cc},{st:c.st,md:c.md,xp:c.xp,cc:c.cc},b?{st:b.st,md:b.md,xp:b.xp,cc:b.cc}:{},o);
+ if(hasB&&b&&(l.name!==b.name||l.logo!==b.logo)){o.name=l.name;o.logo=l.logo}return o} // (name / picture: this device's if it changed them since the last sync)
+function acSlots(l,c,b){if(!l)return c;if(!c)return l;const o={slots:[0,1,2].map(i=>{const L=l.slots&&l.slots[i],C=c.slots&&c.slots[i],Bs=b&&b.slots&&b.slots[i],js=JSON.stringify;
+  if(!L)return Bs&&js(Bs)!==js(C)?C:C||null;if(!C)return Bs?null:L; // (deleted on one side since the last sync: stays deleted)
+  if(Bs&&js(L)===js(Bs))return C;if(Bs&&js(C)===js(Bs))return L;return(+C.xp||0)>(+L.xp||0)?C:L}),active:l.active};return o}
+function acMerge(L,C,B){const hasB=B!=null,b=B||{},M={};
+ for(const k of new Set([...Object.keys(L),...Object.keys(C)])){const l=L[k],c=C[k],bk=b[k];
+  if(c==null){M[k]=l;continue}if(l==null){M[k]=c;continue}if(l===c){M[k]=l;continue}
+  if(hasB&&l===bk){M[k]=c;continue}if(hasB&&c===bk){M[k]=l;continue}
+  if(k===PF_KEY)M[k]=JSON.stringify(acProf(acJ(l),acJ(c),acJ(bk),hasB));
+  else if(k===CC_KEY)M[k]=String(acNum(l,c,bk,hasB));
+  else if(k===OWN_KEY)M[k]=JSON.stringify([...new Set([...(acJ(c)||[]),...(acJ(l)||[])])]);
+  else if(k===SLOT_KEY)M[k]=JSON.stringify(acSlots(acJ(l),acJ(c),acJ(bk)));
+  else M[k]=l} // settings, looks, team picks: this device
+ return M}
+// put a merged save into this device (and reload what the game holds in memory)
+function acApply(M){const L=JSON.parse(acSnap());let ch=0;try{for(const k in M)if(M[k]!==L[k]&&typeof M[k]=='string'){localStorage.setItem(k,M[k]);ch=1}}catch(e){return false}
+ if(ch){profLoad();loadSlots();CC=Math.max(0,parseInt(localStorage.getItem(CC_KEY))||0);OWN.clear();(acJ(localStorage.getItem(OWN_KEY))||[]).forEach(k=>{if(typeof k=='string')OWN.add(k)})}return true}
 // one short-lived socket per relay: send one message, hand every reply to onMsg until it returns true (or the time runs out)
 function acRelay(url,send,onMsg,ms=7000){return new Promise(res=>{let ws,t;const end=()=>{clearTimeout(t);try{ws.close()}catch(e){}res()};try{ws=new WebSocket(url)}catch(e){return res()}
  t=setTimeout(end,ms);ws.onopen=()=>ws.send(JSON.stringify(send));ws.onerror=end;ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(onMsg(m))end()}})}
-async function acPush(){if(!ACCT.code||ACCT.busy||ACCT.in!=null)return;const snap=acSnap(),key=snap+JSON.stringify(lbCard());if(key==ACCT.last)return;/* (the card is part of the key: after an update adds fields to it, it goes out at once, not after the next game) */ACCT.busy=1;let ok=0;
- try{const{sk,pk}=await acKeys(ACCT.code),ev={pubkey:pk,created_at:Math.floor(Date.now()/1000),kind:30078,tags:[['d',AC_D]],content:snap},id=await acId(ev);
+async function acPush(force){if(!ACCT.code||ACCT.busy||ACCT.in!=null)return;if(S!='menu'&&!force)return; // (only between games: a merge can change your players)
+ const L0=acSnap(),key=L0+JSON.stringify(lbCard());if(key==ACCT.last&&Date.now()-(ACCT.pT||0)<60000)return; // (nothing new here: still re-checks the cloud every minute for games played on another device)
+ ACCT.busy=1;ACCT.pT=Date.now();let ok=0;
+ try{const st={},cev=await acPull(ACCT.code,st);if(!st.ans){ACCT.msg='CLOUD SAVE FAILED - RETRYING SOON';return} // couldn't reach the cloud: upload NOTHING (it could hold newer games)
+  const C=(cev&&acJ(cev.content))||{},Braw=localStorage.getItem(AC_BASE),B=Braw?acJ(Braw):null,M=cev?acMerge(JSON.parse(L0),C,B):JSON.parse(L0);
+  if(!acApply(M)){ACCT.msg='COULD NOT SAVE ON THIS DEVICE';return}
+  const snap=acSnap(),sO=JSON.parse(snap),card=JSON.stringify(lbCard()),same=!!cev&&Object.keys(sO).length===Object.keys(C).length&&Object.keys(sO).every(k=>sO[k]===C[k]); // (the cloud already has exactly this)
+  if(same){try{localStorage.setItem(AC_BASE,snap)}catch(e){}if(ACCT.lc!==card){const{sk,pk}=await acKeys(ACCT.code),lb={pubkey:pk,created_at:Math.floor(Date.now()/1000),kind:30078,tags:[['d',AC_LB]],content:card},lid=await acId(lb);lb.id=acHex(lid);lb.sig=acHex(await H27P2P.schnorr.signAsync(lid,sk));await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',lb],m=>m[0]=='OK')));ACCT.lc=card}
+   ACCT.last=snap+card;ACCT.msg='SYNCED WITH CLOUD';ok=1}
+  if(!same){const{sk,pk}=await acKeys(ACCT.code),ev={pubkey:pk,created_at:Math.floor(Date.now()/1000),kind:30078,tags:[['d',AC_D]],content:snap},id=await acId(ev);
   ev.id=acHex(id);ev.sig=acHex(await H27P2P.schnorr.signAsync(id,sk));
   const lb={pubkey:pk,created_at:ev.created_at,kind:30078,tags:[['d',AC_LB]],content:JSON.stringify(lbCard())},lid=await acId(lb);lb.id=acHex(lid);lb.sig=acHex(await H27P2P.schnorr.signAsync(lid,sk));
-  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',ev],m=>{if(m[0]=='OK'&&m[1]==ev.id){if(m[2])ok++;return true}}).then(()=>acRelay(u,['EVENT',lb],m=>m[0]=='OK'))))}catch(e){}
- if(ok)ACCT.last=key;ACCT.msg=ok?'SAVED TO CLOUD':'CLOUD SAVE FAILED - RETRYING SOON';ACCT.busy=0}
-async function acPull(code){const{pk}=await acKeys(code),pkB=acBytes(pk),evs=[];
- await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27',{kinds:[30078],authors:[pk],'#d':[AC_D],limit:1}],m=>{if(m[0]=='EVENT'&&m[2]&&m[2].pubkey==pk)evs.push(m[2]);return m[0]=='EOSE'})));
+  await Promise.all(AC_RELAYS.map(u=>acRelay(u,['EVENT',ev],m=>{if(m[0]=='OK'&&m[1]==ev.id){if(m[2])ok++;return true}}).then(()=>acRelay(u,['EVENT',lb],m=>m[0]=='OK'))));
+  if(ok){try{localStorage.setItem(AC_BASE,snap)}catch(e){}ACCT.last=snap+card;ACCT.lc=card}ACCT.msg=ok?'SAVED TO CLOUD':'CLOUD SAVE FAILED - RETRYING SOON'}}catch(e){ACCT.msg='CLOUD SAVE FAILED - RETRYING SOON'}finally{ACCT.busy=0}}
+async function acPull(code,st){const{pk}=await acKeys(code),pkB=acBytes(pk),evs=[];let ans=0;
+ await Promise.all(AC_RELAYS.map(u=>acRelay(u,['REQ','h27',{kinds:[30078],authors:[pk],'#d':[AC_D],limit:1}],m=>{if(m[0]=='EVENT'&&m[2]&&m[2].pubkey==pk)evs.push(m[2]);if(m[0]=='EOSE'){ans++;return true}})));if(st)st.ans=ans;
  let best=null;for(const ev of evs.sort((a,b)=>b.created_at-a.created_at)){try{const id=await acId(ev);if(acHex(id)==ev.id&&await H27P2P.schnorr.verifyAsync(acBytes(ev.sig),id,pkB)){best=ev;break}}catch(e){}} // a relay can't forge or alter someone's save
  return best}
 function acCreate(){const r=crypto.getRandomValues(new Uint8Array(6));ACCT.code=[...r].map(x=>AC_ABC[x%AC_ABC.length]).join('');try{localStorage.setItem(AC_KEY,ACCT.code)}catch(e){}
- ACCT.last='';ACCT.msg='SAVING...';beep(520,.06,'triangle');acPush()}
+ ACCT.last='';ACCT.pT=0;ACCT.msg='SAVING...';beep(520,.06,'triangle');acPush(1)}
 async function acSignIn(code){if(ACCT.busy)return;if(code==ACCT.code){ACCT.in=null;return}
  const has=acSnap()!='{}';if(has&&!confirm('Sign in with code '+code+'?\n\nThe players, profile and stats on this device will be replaced by that account\'s save.'+(ACCT.code?'\n\n(Your current account '+ACCT.code+' stays backed up.)':'')))return;
  ACCT.in=null;ACCT.busy=1;ACCT.msg='SIGNING IN...';let ev=null;try{ev=await acPull(code)}catch(e){}ACCT.busy=0;
  let o=null;try{o=ev&&JSON.parse(ev.content)}catch(e){}if(!o||typeof o!='object'){ACCT.msg=ev?'THAT SAVE IS DAMAGED':'NO ACCOUNT FOUND FOR '+code;return}
  try{Object.keys(localStorage).filter(k=>k.startsWith('hardwood27.')).forEach(k=>localStorage.removeItem(k));
-  for(const k in o)if(k.startsWith('hardwood27.')&&k!=AC_KEY&&typeof o[k]=='string')localStorage.setItem(k,o[k]);localStorage.setItem(AC_KEY,code)}catch(e){ACCT.msg='COULD NOT SAVE ON THIS DEVICE';return}
+  for(const k in o)if(k.startsWith('hardwood27.')&&k!=AC_KEY&&k!=AC_BASE&&typeof o[k]=='string')localStorage.setItem(k,o[k]);localStorage.setItem(AC_KEY,code);localStorage.setItem(AC_BASE,acSnap())}catch(e){ACCT.msg='COULD NOT SAVE ON THIS DEVICE';return}
  location.reload()}
 addEventListener('keydown',e=>{ // account code entry
  if(!PF.on||ACCT.in==null||e.ctrlKey||e.metaKey||e.altKey)return;
@@ -6168,7 +6208,7 @@ function acDraw(){g.save();g.textAlign='left';const btn=(r,t)=>{const[x,y,w,h]=r
   msg(ACCT.busy?'...':ACCT.msg||'signed in',350);btn(AC_B3,'USE ANOTHER CODE')}
  else{btn(AC_B1,'CREATE ACCOUNT');btn(AC_B2,'SIGN IN WITH CODE');msg(ACCT.busy?'...':ACCT.msg||'not signed in',600)}
  g.restore()}
-setTimeout(acPush,4000);setInterval(()=>{if(S=='menu'||S=='over')acPush()},20000);
+setTimeout(()=>acPush(1),4000);setInterval(()=>{if(S=='menu')acPush()},20000);
 // ===== COURT CREDITS (CC): a standalone currency with its own wallet (not per slot, and NOT boosted by rebirths like EXP is), shown top right of the CAREER screen.
 // Earned by your created player in Career games: win 500 / loss 300, +20 per shot taken (2PT or 3PT), +30 per block, +30 per steal, +50 per assist, then +10% if he is PLAYER OF THE GAME. Each rebirth: +3000.
 const CC_KEY='hardwood27.credits.v1';let CC=0,ccBlk=0;try{CC=Math.max(0,parseInt(localStorage.getItem(CC_KEY))||0)}catch(e){}
