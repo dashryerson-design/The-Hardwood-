@@ -3751,6 +3751,7 @@ function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts; // one fra
  if(S=='replay'&&(P.Digit1||P.Numpad1)){RP.sty=(RP.sty+1)%REP_CAMS.length;RP.k=null;RP.c=null}
  if(S=='play'&&(P.Digit1||P.Numpad1)){CAMM=(CAMM+1)%CAM_N.length;camT=1;say('CAMERA:  '+CAM_N[CAMM],'#7fffa0');savePrefs()}
  menuStep(dt);onlStep(dt);if(S=='over')endStep(dt);
+ if(S=='pause'&&(P.Digit1||P.Numpad1)){const n_=performance.now()/1000;if(n_-AD.t0>2){AD.t0=n_;AD.n=0}if(++AD.n>=3){AD.n=0;AD.t0=0;adStart();for(const k in P)delete P[k]}} // ADMIN CAMERA: 1 x3 within 2 s
  if(S=='admin'&&(P.KeyK||P.Escape)){adEnd();for(const k in P)delete P[k]}
  if(S=='pause'){if(P.ArrowUp||P.KeyW)PM=(PM+3)%4;if(P.ArrowDown||P.KeyS)PM=(PM+1)%4;
   if(P.Enter)pauseGo(PM);
@@ -5765,10 +5766,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.32'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.33'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.33','Minor fixes',['Small fixes and improvements']],
  ['v2.32','Minor fixes',['Small fixes and improvements']],
  ['v2.31','The Hardwood on the web',['The website now has a proper name and description, so the game can be found by searching for The Hardwood']],
  ['v2.30','Accounts sync properly',['Your ACCOUNT is now the one source of your stats: every sync downloads the account first and adds the games played on this device to it, instead of one device overwriting the others','Play on your Mac and your iPad: wins, stats, EXP and CC from both add up, purchases from both are kept, and each player keeps his most progressed version','Nothing is uploaded until the account has been downloaded, so a device that can\'t reach the cloud never replaces your save','First sync after updating: for each stat, the higher number of your devices is kept']],
