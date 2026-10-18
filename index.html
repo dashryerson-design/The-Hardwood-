@@ -314,7 +314,8 @@ const spdF=p=>.8+.4*Math.max(0,Math.min(1,((p&&p.rt&&p.rt.spd>0?p.rt.spd:70)-25)
 // Above 90 the rating grows exponentially: x1.10 at 90, ~x1.22 at 95, ~x1.50 at 99, ~x1.63 at 100
 // STAMINA (p.en, 1 = fresh): sprinting drains it (slightly a dribble move too), it comes back when he isn't sprinting (faster standing still) and between quarters.
 // Under 40% he gets slower (up to -20% when empty), and empty = no sprint. The STAMINA rating sets how fast it drains and comes back.
-const STA={dr:[.12,.055],rc:[.03,.085],still:1.6,mv:.035,low:.4,slow:.2,qtr:.5},staN=p=>Math.max(0,Math.min(1,((p&&p.rt&&p.rt.sta>0?p.rt.sta:60)-25)/75)),
+const STA={dr:[.12,.055],rc:[.03,.085],still:1.6,mv:.035,low:.4,slow:.2,shot:.45,qtr:.5},staN=p=>Math.max(0,Math.min(1,((p&&p.rt&&p.rt.sta>0?p.rt.sta:60)-25)/75)),
+ shFat=p=>{const e=p&&p.en!=null?p.en:1;return e>=STA.low?1:1-STA.shot*(1-e/STA.low)*(1-sigv(p,'ironman'))}, // TIRED: the jump shot's perfect (green) window shrinks, to x0.55 when empty
  fatM=p=>{const e=p&&p.en!=null?p.en:1;return e>=STA.low?1:1-STA.slow*(1-e/STA.low)*(1-sigv(p,'ironman'))};
 function staStep(dt){for(const p of TM.flat()){if(p.en==null)p.en=1;const n=staN(p);
  if(sprintN(p)&&Math.hypot(p.vx,p.vy)>60)p.en=Math.max(0,p.en-dt*(STA.dr[0]+(STA.dr[1]-STA.dr[0])*n)*(1-sigv(p,'motor')));
@@ -506,7 +507,7 @@ const SIG_DEF=[
  {id:"spring",no:57,n:"SPRING-LOADED",cat:1,el:0,req:{vrt:[70,80,88],dnk:[62,72,82]},v:[0.15, 0.3, 0.5],f:"+%",d:"Your dunks leave the floor {} further out."},
  {id:"motor",no:58,n:"ENDLESS MOTOR",cat:4,el:0,req:{sta:[64,74,84]},v:[0.2, 0.35, 0.5],f:"%",d:"Sprinting drains your stamina {} slower (and dribble moves cost half as much of that)."},
  {id:"secwind",no:59,n:"SECOND WIND",cat:4,el:0,req:{sta:[58,68,78]},v:[0.3, 0.6, 1],f:"+%",d:"Your stamina comes back {} faster."},
- {id:"ironman",no:60,n:"IRON MAN",cat:4,el:1,req:{sta:[78,85,91]},v:[0.35, 0.6, 0.85],f:"%",d:"Running low on stamina slows you down {} less."},
+ {id:"ironman",no:60,n:"IRON MAN",cat:4,el:1,req:{sta:[78,85,91]},v:[0.35, 0.6, 0.85],f:"%",d:"Running low on stamina slows you down and shrinks your perfect window {} less."},
  {id:"ice",no:1,n:"ICE WATER",cat:0,el:1,req:{tp:[78,85,90]},v:[0.1, 0.2, 0.35],f:"+%",d:"Perfect window {} bigger with under 5s on the shot clock, or on a tying or go-ahead shot late in the game."},
  {id:"deadeye",no:2,n:"DEADEYE",cat:0,el:1,req:{tp:[80,86,90]},v:[0.15, 0.3, 0.5],f:"%",d:"Defenders’ contests affect your jump shots {} less."},
  {id:"heat",no:3,n:"HEAT CHECK",cat:0,el:0,req:{tp:[62,72,82]},v:[0.04, 0.07, 0.1],f:"+%",d:"Each make in a row grows your perfect window by {} (up to 3 makes). A miss resets it."},
@@ -1396,7 +1397,7 @@ function perfW(p,d,c){const n=shN(p,d),w3=.016+.074*n;let w;
  if(d<=MIDS)w=.05;
  else if(d<R3)w=.05+(w3-.05)*zw(d);
  else{const g=(d-R3)/reachL(n)*(1-sigv(p,'deep'));w=Math.max(.004,w3/(1+g*g));const lg=sigv(p,'logo');if(lg&&d>R3+60)w=Math.max(w,w3*lg);if(pastHalf(p))w=halfW(p,w)}
- return w*(1-contK(p,d)*cwin(c))*pwMul(p,d)*(p.fdk?1-(1-FADE.win-(1-FADE.win)*n)*p.fdk:1)} // (fadeaway: x0.8 window at rating 25 -> x1.0 at 100)
+ return w*shFat(p)*(1-contK(p,d)*cwin(c))*pwMul(p,d)*(p.fdk?1-(1-FADE.win-(1-FADE.win)*n)*p.fdk:1)} // (fadeaway: x0.8 window at rating 25 -> x1.0 at 100)
 const qpick=(c,p)=>{const r=Math.random(),d=p?Math.hypot(hx(p.team)-p.x,HY-p.y):0;if(p){shotPrep(p);c=shotC(p,d,c)}const a=.3*(1-c)*Math.min(1.6,perfW(p,d,0)/.05)*(1-contK(p,d)*c)/(1-.4*c);return r<a?2:r<a+.35?1:0};
 function release(p,qq){p.shT=T; // (after the shot he keeps facing the rim for a while, see render)
  ms.on=false;ms.gb=null;if(ms===MS2&&NET.prt>0)ms.t=NET.prt; // online: the guest's release uses the meter value HIS page measured
@@ -5769,10 +5770,11 @@ const topRect=i=>[34+i*181,452,168,62];
 // each team's catchphrase on the main menu (how they play), instead of ratings
 const MENU_TAG={'PINKIE PIES':'Sweet name. Sour defence.','GREEN GEKOS':'The ball moves. The bigs eat.','YELLOW VIKINGS':'Every possession is a raid.',
  'RED ROYALS':'Slow it down. Own the glass.','BLUE CRUSADERS':"Don't let them shoot.",'RAINBOW SLAYERS':'Paint it every colour.'};
-const GAME_VER='v2.27'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
+const GAME_VER='v2.28'; // bump with every published update (shown top right of the main menu) - and add its PATCH NOTES entry below
 // ===== PATCH NOTES (main menu, top right, or N): EVERY version (newest first) in a scrolling list, and what changed in the one picked =====
 // EVERY TIME GAME_VER IS BUMPED, add the new version at the TOP of this list: [version, short title, [one line per change]]. All of them are shown.
 const PATCH=[
+ ['v2.28','Tired shooting',['STAMINA now affects shooting: under 40% stamina your perfect (green) window shrinks, down to about half its size when you are empty','IRON MAN also softens the smaller window']],
  ['v2.27','Vertical & Stamina',['NEW PHYSICAL attributes: VERTICAL and STAMINA (every created player starts them at 50 - your attribute pool grew by 50 to cover it)','VERTICAL: how high you get up - higher block jumps and more rebound reach','STAMINA: sprinting drains it (dribble moves a little); it comes back when you stop sprinting and between quarters. Low stamina slows you down, empty = no sprint','A stamina bar shows under your player card while you play','6 new Signatures: SKYWALKER, HIGH POINT, SPRING-LOADED (vertical) · ENDLESS MOTOR, SECOND WIND, IRON MAN (stamina)']],
  ['v2.26','Contact dunk hits',['Real body-contact sound when a dunker knocks a defender over, at a different pitch every time']],
  ['v2.25','Dunk slam sounds',['Real dunk sounds: the ball rammed through the rim plays the moment a dunk is slammed home (3 recordings, picked at random)']],
