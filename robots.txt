@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dashryerson-design.github.io/The-Hardwood-/sitemap.xml
